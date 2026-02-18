@@ -12,9 +12,15 @@ import { spacing } from "../../theme/spacing";
 type PageContainerProps = {
   children: React.ReactNode;
   style?: ViewStyle;
+  /** Extra bottom padding when used inside a tab layout (e.g. 72) so content doesn't sit under the tab bar */
+  bottomPadding?: number;
 };
 
-export function PageContainer({ children, style }: PageContainerProps) {
+export function PageContainer({
+  children,
+  style,
+  bottomPadding = 0,
+}: PageContainerProps) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -31,7 +37,11 @@ export function PageContainer({ children, style }: PageContainerProps) {
     >
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.content, style]}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: spacing.xxl + bottomPadding },
+          style,
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {children}

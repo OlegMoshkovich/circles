@@ -10,6 +10,8 @@ export const spacing = {
   xxl: 40,
   pageHorizontal: 24,
   cardPadding: 16,
+  /** Use as bottomPadding in PageContainer when screen is inside bottom tab bar */
+  tabBarBottomPadding: 72,
 } as const;
 
 export type Spacing = typeof spacing;
