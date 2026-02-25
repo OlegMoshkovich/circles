@@ -18,6 +18,15 @@ export type EventDetailParams = {
   description: string;
 };
 
+export type PromptDetailParams = {
+  title: string;
+  badge: string;
+  meta: string;
+  description: string;
+  quote: string;
+  attribution: string;
+};
+
 export type RootStackParamList = {
   Root: undefined;
   Home: undefined;
@@ -26,6 +35,7 @@ export type RootStackParamList = {
   MyProfile: undefined;
   VerifyCode: undefined;
   EventDetail: EventDetailParams;
+  PromptDetail: PromptDetailParams;
 };
 
 export type RootStackScreenProps<Screen extends keyof RootStackParamList> =

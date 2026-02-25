@@ -1,5 +1,5 @@
 import React from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
@@ -10,6 +10,7 @@ type SuggestionCardProps = {
   metaRight?: string;
   badge?: string;
   description: string;
+  onPress?: () => void;
 };
 
 export function SuggestionCard({
@@ -18,6 +19,7 @@ export function SuggestionCard({
   metaRight,
   badge,
   description,
+  onPress,
 }: SuggestionCardProps) {
   const meta =
     metaLeft && metaRight
@@ -25,7 +27,7 @@ export function SuggestionCard({
       : metaLeft ?? metaRight ?? "";
 
   return (
-    <View style={styles.card}>
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
       <View style={styles.header}>
         <Text style={styles.title} numberOfLines={1}>
           {title}
@@ -40,7 +42,7 @@ export function SuggestionCard({
         <Text style={styles.meta}>{meta}</Text>
       )}
       <Text style={styles.description}>{description}</Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 

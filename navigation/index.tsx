@@ -12,6 +12,7 @@ import SignInScreen from "../screens/SignInScreen";
 import VerifyCodeScreen from "../screens/VerifyCodeScreen";
 import MyProfileScreen from "../screens/MyProfileScreen";
 import EventDetailScreen from "../screens/EventDetailScreen";
+import PromptDetailScreen from "../screens/PromptDetailScreen";
 import TabNavigator from "./TabNavigator";
 import { RootStackParamList } from "../types";
 import LinkingConfiguration from "./LinkingConfiguration";
@@ -60,6 +61,11 @@ const RootNavigator = () => {
             <Stack.Screen
               name="EventDetail"
               component={EventDetailScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="PromptDetail"
+              component={PromptDetailScreen}
               options={{ headerShown: false }}
             />
           </>
