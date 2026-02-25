@@ -1,5 +1,5 @@
 import React from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
@@ -9,23 +9,27 @@ type EventCardProps = {
   title: string;
   organizer: string;
   date: string;
+  time: string;
   location: string;
   going: number;
   maybe: number;
   rsvp?: "going" | "maybe";
+  onPress?: () => void;
 };
 
 export function EventCard({
   title,
   organizer,
   date,
+  time,
   location,
   going,
   maybe,
   rsvp,
+  onPress,
 }: EventCardProps) {
   return (
-    <View style={styles.card}>
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
       <View style={styles.header}>
         <Text style={styles.title}>{title}</Text>
         {rsvp != null && (
@@ -41,7 +45,7 @@ export function EventCard({
 
       <View style={styles.metaRow}>
         <Ionicons name="calendar-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
-        <Text style={styles.metaText}>{date}</Text>
+        <Text style={styles.metaText}>{date} · {time}</Text>
       </View>
 
       <View style={styles.metaRow}>
@@ -61,7 +65,7 @@ export function EventCard({
         </Text>
         <Ionicons name="chatbubble-outline" size={16} color={colors.textMuted} />
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
