@@ -60,14 +60,14 @@ const RootNavigator = () => {
         ) : (
           <>
             <Stack.Screen
-              name="SignUp"
-              component={SignUpScreen}
-              options={{ title: "Sign Up" }}
-            />
-            <Stack.Screen
               name="SignIn"
               component={SignInScreen}
-              options={{ title: "Sign In" }}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="SignUp"
+              component={SignUpScreen}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="VerifyCode"

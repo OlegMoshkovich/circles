@@ -6,13 +6,20 @@ import { typography } from "../../theme/typography";
 
 type NavbarTitleProps = {
   title: string;
+  rightElement?: React.ReactNode;
 };
 
-export function NavbarTitle({ title }: NavbarTitleProps) {
+export function NavbarTitle({ title, rightElement }: NavbarTitleProps) {
   return (
     <View style={styles.row}>
       <View style={styles.iconPlaceholder} />
       <Text style={styles.title}>{title}</Text>
+      {rightElement != null ? (
+        <>
+          <View style={styles.spacer} />
+          {rightElement}
+        </>
+      ) : null}
     </View>
   );
 }
@@ -30,6 +37,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.textMuted,
     opacity: 0.4,
     marginRight: spacing.sm,
+  },
+  spacer: {
+    flex: 1,
   },
   title: {
     ...typography.navbarTitle,
