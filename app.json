@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "clerk-expo-starter",
-    "slug": "clerk-expo-starter",
+    "name": "CommunityCircles",
+    "slug": "communitycircles",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -13,12 +13,19 @@
       "backgroundColor": "#ffffff"
     },
     "updates": {
-      "fallbackToCacheTimeout": 0
+      "url": "https://u.expo.dev/42bf8eed-9287-4e15-9c72-8d20b4475200"
     },
-    "assetBundlePatterns": ["**/*"],
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
-      "associatedDomains": ["applinks:clerk.helping.lemming-64.lclstage.dev"],
+      "associatedDomains": [
+        "applinks:clerk.helping.lemming-64.lclstage.dev"
+      ],
       "bundleIdentifier": "dev.clerk.clerkexpostarter"
     },
     "android": {
@@ -37,13 +44,22 @@
               "pathPrefix": "/v1/oauth-native-callback"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "package": "com.sokratisv.clerkexpostarter"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
+    },
+    "owner": "analogfuture",
+    "extra": {
+      "eas": {
+        "projectId": "42bf8eed-9287-4e15-9c72-8d20b4475200"
+      }
     }
   }
 }

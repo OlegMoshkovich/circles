@@ -1,5 +1,6 @@
 import React from "react";
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import { ScreenLayout } from "../src/components/layout/ScreenLayout";
 import { NavbarTitle } from "../src/components/layout/NavbarTitle";
@@ -33,7 +34,22 @@ export default function MyProfileScreen() {
     : "—";
 
   return (
-    <ScreenLayout header={<NavbarTitle title="Profile" />}>
+    <ScreenLayout
+      header={
+        <NavbarTitle
+          title="Profile"
+          rightElement={
+            <TouchableOpacity
+              onPress={() => handleSignOut(signOut)}
+              style={styles.iconButton}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Ionicons name="log-out-outline" size={14} color={colors.card} />
+            </TouchableOpacity>
+          }
+        />
+      }
+    >
       {/* Avatar + name */}
       <View style={styles.avatarSection}>
         <View style={styles.avatar}>
@@ -75,16 +91,6 @@ export default function MyProfileScreen() {
         </View>
       </View>
 
-      <View style={styles.divider} />
-
-      {/* Sign out */}
-      <TouchableOpacity
-        onPress={() => handleSignOut(signOut)}
-        style={styles.signOutRow}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      >
-        <Text style={styles.signOutText}>Sign out</Text>
-      </TouchableOpacity>
     </ScreenLayout>
   );
 }
@@ -169,12 +175,12 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textMuted,
   },
-  signOutRow: {
-    paddingVertical: spacing.sm,
+  iconButton: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.text,
     alignItems: "center",
-  },
-  signOutText: {
-    ...typography.body,
-    color: colors.textMuted,
+    justifyContent: "center",
   },
 });

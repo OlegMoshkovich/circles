@@ -1,5 +1,6 @@
 import React from "react";
-import { StyleSheet, Text } from "react-native";
+import { StyleSheet, Text, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
@@ -63,7 +64,18 @@ export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
 
   return (
-    <ScreenLayout header={<NavbarTitle title="Local Living" />}>
+    <ScreenLayout
+      header={
+        <NavbarTitle
+          title="Local Living"
+          rightElement={
+            <TouchableOpacity style={styles.iconButton} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+              <Ionicons name="add" size={16} color={colors.card} />
+            </TouchableOpacity>
+          }
+        />
+      }
+    >
       <TextBlock subtitle={INTRO_SUBTITLE} />
       <InfoCard
         title="TODAY"
@@ -102,6 +114,14 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  iconButton: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.text,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   sectionLabel: {
     ...typography.sectionLabel,
     color: colors.textMuted,
