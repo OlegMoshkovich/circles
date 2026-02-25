@@ -3,7 +3,7 @@
  */
 export const typography = {
   navbarTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: "600" as const,
   },
   sectionLabel: {
