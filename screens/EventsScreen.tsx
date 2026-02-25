@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { PageContainer } from "../src/components/layout/PageContainer";
+import { ScreenLayout } from "../src/components/layout/ScreenLayout";
 import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { TextBlock } from "../src/components/blocks/TextBlock";
 import { EventCard } from "../src/components/cards/EventCard";
@@ -38,21 +38,27 @@ const EVENTS = [
   },
 ];
 
+const EVENTS_SUBTITLE =
+  "Gentle opportunities for connection—\nsmall, meaningful gatherings";
+
 export default function EventsScreen() {
   return (
-    <PageContainer>
-      <NavbarTitle
-        title="Events"
-        rightElement={
-          <TouchableOpacity
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            style={styles.addButton}
-          >
-            <Ionicons name="add" size={20} color={colors.card} />
-          </TouchableOpacity>
-        }
-      />
-      <TextBlock subtitle="Gentle opportunities for connection—\nsmall, meaningful gatherings" />
+    <ScreenLayout
+      header={
+        <NavbarTitle
+          title="Events"
+          rightElement={
+            <TouchableOpacity
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={styles.addButton}
+            >
+              <Ionicons name="add" size={20} color={colors.card} />
+            </TouchableOpacity>
+          }
+        />
+      }
+    >
+      <TextBlock subtitle={EVENTS_SUBTITLE} />
       {EVENTS.map((event, i) => (
         <EventCard
           key={i}
@@ -65,7 +71,7 @@ export default function EventsScreen() {
           rsvp={event.rsvp}
         />
       ))}
-    </PageContainer>
+    </ScreenLayout>
   );
 }
 
