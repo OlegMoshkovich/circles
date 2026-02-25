@@ -23,7 +23,6 @@ export function PageContainer({ children, style }: PageContainerProps) {
         styles.wrapper,
         {
           paddingTop: insets.top,
-          paddingBottom: insets.bottom,
           paddingLeft: insets.left + spacing.pageHorizontal,
           paddingRight: insets.right + spacing.pageHorizontal,
         },
