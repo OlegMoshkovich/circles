@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { log } from "../logger";
 import { RootStackScreenProps } from "../types";
 import { OAuthButtons } from "../components/OAuth";
+import { colors } from "../src/theme/colors";
 
 export default function SignInScreen({
   navigation,
@@ -40,34 +41,30 @@ export default function SignInScreen({
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
 
-      {/* Title */}
       <View style={styles.titleContainer}>
-        <Text style={styles.titleText}>Log into{"\n"}your account</Text>
+        <Text style={styles.titleText}>Welcome to{"\n"}Community Circles</Text>
       </View>
 
-      {/* Form */}
       <View style={styles.formContainer}>
-        {/* Email */}
         <View style={styles.inputRow}>
           <TextInput
             autoCapitalize="none"
             value={emailAddress}
             style={styles.input}
             placeholder="Username/Email"
-            placeholderTextColor="rgba(255,255,255,0.75)"
+            placeholderTextColor={colors.textMuted}
             onChangeText={setEmailAddress}
           />
         </View>
 
-        {/* Password */}
         <View style={styles.inputRow}>
           <TextInput
             value={password}
             style={styles.input}
             placeholder="Password"
-            placeholderTextColor="rgba(255,255,255,0.75)"
+            placeholderTextColor={colors.textMuted}
             secureTextEntry={true}
             onChangeText={setPassword}
           />
@@ -76,7 +73,6 @@ export default function SignInScreen({
           </TouchableOpacity>
         </View>
 
-        {/* Remember me */}
         <TouchableOpacity
           style={styles.rememberRow}
           onPress={() => setRememberMe(!rememberMe)}
@@ -88,19 +84,16 @@ export default function SignInScreen({
           <Text style={styles.rememberText}>Remember me</Text>
         </TouchableOpacity>
 
-        {/* Log In button */}
         <TouchableOpacity style={styles.primaryButton} onPress={onSignInPress}>
           <Text style={styles.primaryButtonText}>Log In</Text>
         </TouchableOpacity>
 
-        {/* OAuth */}
         <OAuthButtons
           buttonStyle={styles.oauthButton}
           textStyle={styles.oauthButtonText}
         />
       </View>
 
-      {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>Don't have an account? </Text>
         <TouchableOpacity onPress={onSignUpPress}>
@@ -114,7 +107,7 @@ export default function SignInScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#BFA89E",
+    backgroundColor: colors.background,
     justifyContent: "flex-end",
     paddingBottom: 48,
   },
@@ -123,9 +116,9 @@ const styles = StyleSheet.create({
     paddingBottom: 44,
   },
   titleText: {
-    fontSize: 36,
+    fontSize: 34,
     fontWeight: "700",
-    color: "#fff",
+    color: colors.text,
     lineHeight: 44,
   },
   formContainer: {
@@ -135,18 +128,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.5)",
+    borderBottomColor: colors.cardBorder,
     marginBottom: 28,
     paddingBottom: 8,
   },
   input: {
     flex: 1,
-    color: "#fff",
+    color: colors.text,
     fontSize: 16,
     height: 36,
   },
   forgotText: {
-    color: "rgba(255,255,255,0.85)",
+    color: colors.textMuted,
     fontSize: 14,
   },
   rememberRow: {
@@ -159,21 +152,21 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 4,
     borderWidth: 1.5,
-    borderColor: "rgba(255,255,255,0.8)",
+    borderColor: colors.cardBorder,
     marginRight: 10,
     alignItems: "center",
     justifyContent: "center",
   },
   checkboxChecked: {
-    backgroundColor: "#3a3a3a",
-    borderColor: "#3a3a3a",
+    backgroundColor: colors.text,
+    borderColor: colors.text,
   },
   rememberText: {
-    color: "rgba(255,255,255,0.9)",
+    color: colors.text,
     fontSize: 14,
   },
   primaryButton: {
-    backgroundColor: "#2b2b2b",
+    backgroundColor: colors.text,
     borderRadius: 50,
     height: 54,
     alignItems: "center",
@@ -186,15 +179,16 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   oauthButton: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.card,
     borderRadius: 50,
     height: 54,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 0,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   oauthButtonText: {
-    color: "#2b2b2b",
+    color: colors.text,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -204,11 +198,11 @@ const styles = StyleSheet.create({
     marginTop: 36,
   },
   footerText: {
-    color: "rgba(255,255,255,0.8)",
+    color: colors.textMuted,
     fontSize: 14,
   },
   signUpText: {
-    color: "#fff",
+    color: colors.text,
     fontSize: 14,
     textDecorationLine: "underline",
     fontWeight: "600",

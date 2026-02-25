@@ -11,6 +11,7 @@ import { useSignUp } from "@clerk/clerk-expo";
 import { log } from "../logger";
 import { RootStackScreenProps } from "../types";
 import { OAuthButtons } from "../components/OAuth";
+import { colors } from "../src/theme/colors";
 
 export default function SignUpScreen({
   navigation,
@@ -37,21 +38,19 @@ export default function SignUpScreen({
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="dark-content" />
 
-      {/* Title */}
       <View style={styles.titleContainer}>
         <Text style={styles.titleText}>Create{"\n"}your account</Text>
       </View>
 
-      {/* Form */}
       <View style={styles.formContainer}>
         <View style={styles.inputRow}>
           <TextInput
             value={firstName}
             style={styles.input}
             placeholder="First name"
-            placeholderTextColor="rgba(255,255,255,0.75)"
+            placeholderTextColor={colors.textMuted}
             onChangeText={setFirstName}
           />
         </View>
@@ -61,7 +60,7 @@ export default function SignUpScreen({
             value={lastName}
             style={styles.input}
             placeholder="Last name"
-            placeholderTextColor="rgba(255,255,255,0.75)"
+            placeholderTextColor={colors.textMuted}
             onChangeText={setLastName}
           />
         </View>
@@ -72,7 +71,7 @@ export default function SignUpScreen({
             value={emailAddress}
             style={styles.input}
             placeholder="Email"
-            placeholderTextColor="rgba(255,255,255,0.75)"
+            placeholderTextColor={colors.textMuted}
             onChangeText={setEmailAddress}
           />
         </View>
@@ -82,25 +81,22 @@ export default function SignUpScreen({
             value={password}
             style={styles.input}
             placeholder="Password"
-            placeholderTextColor="rgba(255,255,255,0.75)"
+            placeholderTextColor={colors.textMuted}
             secureTextEntry={true}
             onChangeText={setPassword}
           />
         </View>
 
-        {/* Sign Up button */}
         <TouchableOpacity style={styles.primaryButton} onPress={onSignUpPress}>
           <Text style={styles.primaryButtonText}>Sign Up</Text>
         </TouchableOpacity>
 
-        {/* OAuth */}
         <OAuthButtons
           buttonStyle={styles.oauthButton}
           textStyle={styles.oauthButtonText}
         />
       </View>
 
-      {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>Already have an account? </Text>
         <TouchableOpacity onPress={onSignInPress}>
@@ -114,7 +110,7 @@ export default function SignUpScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#BFA89E",
+    backgroundColor: colors.background,
     justifyContent: "flex-end",
     paddingBottom: 48,
   },
@@ -125,7 +121,7 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: 36,
     fontWeight: "700",
-    color: "#fff",
+    color: colors.text,
     lineHeight: 44,
   },
   formContainer: {
@@ -135,18 +131,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.5)",
+    borderBottomColor: colors.cardBorder,
     marginBottom: 28,
     paddingBottom: 8,
   },
   input: {
     flex: 1,
-    color: "#fff",
+    color: colors.text,
     fontSize: 16,
     height: 36,
   },
   primaryButton: {
-    backgroundColor: "#2b2b2b",
+    backgroundColor: colors.text,
     borderRadius: 50,
     height: 54,
     alignItems: "center",
@@ -159,14 +155,16 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   oauthButton: {
-    backgroundColor: "#fff",
+    backgroundColor: colors.card,
     borderRadius: 50,
     height: 54,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
   },
   oauthButtonText: {
-    color: "#2b2b2b",
+    color: colors.text,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -176,11 +174,11 @@ const styles = StyleSheet.create({
     marginTop: 36,
   },
   footerText: {
-    color: "rgba(255,255,255,0.8)",
+    color: colors.textMuted,
     fontSize: 14,
   },
   signInText: {
-    color: "#fff",
+    color: colors.text,
     fontSize: 14,
     textDecorationLine: "underline",
     fontWeight: "600",
