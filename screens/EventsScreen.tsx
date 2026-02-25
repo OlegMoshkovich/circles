@@ -68,7 +68,7 @@ export default function EventsScreen() {
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               style={styles.addButton}
             >
-              <Ionicons name="add" size={20} color={colors.card} />
+              <Ionicons name="add" size={16} color={colors.card} />
             </TouchableOpacity>
           }
         />
@@ -107,12 +107,11 @@ export default function EventsScreen() {
 
 const styles = StyleSheet.create({
   addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: colors.text,
     alignItems: "center",
     justifyContent: "center",
-    padding: spacing.xs,
   },
 });

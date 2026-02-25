@@ -1,7 +1,5 @@
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "@clerk/clerk-expo";
+import { StyleSheet, Text } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
@@ -15,14 +13,6 @@ import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-
-async function handleSignOut(signOut: () => Promise<void>) {
-  try {
-    await signOut();
-  } catch (_) {
-    // Sign out errors are rare; user can retry from profile if needed
-  }
-}
 
 const INTRO_SUBTITLE =
   "Curated essentials and seasonal rhythms—\nliving with the lake and forest as part of daily life.";
@@ -70,26 +60,10 @@ const SUGGESTIONS = [
 ];
 
 export default function HomeScreen() {
-  const { signOut } = useAuth();
   const navigation = useNavigation<Nav>();
 
   return (
-    <ScreenLayout
-      header={
-        <NavbarTitle
-          title="Local Living"
-          rightElement={
-            <TouchableOpacity
-              onPress={() => handleSignOut(signOut)}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              style={styles.signOutButton}
-            >
-              <Ionicons name="log-out-outline" size={24} color={colors.text} />
-            </TouchableOpacity>
-          }
-        />
-      }
-    >
+    <ScreenLayout header={<NavbarTitle title="Local Living" />}>
       <TextBlock subtitle={INTRO_SUBTITLE} />
       <InfoCard
         title="TODAY"
@@ -128,9 +102,6 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  signOutButton: {
-    padding: spacing.xs,
-  },
   sectionLabel: {
     ...typography.sectionLabel,
     color: colors.textMuted,
