@@ -50,7 +50,7 @@ export default function SignInScreen({
       <StatusBar barStyle="dark-content" />
 
       <View style={styles.titleContainer}>
-        <Text style={styles.titleText}>Welcome to{"\n"}Val Mia</Text>
+        <Text style={styles.titleText}>Welcome {"\n"}to ValMia</Text>
       </View>
 
       <View style={styles.formContainer}>
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
     paddingBottom: 44,
   },
   titleText: {
-    fontSize: 40,
+    fontSize: 36,
     fontWeight: "700",
     color: colors.text,
     lineHeight: 44,
