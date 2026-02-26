@@ -31,7 +31,7 @@ export function OAuthButtons({ buttonStyle, textStyle }: OAuthButtonsProps) {
   return (
     <TouchableOpacity style={buttonStyle} onPress={onPress} activeOpacity={0.85}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <Ionicons name="logo-google" size={18} color="#2b2b2b" />
+        <Ionicons name="logo-google" size={18} color="#fff" />
         <Text style={textStyle}>Continue with Google</Text>
       </View>
     </TouchableOpacity>

@@ -6,6 +6,7 @@ import {
   View,
   StyleSheet,
   StatusBar,
+  ImageBackground,
 } from "react-native";
 import { useSignIn } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
@@ -40,11 +41,16 @@ export default function SignInScreen({
   const onSignUpPress = () => navigation.replace("SignUp");
 
   return (
-    <View style={styles.container}>
+    <ImageBackground
+      source={require("../assets/Background.webp")}
+      style={styles.container}
+      imageStyle={styles.backgroundImage}
+      resizeMode="cover"
+    >
       <StatusBar barStyle="dark-content" />
 
       <View style={styles.titleContainer}>
-        <Text style={styles.titleText}>Welcome to{"\n"}Community Circles</Text>
+        <Text style={styles.titleText}>Welcome to{"\n"}Val Mia</Text>
       </View>
 
       <View style={styles.formContainer}>
@@ -84,14 +90,14 @@ export default function SignInScreen({
           <Text style={styles.rememberText}>Remember me</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.primaryButton} onPress={onSignInPress}>
-          <Text style={styles.primaryButtonText}>Log In</Text>
-        </TouchableOpacity>
-
         <OAuthButtons
           buttonStyle={styles.oauthButton}
           textStyle={styles.oauthButtonText}
         />
+
+        <TouchableOpacity style={styles.primaryButton} disabled>
+          <Text style={styles.primaryButtonText}>Log In</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.footer}>
@@ -100,23 +106,26 @@ export default function SignInScreen({
           <Text style={styles.signUpText}>Sign Up</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
     justifyContent: "flex-end",
     paddingBottom: 48,
+  },
+  backgroundImage: {
+    top: -250,
+    left: -200
   },
   titleContainer: {
     paddingHorizontal: 32,
     paddingBottom: 44,
   },
   titleText: {
-    fontSize: 34,
+    fontSize: 40,
     fontWeight: "700",
     color: colors.text,
     lineHeight: 44,
@@ -165,7 +174,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 14,
   },
-  primaryButton: {
+  oauthButton: {
     backgroundColor: colors.text,
     borderRadius: 50,
     height: 54,
@@ -173,12 +182,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 12,
   },
-  primaryButtonText: {
+  oauthButtonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
   },
-  oauthButton: {
+  primaryButton: {
     backgroundColor: colors.card,
     borderRadius: 50,
     height: 54,
@@ -186,8 +195,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: colors.cardBorder,
+    opacity: 0.45,
   },
-  oauthButtonText: {
+  primaryButtonText: {
     color: colors.text,
     fontSize: 16,
     fontWeight: "600",

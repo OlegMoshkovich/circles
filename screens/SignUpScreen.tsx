@@ -6,6 +6,7 @@ import {
   View,
   StyleSheet,
   StatusBar,
+  ImageBackground,
 } from "react-native";
 import { useSignUp } from "@clerk/clerk-expo";
 import { log } from "../logger";
@@ -37,7 +38,11 @@ export default function SignUpScreen({
   const onSignInPress = () => navigation.replace("SignIn");
 
   return (
-    <View style={styles.container}>
+    <ImageBackground
+      source={require("../assets/Background.webp")}
+      style={styles.container}
+      resizeMode="cover"
+    >
       <StatusBar barStyle="dark-content" />
 
       <View style={styles.titleContainer}>
@@ -103,14 +108,13 @@ export default function SignUpScreen({
           <Text style={styles.signInText}>Sign In</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
     justifyContent: "flex-end",
     paddingBottom: 48,
   },
