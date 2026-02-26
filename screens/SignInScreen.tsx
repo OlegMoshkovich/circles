@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { log } from "../logger";
 import { RootStackScreenProps } from "../types";
 import { OAuthButtons } from "../components/OAuth";
+import { BlurView } from "expo-blur";
 import { colors } from "../src/theme/colors";
 
 export default function SignInScreen({
@@ -47,6 +48,7 @@ export default function SignInScreen({
       imageStyle={styles.backgroundImage}
       resizeMode="cover"
     >
+      <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill} />
       <StatusBar barStyle="dark-content" />
 
       <View style={styles.titleContainer}>
@@ -117,7 +119,7 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
   },
   backgroundImage: {
-    top: -250,
+    top: -200,
     left: -200
   },
   titleContainer: {
