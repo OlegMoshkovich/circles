@@ -44,7 +44,7 @@ export default function SignInScreen({
       <StatusBar barStyle="dark-content" />
 
       <View style={styles.titleContainer}>
-        <Text style={styles.titleText}>Welcome to{"\n"}Community Circles</Text>
+        <Text style={styles.titleText}>Welcome to ValMia</Text>
       </View>
 
       <View style={styles.formContainer}>
