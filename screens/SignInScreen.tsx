@@ -48,11 +48,16 @@ export default function SignInScreen({
       imageStyle={styles.backgroundImage}
       resizeMode="cover"
     >
-      <BlurView intensity={40} tint="light" style={StyleSheet.absoluteFill} />
+      <BlurView intensity={0} tint="light" style={StyleSheet.absoluteFill} />
       <StatusBar barStyle="dark-content" />
 
       <View style={styles.titleContainer}>
-        <Text style={styles.titleText}>Welcome to Val Mia</Text>
+        <Text style={styles.titleText}>Welcome to</Text>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <Text style={styles.titleText}>ValMia</Text>
+          <Text style={[styles.titleText, { color: 'red' }]}> La Punt</Text>
+  
+        </View>
       </View>
 
       <View style={styles.formContainer}>
@@ -119,7 +124,7 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
   },
   backgroundImage: {
-    top: -200,
+    top: -280,
     left: -200
   },
   titleContainer: {
