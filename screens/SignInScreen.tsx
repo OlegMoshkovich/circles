@@ -46,6 +46,7 @@ export default function SignInScreen({
       source={require("../assets/Background.webp")}
       style={styles.container}
       imageStyle={styles.backgroundImage}
+       
       resizeMode="cover"
     >
       <BlurView intensity={0} tint="light" style={StyleSheet.absoluteFill} />
