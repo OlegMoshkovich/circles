@@ -7,14 +7,12 @@ import { ClerkProvider } from "@clerk/clerk-expo";
 import { tokenCache } from "./cache";
 import * as SplashScreen from "expo-splash-screen";
 
+SplashScreen.preventAutoHideAsync();
+
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 
 export default function App() {
   const isLoadingComplete = useCachedResources();
-
-  React.useEffect(() => {
-    SplashScreen.preventAutoHideAsync();
-  }, []);
 
   if (!isLoadingComplete) {
     return null;
