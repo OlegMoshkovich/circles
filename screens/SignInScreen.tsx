@@ -56,7 +56,7 @@ export default function SignInScreen({
         <Text style={styles.titleText}>Welcome to</Text>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
         <Text style={styles.titleText}>ValMia</Text>
-          <Text style={[styles.titleText, { color: 'red' }]}> La Punt</Text>
+          <Text style={styles.titleText}> La Punt</Text>
   
         </View>
       </View>
@@ -68,7 +68,7 @@ export default function SignInScreen({
             value={emailAddress}
             style={styles.input}
             placeholder="Username/Email"
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor="rgba(239,237,225,0.55)"
             onChangeText={setEmailAddress}
           />
         </View>
@@ -78,7 +78,7 @@ export default function SignInScreen({
             value={password}
             style={styles.input}
             placeholder="Password"
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor="rgba(239,237,225,0.55)"
             secureTextEntry={true}
             onChangeText={setPassword}
           />
@@ -93,7 +93,7 @@ export default function SignInScreen({
           activeOpacity={0.7}
         >
           <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-            {rememberMe && <Ionicons name="checkmark" size={13} color="#fff" />}
+            {rememberMe && <Ionicons name="checkmark" size={13} color="#333" />}
           </View>
           <Text style={styles.rememberText}>Remember me</Text>
         </TouchableOpacity>
@@ -130,12 +130,12 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     paddingHorizontal: 32,
-    paddingBottom: 44,
+    paddingBottom: 30,
   },
   titleText: {
     fontSize: 36,
-    fontWeight: "700",
-    color: colors.text,
+    fontFamily: "Lora_400Regular",
+    color: '#efede1',
     lineHeight: 44,
   },
   formContainer: {
@@ -145,18 +145,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
+    borderBottomColor: "rgba(239,237,225,0.4)",
     marginBottom: 28,
     paddingBottom: 8,
   },
   input: {
     flex: 1,
-    color: colors.text,
+    color: "#efede1",
     fontSize: 16,
     height: 36,
   },
   forgotText: {
-    color: colors.textMuted,
+    color: "rgba(239,237,225,0.65)",
     fontSize: 14,
   },
   rememberRow: {
@@ -169,21 +169,21 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 4,
     borderWidth: 1.5,
-    borderColor: colors.cardBorder,
+    borderColor: "rgba(239,237,225,0.5)",
     marginRight: 10,
     alignItems: "center",
     justifyContent: "center",
   },
   checkboxChecked: {
-    backgroundColor: colors.text,
-    borderColor: colors.text,
+    backgroundColor: "#efede1",
+    borderColor: "#efede1",
   },
   rememberText: {
-    color: colors.text,
+    color: "#efede1",
     fontSize: 14,
   },
   oauthButton: {
-    backgroundColor: colors.text,
+    backgroundColor: '#646F3D',
     borderRadius: 50,
     height: 54,
     alignItems: "center",
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   primaryButton: {
-    backgroundColor: colors.card,
+    backgroundColor: '#efede1',
     borderRadius: 50,
     height: 54,
     alignItems: "center",
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   primaryButtonText: {
-    color: colors.text,
+    color: "#333",
     fontSize: 16,
     fontWeight: "600",
   },
@@ -216,11 +216,11 @@ const styles = StyleSheet.create({
     marginTop: 36,
   },
   footerText: {
-    color: colors.textMuted,
+    color: "rgba(239,237,225,0.65)",
     fontSize: 14,
   },
   signUpText: {
-    color: colors.text,
+    color: "#efede1",
     fontSize: 14,
     textDecorationLine: "underline",
     fontWeight: "600",
