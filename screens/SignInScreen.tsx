@@ -205,6 +205,7 @@ const styles = StyleSheet.create({
   rememberText: {
     color: "#efede1",
     fontSize: 14,
+    fontFamily: "Lora_400Regular",
   },
   oauthButton: {
     backgroundColor: '#646F3D',
@@ -217,7 +218,7 @@ const styles = StyleSheet.create({
   oauthButtonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "400",
   },
   primaryButton: {
     backgroundColor: '#efede1',
@@ -242,11 +243,12 @@ const styles = StyleSheet.create({
   footerText: {
     color: "rgba(239,237,225,0.65)",
     fontSize: 14,
+    fontFamily: "Lora_400Regular",
   },
   signUpText: {
     color: "#efede1",
     fontSize: 14,
+    fontFamily: "Lora_400Regular",
     textDecorationLine: "underline",
-    fontWeight: "600",
   },
 });
