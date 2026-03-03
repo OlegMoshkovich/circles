@@ -7,6 +7,7 @@ import {
   StyleSheet,
   StatusBar,
   ImageBackground,
+  Image,
 } from "react-native";
 import { useSignIn } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,6 +16,7 @@ import { RootStackScreenProps } from "../types";
 import { OAuthButtons } from "../components/OAuth";
 import { BlurView } from "expo-blur";
 import { colors } from "../src/theme/colors";
+import Svg, { Path } from "react-native-svg";
 
 export default function SignInScreen({
   navigation,
@@ -51,6 +53,23 @@ export default function SignInScreen({
     >
       <BlurView intensity={0} tint="light" style={StyleSheet.absoluteFill} />
       <StatusBar barStyle="dark-content" />
+
+      <View style={styles.logoContainer}>
+        <Svg width={26} height={40} viewBox="0 0 132 175" fill="none">
+          <Path
+            d="M128.5 3.0005L66.1263 112.457C65.7404 113.135 64.7625 113.13 64.3836 112.448L3.5 3.00048"
+            stroke="#efede1"
+            strokeWidth={6}
+            strokeLinecap="round"
+          />
+          <Path
+            d="M3 171.5V47.8296C3 46.7998 4.36875 46.4423 4.87231 47.3407L64.6312 153.95C65.0124 154.631 65.9906 154.632 66.3741 153.953L126.629 47.3112C127.135 46.4162 128.5 46.7751 128.5 47.8031V171.5"
+            stroke="#efede1"
+            strokeWidth={6}
+            strokeLinecap="round"
+          />
+        </Svg>
+      </View>
 
       <View style={styles.titleContainer}>
         <Text style={styles.titleText}>Welcome to</Text>
@@ -127,6 +146,11 @@ const styles = StyleSheet.create({
   backgroundImage: {
     top: -280,
     left: -200
+  },
+  logoContainer: {
+    alignItems: "center",
+    paddingHorizontal: 32,
+    paddingBottom: 120,
   },
   titleContainer: {
     paddingHorizontal: 32,
