@@ -25,7 +25,7 @@ export default function SignInScreen({
 
   const [emailAddress, setEmailAddress] = React.useState("");
   const [password, setPassword] = React.useState("");
-  const [rememberMe, setRememberMe] = React.useState(true);
+  const [rememberMe, setRememberMe] = React.useState(false);
 
   const onSignInPress = async () => {
     if (!isLoaded) return;
