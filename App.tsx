@@ -14,6 +14,12 @@ const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 export default function App() {
   const isLoadingComplete = useCachedResources();
 
+  React.useEffect(() => {
+    if (isLoadingComplete) {
+      SplashScreen.hideAsync();
+    }
+  }, [isLoadingComplete]);
+
   if (!isLoadingComplete) {
     return null;
   } else {
