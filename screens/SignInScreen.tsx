@@ -15,7 +15,6 @@ import { log } from "../logger";
 import { RootStackScreenProps } from "../types";
 import { OAuthButtons } from "../components/OAuth";
 import { BlurView } from "expo-blur";
-import { colors } from "../src/theme/colors";
 import Svg, { Path } from "react-native-svg";
 
 export default function SignInScreen({
@@ -123,7 +122,10 @@ export default function SignInScreen({
         />
 
         <TouchableOpacity style={styles.primaryButton} disabled>
-          <Text style={styles.primaryButtonText}>Log In</Text>
+          <BlurView intensity={28} tint="light" style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(255,255,255,0.15)" }]} />
+          <View style={[StyleSheet.absoluteFill, { borderRadius: 50, borderWidth: 1, borderColor: "rgba(255,255,255,0.35)" }]} />
+<Text style={styles.primaryButtonText}>Log In</Text>
         </TouchableOpacity>
       </View>
 
@@ -208,12 +210,12 @@ const styles = StyleSheet.create({
     fontFamily: "Lora_400Regular",
   },
   oauthButton: {
-    backgroundColor: '#646F3D',
     borderRadius: 50,
     height: 54,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
+    overflow: "hidden",
   },
   oauthButtonText: {
     color: "#fff",
@@ -221,17 +223,15 @@ const styles = StyleSheet.create({
     fontWeight: "400",
   },
   primaryButton: {
-    backgroundColor: '#efede1',
     borderRadius: 50,
     height: 54,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    opacity: 0.45,
+    overflow: "hidden",
+    opacity: 0.65,
   },
   primaryButtonText: {
-    color: "#333",
+    color: "#efede1",
     fontSize: 16,
     fontWeight: "600",
   },
