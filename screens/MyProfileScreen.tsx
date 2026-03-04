@@ -7,6 +7,7 @@ import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { colors } from "../src/theme/colors";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
+import { useLanguage, Language } from "../src/i18n/LanguageContext";
 
 async function handleSignOut(signOut: () => Promise<void>) {
   try {
@@ -14,9 +15,18 @@ async function handleSignOut(signOut: () => Promise<void>) {
   } catch (_) {}
 }
 
+const LANGUAGES: { code: Language; flag: string; label: string }[] = [
+
+  { code: "de", flag: "🇨🇭", label: "DE" },
+  { code: "fr", flag: "🇫🇷", label: "FR" },
+  { code: "it", flag: "🇮🇹", label: "IT" },
+  { code: "en", flag: "🇬🇧", label: "EN" },
+];
+
 export default function MyProfileScreen() {
   const { signOut } = useAuth();
   const { user } = useUser();
+  const { language, setLanguage, t } = useLanguage();
 
   const name =
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Member";
@@ -27,7 +37,7 @@ export default function MyProfileScreen() {
       .join("")
       .toUpperCase() || "M";
   const memberSince = user?.createdAt
-    ? new Date(user.createdAt).toLocaleDateString("en-US", {
+    ? new Date(user.createdAt).toLocaleDateString(t.locale, {
         month: "long",
         year: "numeric",
       })
@@ -37,40 +47,42 @@ export default function MyProfileScreen() {
     <ScreenLayout
       header={
         <NavbarTitle
-          title="Profile"
+          title={t.nav.profile}
           rightElement={
             <TouchableOpacity
               onPress={() => handleSignOut(signOut)}
               style={styles.iconButton}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <Ionicons name="log-out-outline" size={14} color={colors.card} />
+              <Ionicons name="log-out-outline" size={16} color={colors.card} />
             </TouchableOpacity>
           }
         />
       }
+      stickyTop={
+        <>
+          <View style={styles.avatarSection}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarInitials}>{initials}</Text>
+            </View>
+            <Text style={styles.name}>{name}</Text>
+            {email.length > 0 && <Text style={styles.email}>{email}</Text>}
+          </View>
+          <View style={styles.divider} />
+        </>
+      }
     >
-      {/* Avatar + name */}
-      <View style={styles.avatarSection}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarInitials}>{initials}</Text>
-        </View>
-        <Text style={styles.name}>{name}</Text>
-        {email.length > 0 && <Text style={styles.email}>{email}</Text>}
-      </View>
-
-      <View style={styles.divider} />
-
       {/* Account card */}
-      <Text style={styles.sectionLabel}>ACCOUNT</Text>
+      <View style={styles.scrollTopPad} />
+      <Text style={styles.sectionLabel}>{t.profile.account}</Text>
       <View style={styles.card}>
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Circle</Text>
-          <Text style={styles.rowValue}>Circles Collective</Text>
+          <Text style={styles.rowLabel}>{t.profile.circle}</Text>
+          <Text style={styles.rowValue}>{t.profile.circleValue}</Text>
         </View>
         <View style={styles.rowDivider} />
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Member since</Text>
+          <Text style={styles.rowLabel}>{t.profile.memberSince}</Text>
           <Text style={styles.rowValue}>{memberSince}</Text>
         </View>
       </View>
@@ -78,17 +90,40 @@ export default function MyProfileScreen() {
       <View style={styles.divider} />
 
       {/* Neighbourhood card */}
-      <Text style={styles.sectionLabel}>NEIGHBOURHOOD</Text>
+      <Text style={styles.sectionLabel}>{t.profile.neighbourhood}</Text>
       <View style={styles.card}>
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Location</Text>
-          <Text style={styles.rowValue}>Lakeside Quarter</Text>
+          <Text style={styles.rowLabel}>{t.profile.location}</Text>
+          <Text style={styles.rowValue}>{t.profile.locationValue}</Text>
         </View>
         <View style={styles.rowDivider} />
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Neighbours</Text>
-          <Text style={styles.rowValue}>24 members</Text>
+          <Text style={styles.rowLabel}>{t.profile.neighbours}</Text>
+          <Text style={styles.rowValue}>{t.profile.neighboursValue}</Text>
         </View>
+      </View>
+
+      <View style={styles.divider} />
+
+      {/* Language selector */}
+      <Text style={styles.sectionLabel}>{t.profile.language}</Text>
+      <View style={styles.flagRow}>
+        {LANGUAGES.map(({ code, flag, label }) => {
+          const selected = language === code;
+          return (
+            <TouchableOpacity
+              key={code}
+              onPress={() => setLanguage(code)}
+              style={[styles.flagButton, selected && styles.flagButtonSelected]}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.flagEmoji}>{flag}</Text>
+              <Text style={[styles.flagLabel, selected && styles.flagLabelSelected]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
     </ScreenLayout>
@@ -98,7 +133,7 @@ export default function MyProfileScreen() {
 const styles = StyleSheet.create({
   avatarSection: {
     alignItems: "center",
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.sm,
   },
   avatar: {
     width: 72,
@@ -107,24 +142,28 @@ const styles = StyleSheet.create({
     backgroundColor: colors.badgeBg,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
   avatarInitials: {
     fontSize: 24,
-    fontWeight: "500" as const,
+    fontFamily: "Lora_400Regular",
     color: colors.text,
   },
   name: {
     fontSize: 20,
-    fontWeight: "500" as const,
+    fontWeight: "400" as const,
+    fontFamily: "Lora_400Regular",
     color: colors.text,
     marginBottom: spacing.xs,
   },
   email: {
     ...typography.bodySmall,
     color: colors.textMuted,
+  },
+  scrollTopPad: {
+    height: spacing.lg,
   },
   divider: {
     height: 1,
@@ -176,11 +215,41 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   iconButton: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: colors.text,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: colors.iconbBg,
     alignItems: "center",
     justifyContent: "center",
+  },
+  flagRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  flagButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: .4,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.card,
+  },
+  flagButtonSelected: {
+    borderColor: colors.text,
+    // backgroundColor: colors.badgeBg,
+  },
+  flagEmoji: {
+    fontSize: 20,
+  },
+  flagLabel: {
+    fontSize: 13,
+    fontWeight: "500" as const,
+    color: colors.textMuted,
+  },
+  flagLabelSelected: {
+    color: colors.text,
   },
 });

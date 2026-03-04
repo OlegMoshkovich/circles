@@ -8,12 +8,12 @@ export const typography = {
   },
   sectionLabel: {
     fontSize: 12,
-    fontWeight: "600" as const,
+    fontWeight: "400" as const,
     letterSpacing: 0.8,
   },
   cardTitle: {
     fontSize: 11,
-    fontWeight: "600" as const,
+    fontWeight: "400" as const,
     letterSpacing: 0.6,
   },
   body: {
@@ -28,12 +28,12 @@ export const typography = {
   },
   subtitle: {
     fontSize: 15,
-    fontWeight: "400" as const,
+    fontWeight: "300" as const,
     lineHeight: 22,
   },
   suggestionTitle: {
     fontSize: 16,
-    fontWeight: "600" as const,
+    fontWeight: "400" as const,
   },
   meta: {
     fontSize: 13,
@@ -42,6 +42,6 @@ export const typography = {
   note: {
     fontSize: 13,
     fontWeight: "400" as const,
-    fontStyle: "italic" as const,
+    // fontStyle: "italic" as const,
   },
 } as const;

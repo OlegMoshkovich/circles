@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 type EventCardProps = {
   title: string;
@@ -28,6 +29,7 @@ export function EventCard({
   rsvp,
   onPress,
 }: EventCardProps) {
+  const { t } = useLanguage();
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
       <View style={styles.header}>
@@ -35,13 +37,13 @@ export function EventCard({
         {rsvp != null && (
           <View style={[styles.badge, rsvp === "going" ? styles.badgeGoing : styles.badgeMaybe]}>
             <Text style={[styles.badgeText, rsvp === "going" ? styles.badgeTextGoing : styles.badgeTextMaybe]}>
-              {rsvp === "going" ? "GOING" : "MAYBE"}
+              {rsvp === "going" ? t.events.badgeGoing : t.events.badgeMaybe}
             </Text>
           </View>
         )}
       </View>
 
-      <Text style={styles.organizer}>by {organizer}</Text>
+      <Text style={styles.organizer}>{t.events.by} {organizer}</Text>
 
       <View style={styles.metaRow}>
         <Ionicons name="calendar-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
@@ -58,10 +60,10 @@ export function EventCard({
       <View style={styles.footer}>
         <Text style={styles.footerText}>
           <Text style={styles.footerCount}>{going}</Text>
-          <Text style={styles.footerLabel}> going</Text>
+          <Text style={styles.footerLabel}> {t.events.goingLabel}</Text>
           {"   "}
           <Text style={styles.footerCount}>{maybe}</Text>
-          <Text style={styles.footerLabel}> maybe</Text>
+          <Text style={styles.footerLabel}> {t.events.maybeLabel}</Text>
         </Text>
         <Ionicons name="chatbubble-outline" size={16} color={colors.textMuted} />
       </View>
@@ -95,8 +97,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   title: {
-    fontSize: 18,
-    fontWeight: "500" as const,
+    fontSize: 16,
+    fontWeight: "400" as const,
     color: colors.text,
     flex: 1,
     marginRight: spacing.sm,
@@ -107,7 +109,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   badgeGoing: {
-    backgroundColor: colors.text,
+    backgroundColor: colors.iconbBg,
   },
   badgeMaybe: {
     backgroundColor: colors.badgeBg,

@@ -9,60 +9,25 @@ import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { TextBlock } from "../src/components/blocks/TextBlock";
 import { EventCard } from "../src/components/cards/EventCard";
 import { colors } from "../src/theme/colors";
-import { spacing } from "../src/theme/spacing";
+import { useLanguage } from "../src/i18n/LanguageContext";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-const EVENTS = [
-  {
-    title: "Morning Lake Swim",
-    organizer: "Sophie Martin",
-    date: "Dec 18",
-    time: "7:00 AM",
-    location: "Lake",
-    going: 5,
-    maybe: 2,
-    rsvp: "going" as const,
-    description:
-      "A refreshing early morning swim at the lake. All levels welcome—bring a towel and good energy.",
-  },
-  {
-    title: "Afternoon Coffee",
-    organizer: "Lucas Weber",
-    date: "Dec 19",
-    time: "3:00 PM",
-    location: "Common Room",
-    going: 4,
-    maybe: 1,
-    rsvp: undefined,
-    description:
-      "An informal drop-in coffee hour in the common room. Come for a chat or bring something to work on.",
-  },
-  {
-    title: "Weekend Garden Work",
-    organizer: "Emma Schneider",
-    date: "Dec 21",
-    time: "10:00 AM",
-    location: "Rooftop Garden",
-    going: 6,
-    maybe: 3,
-    rsvp: "maybe" as const,
-    description:
-      "Let's prepare the garden beds for spring. All skill levels welcome.",
-  },
+const STATIC_EVENTS = [
+  { organizer: "Sophie Martin", date: "Dec 18", time: "7:00 AM",  location: "Lake",           going: 5, maybe: 2, rsvp: "going" as const },
+  { organizer: "Lucas Weber",   date: "Dec 19", time: "3:00 PM",  location: "Common Room",    going: 4, maybe: 1, rsvp: undefined },
+  { organizer: "Emma Schneider",date: "Dec 21", time: "10:00 AM", location: "Rooftop Garden", going: 6, maybe: 3, rsvp: "maybe" as const },
 ];
-
-const EVENTS_SUBTITLE =
-  "Gentle opportunities for connection—\nsmall, meaningful gatherings";
 
 export default function EventsScreen() {
   const navigation = useNavigation<Nav>();
+  const { t } = useLanguage();
 
   return (
     <ScreenLayout
       header={
         <NavbarTitle
-          title="Events"
+          title={t.nav.events}
           rightElement={
             <TouchableOpacity
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -74,43 +39,46 @@ export default function EventsScreen() {
         />
       }
     >
-      <TextBlock subtitle={EVENTS_SUBTITLE} />
-      {EVENTS.map((event, i) => (
-        <EventCard
-          key={i}
-          title={event.title}
-          organizer={event.organizer}
-          date={event.date}
-          time={event.time}
-          location={event.location}
-          going={event.going}
-          maybe={event.maybe}
-          rsvp={event.rsvp}
-          onPress={() =>
-            navigation.navigate("EventDetail", {
-              title: event.title,
-              organizer: event.organizer,
-              date: event.date,
-              time: event.time,
-              location: event.location,
-              going: event.going,
-              maybe: event.maybe,
-              rsvp: event.rsvp,
-              description: event.description,
-            })
-          }
-        />
-      ))}
+      <TextBlock subtitle={t.events.subtitle} />
+      {t.events.items.map((item, i) => {
+        const s = STATIC_EVENTS[i];
+        return (
+          <EventCard
+            key={i}
+            title={item.title}
+            organizer={s.organizer}
+            date={s.date}
+            time={s.time}
+            location={s.location}
+            going={s.going}
+            maybe={s.maybe}
+            rsvp={s.rsvp}
+            onPress={() =>
+              navigation.navigate("EventDetail", {
+                title: item.title,
+                organizer: s.organizer,
+                date: s.date,
+                time: s.time,
+                location: s.location,
+                going: s.going,
+                maybe: s.maybe,
+                rsvp: s.rsvp,
+                description: item.description,
+              })
+            }
+          />
+        );
+      })}
     </ScreenLayout>
   );
 }
 
 const styles = StyleSheet.create({
   addButton: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: colors.text,
+    width: 30,
+    height: 30,
+    borderRadius: 30,
+    backgroundColor: colors.iconbBg,
     alignItems: "center",
     justifyContent: "center",
   },
