@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState } from "react";
 import { translations, Translations } from "./translations";
 
-export type Language = "en" | "de";
+export type Language = "en" | "de" | "fr" | "it";
 
 type LanguageContextType = {
   language: Language;

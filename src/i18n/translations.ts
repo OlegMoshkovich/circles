@@ -148,4 +148,152 @@ export const de: Translations = {
   },
 };
 
-export const translations = { en, de };
+export const fr: Translations = {
+  locale: "fr-CH",
+  nav: {
+    villageLiving: "Vie de Village",
+    events: "Événements",
+    profile: "Profil",
+  },
+  home: {
+    subtitle: "Essentiels curatés et rythmes saisonniers –\nvivre avec le lac et la forêt au quotidien.",
+    today: "AUJOURD'HUI",
+    todayItems: [
+      { icon: "thermometer-outline", label: "4°C, ciel dégagé" },
+      { icon: "navigate-outline", label: "Légère brise de l'est" },
+      { icon: "time-outline", label: "Lever 07:42 · Coucher 16:52" },
+    ],
+    todayNote: "Belle matinée pour une promenade au bord du lac avant le marché.",
+    seasonalPrompts: "SUGGESTIONS SAISONNIÈRES",
+    suggestions: [
+      {
+        title: "Promenade Hivernale au Lac",
+        badge: "ROUTE",
+        description: "Un chemin tranquille le long du rivage gelé. Idéal à l'aube quand la brume s'élève sur l'eau.",
+        quote: "Parfait pour les promenades matinales. Admirer le lever du soleil depuis le quai.",
+      },
+      {
+        title: "Première Lumière en Lisière",
+        badge: "MOMENT",
+        description: "La clairière près du chênaie capte parfaitement le soleil matinal en hiver.",
+        quote: "La lumière ici en hiver est incomparable. Arriver avant 7h30.",
+      },
+      {
+        title: "Salon de Thé Caché",
+        badge: "DÉCOUVERTE",
+        description: "Une halte chaleureuse sur le chemin du retour. Ouvert dès 9h le week-end.",
+        quote: "Le secret le mieux gardé du quartier. Le thé à la cardamome est merveilleux.",
+      },
+    ],
+  },
+  events: {
+    subtitle: "De douces occasions de rencontre –\nde petits rassemblements porteurs de sens",
+    badgeGoing: "PRÉSENT",
+    badgeMaybe: "PEUT-ÊTRE",
+    by: "par",
+    goingLabel: "présents",
+    maybeLabel: "peut-être",
+    items: [
+      {
+        title: "Baignade Matinale au Lac",
+        description: "Une baignade rafraîchissante en début de matinée. Tous niveaux bienvenus – apportez une serviette et de la bonne humeur.",
+      },
+      {
+        title: "Café de l'Après-midi",
+        description: "Une heure de café informelle dans la salle commune. Venez discuter ou apportez de quoi travailler.",
+      },
+      {
+        title: "Jardinage du Week-end",
+        description: "Préparons les parterres pour le printemps. Tous niveaux bienvenus.",
+      },
+    ],
+  },
+  profile: {
+    account: "COMPTE",
+    circle: "Cercle",
+    circleValue: "Collectif Cercles",
+    memberSince: "Membre depuis",
+    neighbourhood: "QUARTIER",
+    location: "Lieu",
+    locationValue: "Quartier du Lac",
+    neighbours: "Voisins",
+    neighboursValue: "24 membres",
+    language: "LANGUE",
+  },
+};
+
+export const it: Translations = {
+  locale: "it-CH",
+  nav: {
+    villageLiving: "Vita del Villaggio",
+    events: "Eventi",
+    profile: "Profilo",
+  },
+  home: {
+    subtitle: "Essenziali curati e ritmi stagionali –\nvivere con il lago e la foresta come parte della vita quotidiana.",
+    today: "OGGI",
+    todayItems: [
+      { icon: "thermometer-outline", label: "4°C, cielo sereno" },
+      { icon: "navigate-outline", label: "Leggera brezza da est" },
+      { icon: "time-outline", label: "Alba 07:42 · Tramonto 16:52" },
+    ],
+    todayNote: "Mattinata perfetta per una passeggiata al lago prima del mercato.",
+    seasonalPrompts: "SUGGERIMENTI STAGIONALI",
+    suggestions: [
+      {
+        title: "Passeggiata Invernale al Lago",
+        badge: "PERCORSO",
+        description: "Un sentiero tranquillo lungo la riva ghiacciata. Meglio all'alba quando la nebbia sale dall'acqua.",
+        quote: "Perfetto per le passeggiate mattutine. Ammirare l'alba dal molo.",
+      },
+      {
+        title: "Prima Luce al Margine del Bosco",
+        badge: "MOMENTO",
+        description: "La radura vicino al querceto cattura perfettamente il sole mattutino d'inverno.",
+        quote: "La luce qui in inverno è unica. Arrivare prima delle 7:30.",
+      },
+      {
+        title: "Casa da Tè Nascosta",
+        badge: "SCOPERTA",
+        description: "Una sosta accogliente sulla via del ritorno. Aperta dalle 9 nei fine settimana.",
+        quote: "Il segreto meglio custodito del quartiere. Il tè al cardamomo è meraviglioso.",
+      },
+    ],
+  },
+  events: {
+    subtitle: "Dolci occasioni di connessione –\npiccoli incontri ricchi di significato",
+    badgeGoing: "PRESENTE",
+    badgeMaybe: "FORSE",
+    by: "di",
+    goingLabel: "presenti",
+    maybeLabel: "forse",
+    items: [
+      {
+        title: "Nuotata Mattutina al Lago",
+        description: "Una nuotata rinfrescante al lago nelle prime ore del mattino. Tutti i livelli benvenuti – portate un asciugamano e buona energia.",
+      },
+      {
+        title: "Caffè del Pomeriggio",
+        description: "Un'ora informale di caffè nella sala comune. Venite a chiacchierare o portate qualcosa su cui lavorare.",
+      },
+      {
+        title: "Lavori in Giardino nel Week-end",
+        description: "Prepariamo le aiuole per la primavera. Tutti i livelli di esperienza benvenuti.",
+      },
+    ],
+  },
+  profile: {
+    account: "ACCOUNT",
+    circle: "Cerchio",
+    circleValue: "Collettivo Cerchi",
+    memberSince: "Membro dal",
+    neighbourhood: "QUARTIERE",
+    location: "Luogo",
+    locationValue: "Quartiere del Lago",
+    neighbours: "Vicini",
+    neighboursValue: "24 membri",
+    language: "LINGUA",
+  },
+};
+
+export const translations = { en, de, fr, it };

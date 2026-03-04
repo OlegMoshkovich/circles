@@ -16,7 +16,10 @@ async function handleSignOut(signOut: () => Promise<void>) {
 }
 
 const LANGUAGES: { code: Language; flag: string; label: string }[] = [
+
   { code: "de", flag: "🇨🇭", label: "DE" },
+  { code: "fr", flag: "🇫🇷", label: "FR" },
+  { code: "it", flag: "🇮🇹", label: "IT" },
   { code: "en", flag: "🇬🇧", label: "EN" },
 ];
 
