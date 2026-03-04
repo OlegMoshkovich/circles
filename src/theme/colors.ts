@@ -6,6 +6,7 @@ export const colors = {
   card: "#FDFBF7",
   cardBorder: "#E8E4DD",
   text: "#2C2A26",
+  iconbBg: "#5A4A3A",
   textMuted: "#6B6560",
   badgeBg: "#E5E2DC",
   divider: "#E8E4DD",

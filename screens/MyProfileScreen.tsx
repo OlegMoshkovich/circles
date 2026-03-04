@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: colors.text,
+    backgroundColor: colors.iconbBg,
     alignItems: "center",
     justifyContent: "center",
   },

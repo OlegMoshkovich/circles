@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   badgeGoing: {
-    backgroundColor: colors.text,
+    backgroundColor: colors.iconbBg,
   },
   badgeMaybe: {
     backgroundColor: colors.badgeBg,
