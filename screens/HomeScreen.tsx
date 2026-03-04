@@ -19,9 +19,9 @@ const INTRO_SUBTITLE =
   "Curated essentials and seasonal rhythms \nliving with the lake and forest as part of daily life.";
 
 const TODAY_ITEMS = [
-  { label: "4°C, clear skies" },
-  { label: "Light breeze from the east" },
-  { label: "Sunrise 7:42 AM · Sunset 4:52 PM" },
+  { icon: "thermometer-outline", label: "4°C, clear skies" },
+  { icon: "navigate-outline", label: "Light breeze from the east" },
+  { icon: "time-outline", label: "Sunrise 7:42 AM · Sunset 4:52 PM" },
 ];
 
 const TODAY_NOTE =
@@ -79,6 +79,7 @@ export default function HomeScreen() {
       <TextBlock subtitle={INTRO_SUBTITLE} />
       <InfoCard
         title="TODAY"
+        titleIcon="partly-sunny-outline"
         items={TODAY_ITEMS}
         note={TODAY_NOTE}
       />

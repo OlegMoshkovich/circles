@@ -1,5 +1,6 @@
 import React from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
@@ -11,17 +12,29 @@ export type InfoCardItem = {
 
 type InfoCardProps = {
   title: string;
+  titleIcon?: string;
   items: InfoCardItem[];
   note?: string;
 };
 
-export function InfoCard({ title, items, note }: InfoCardProps) {
+export function InfoCard({ title, titleIcon, items, note }: InfoCardProps) {
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>{title}</Text>
+      <View style={styles.titleRow}>
+        {titleIcon != null && (
+          <Ionicons name={titleIcon as any} size={14} color={colors.textMuted} style={styles.titleIcon} />
+        )}
+        <Text style={styles.title}>{title}</Text>
+      </View>
       {items.map((item, index) => (
         <View key={index} style={styles.row}>
-          <View style={styles.iconPlaceholder} />
+          <View style={styles.iconWrap}>
+            {item.icon != null ? (
+              <Ionicons name={item.icon as any} size={18} color={colors.textMuted} />
+            ) : (
+              <View style={styles.iconPlaceholder} />
+            )}
+          </View>
           <Text style={styles.label}>{item.label}</Text>
         </View>
       ))}
@@ -54,10 +67,17 @@ const styles = StyleSheet.create({
       default: {},
     }),
   },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.md,
+  },
+  titleIcon: {
+    marginRight: 6,
+  },
   title: {
     ...typography.cardTitle,
     color: colors.textMuted,
-    marginBottom: spacing.md,
     textTransform: "uppercase",
   },
   row: {
@@ -65,16 +85,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: spacing.sm,
   },
-  iconPlaceholder: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: colors.textMuted,
-    opacity: 0.35,
+  iconWrap: {
+    width: 26,
+    alignItems: "center",
     marginRight: spacing.sm,
   },
+  iconPlaceholder: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.textMuted,
+    opacity: 0.35,
+  },
   label: {
-    ...typography.bodySmall,
+    ...typography.body,
     color: colors.text,
     flex: 1,
   },
