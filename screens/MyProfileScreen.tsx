@@ -44,7 +44,7 @@ export default function MyProfileScreen() {
               style={styles.iconButton}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <Ionicons name="log-out-outline" size={14} color={colors.card} />
+              <Ionicons name="log-out-outline" size={16} color={colors.card} />
             </TouchableOpacity>
           }
         />
@@ -118,7 +118,7 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 20,
-    fontWeight: "500" as const,
+    fontWeight: "400" as const,
     color: colors.text,
     marginBottom: spacing.xs,
   },
@@ -176,9 +176,9 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   iconButton: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: colors.text,
     alignItems: "center",
     justifyContent: "center",

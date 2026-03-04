@@ -53,7 +53,7 @@ const EVENTS = [
 ];
 
 const EVENTS_SUBTITLE =
-  "Gentle opportunities for connection—\nsmall, meaningful gatherings";
+  "Gentle opportunities for connection \nsmall, meaningful gatherings";
 
 export default function EventsScreen() {
   const navigation = useNavigation<Nav>();
@@ -107,9 +107,9 @@ export default function EventsScreen() {
 
 const styles = StyleSheet.create({
   addButton: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 30,
+    height: 30,
+    borderRadius: 30,
     backgroundColor: colors.text,
     alignItems: "center",
     justifyContent: "center",

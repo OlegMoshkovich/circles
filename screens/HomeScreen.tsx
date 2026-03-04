@@ -16,7 +16,7 @@ import { typography } from "../src/theme/typography";
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const INTRO_SUBTITLE =
-  "Curated essentials and seasonal rhythms—\nliving with the lake and forest as part of daily life.";
+  "Curated essentials and seasonal rhythms \nliving with the lake and forest as part of daily life.";
 
 const TODAY_ITEMS = [
   { label: "4°C, clear skies" },
@@ -67,7 +67,7 @@ export default function HomeScreen() {
     <ScreenLayout
       header={
         <NavbarTitle
-          title="Local Living"
+          title="Village Living"
           rightElement={
             <TouchableOpacity style={styles.iconButton} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <Ionicons name="add" size={16} color={colors.card} />
@@ -115,9 +115,9 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   iconButton: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: colors.text,
     alignItems: "center",
     justifyContent: "center",

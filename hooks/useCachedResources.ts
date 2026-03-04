@@ -2,6 +2,7 @@ import { FontAwesome } from "@expo/vector-icons";
 import * as Font from "expo-font";
 import * as React from "react";
 import { Lora_400Regular, Lora_700Bold } from "@expo-google-fonts/lora";
+import { CormorantGaramond_300Light } from "@expo-google-fonts/cormorant-garamond";
 
 export default function useCachedResources() {
   const [isLoadingComplete, setLoadingComplete] = React.useState(false);
@@ -16,6 +17,7 @@ export default function useCachedResources() {
           "space-mono": require("../assets/fonts/SpaceMono-Regular.ttf"),
           Lora_400Regular,
           Lora_700Bold,
+          CormorantGaramond_300Light,
         });
       } catch (e) {
         // We might want to provide this error information to an error reporting service

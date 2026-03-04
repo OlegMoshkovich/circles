@@ -95,8 +95,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   title: {
-    fontSize: 18,
-    fontWeight: "500" as const,
+    fontSize: 16,
+    fontWeight: "400" as const,
     color: colors.text,
     flex: 1,
     marginRight: spacing.sm,
