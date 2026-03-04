@@ -7,6 +7,8 @@ import { colors } from "../src/theme/colors";
 import { BlurView } from "expo-blur";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLanguage, Language } from "../src/i18n/LanguageContext";
+import { Translations } from "../src/i18n/translations";
 
 const Tab = createBottomTabNavigator();
 
@@ -23,13 +25,14 @@ function GlassBackground() {
   );
 }
 
-function makeTabButton(label: string) {
+function makeTabButton(getLabel: (t: Translations) => string) {
   return function TabButton({ onPress, accessibilityState }: any) {
+    const { t } = useLanguage();
     const focused = accessibilityState?.selected;
     return (
       <TouchableOpacity onPress={onPress} style={styles.tabButton} activeOpacity={0.7}>
         <Text style={[styles.labelText, { color: focused ? colors.text : colors.textMuted }]}>
-          {label}
+          {getLabel(t)}
         </Text>
       </TouchableOpacity>
     );
@@ -67,21 +70,21 @@ export default function TabNavigator() {
         name="LocalLiving"
         component={HomeScreen}
         options={{
-          tabBarButton: makeTabButton("Village Living"),
+          tabBarButton: makeTabButton((t) => t.nav.villageLiving),
         }}
       />
       <Tab.Screen
         name="Events"
         component={EventsScreen}
         options={{
-          tabBarButton: makeTabButton("Events"),
+          tabBarButton: makeTabButton((t) => t.nav.events),
         }}
       />
       <Tab.Screen
         name="Profile"
         component={MyProfileScreen}
         options={{
-          tabBarButton: makeTabButton("Profile"),
+          tabBarButton: makeTabButton((t) => t.nav.profile),
         }}
       />
     </Tab.Navigator>

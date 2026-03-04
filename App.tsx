@@ -6,6 +6,7 @@ import Navigation from "./navigation";
 import { ClerkProvider } from "@clerk/clerk-expo";
 import { tokenCache } from "./cache";
 import * as SplashScreen from "expo-splash-screen";
+import { LanguageProvider } from "./src/i18n/LanguageContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -24,12 +25,14 @@ export default function App() {
     return null;
   } else {
     return (
-      <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-        <SafeAreaProvider>
-          <Navigation />
-          <StatusBar />
-        </SafeAreaProvider>
-      </ClerkProvider>
+      <LanguageProvider>
+        <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+          <SafeAreaProvider>
+            <Navigation />
+            <StatusBar />
+          </SafeAreaProvider>
+        </ClerkProvider>
+      </LanguageProvider>
     );
   }
 }

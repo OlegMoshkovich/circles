@@ -12,62 +12,25 @@ import { SuggestionCard } from "../src/components/cards/SuggestionCard";
 import { colors } from "../src/theme/colors";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
+import { useLanguage } from "../src/i18n/LanguageContext";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-const INTRO_SUBTITLE =
-  "Curated essentials and seasonal rhythms \nliving with the lake and forest as part of daily life.";
-
-const TODAY_ITEMS = [
-  { icon: "thermometer-outline", label: "4°C, clear skies" },
-  { icon: "navigate-outline", label: "Light breeze from the east" },
-  { icon: "time-outline", label: "Sunrise 7:42 AM · Sunset 4:52 PM" },
-];
-
-const TODAY_NOTE =
-  "Perfect morning for a lake walk before the market opens.";
-
-const SUGGESTIONS = [
-  {
-    title: "Winter Morning Lake Walk",
-    metaLeft: "25 min",
-    metaRight: "7:00 - 8:30 AM",
-    badge: "ROUTE",
-    description:
-      "A quiet path along the frozen shore. Best in early light when mist rises from the water.",
-    quote: "Perfect for morning walks. Watch the sunrise from the dock.",
-    attribution: "Oliver M.",
-  },
-  {
-    title: "First Light at the Forest Edge",
-    metaLeft: "7:15 AM",
-    metaRight: undefined,
-    badge: "MOMENT",
-    description:
-      "The clearing near the oak grove catches the morning sun perfectly in winter.",
-    quote: "The light here in winter is unlike anything else. Arrive before 7:30.",
-    attribution: "Sarah K.",
-  },
-  {
-    title: "Hidden Tea House",
-    metaLeft: undefined,
-    metaRight: undefined,
-    badge: "DISCOVERY",
-    description:
-      "A cozy stop on the way back. Open from 9 AM on weekends.",
-    quote: "The best kept secret in the neighbourhood. The cardamom tea is wonderful.",
-    attribution: "Marcus L.",
-  },
+const STATIC_SUGGESTIONS = [
+  { metaLeft: "25 min", metaRight: "7:00 - 8:30 AM", attribution: "Oliver M." },
+  { metaLeft: "7:15 AM", metaRight: undefined,        attribution: "Sarah K." },
+  { metaLeft: undefined, metaRight: undefined,         attribution: "Marcus L." },
 ];
 
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
+  const { t } = useLanguage();
 
   return (
     <ScreenLayout
       header={
         <NavbarTitle
-          title="Village Living"
+          title={t.nav.villageLiving}
           rightElement={
             <TouchableOpacity style={styles.iconButton} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <Ionicons name="add" size={16} color={colors.card} />
@@ -76,25 +39,26 @@ export default function HomeScreen() {
         />
       }
     >
-      <TextBlock subtitle={INTRO_SUBTITLE} />
+      <TextBlock subtitle={t.home.subtitle} />
       <InfoCard
-        title="TODAY"
+        title={t.home.today}
         titleIcon="partly-sunny-outline"
-        items={TODAY_ITEMS}
-        note={TODAY_NOTE}
+        items={t.home.todayItems}
+        note={t.home.todayNote}
       />
-      <Text style={styles.sectionLabel}>SEASONAL PROMPTS</Text>
-      {SUGGESTIONS.map((s, i) => {
-        const meta = s.metaLeft && s.metaRight
-          ? `${s.metaLeft} · ${s.metaRight}`
-          : s.metaLeft ?? s.metaRight ?? "";
+      <Text style={styles.sectionLabel}>{t.home.seasonalPrompts}</Text>
+      {t.home.suggestions.map((s, i) => {
+        const { metaLeft, metaRight, attribution } = STATIC_SUGGESTIONS[i];
+        const meta = metaLeft && metaRight
+          ? `${metaLeft} · ${metaRight}`
+          : metaLeft ?? metaRight ?? "";
 
         return (
           <SuggestionCard
             key={i}
             title={s.title}
-            metaLeft={s.metaLeft}
-            metaRight={s.metaRight}
+            metaLeft={metaLeft}
+            metaRight={metaRight}
             badge={s.badge}
             description={s.description}
             onPress={() =>
@@ -104,7 +68,7 @@ export default function HomeScreen() {
                 meta,
                 description: s.description,
                 quote: s.quote,
-                attribution: s.attribution,
+                attribution,
               })
             }
           />
