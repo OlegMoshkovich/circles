@@ -8,12 +8,13 @@ import { spacing } from "../../theme/spacing";
 type ScreenLayoutProps = {
   header: React.ReactNode;
   children: React.ReactNode;
+  stickyTop?: React.ReactNode;
   contentStyle?: ViewStyle;
   backgroundImage?: ImageSourcePropType;
   backgroundBlurIntensity?: number;
 };
 
-export function ScreenLayout({ header, children, contentStyle, backgroundImage, backgroundBlurIntensity = 40 }: ScreenLayoutProps) {
+export function ScreenLayout({ header, children, stickyTop, contentStyle, backgroundImage, backgroundBlurIntensity = 40 }: ScreenLayoutProps) {
   const insets = useSafeAreaInsets();
 
   const inner = (
@@ -29,6 +30,7 @@ export function ScreenLayout({ header, children, contentStyle, backgroundImage, 
       ]}
     >
       <View style={[styles.headerArea, !backgroundImage && { backgroundColor: colors.background }]}>{header}</View>
+      {stickyTop != null && <View>{stickyTop}</View>}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 80 }, contentStyle]}

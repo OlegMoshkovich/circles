@@ -59,19 +59,21 @@ export default function MyProfileScreen() {
           }
         />
       }
+      stickyTop={
+        <>
+          <View style={styles.avatarSection}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarInitials}>{initials}</Text>
+            </View>
+            <Text style={styles.name}>{name}</Text>
+            {email.length > 0 && <Text style={styles.email}>{email}</Text>}
+          </View>
+          <View style={styles.divider} />
+        </>
+      }
     >
-      {/* Avatar + name */}
-      <View style={styles.avatarSection}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarInitials}>{initials}</Text>
-        </View>
-        <Text style={styles.name}>{name}</Text>
-        {email.length > 0 && <Text style={styles.email}>{email}</Text>}
-      </View>
-
-      <View style={styles.divider} />
-
       {/* Account card */}
+      <View style={styles.scrollTopPad} />
       <Text style={styles.sectionLabel}>{t.profile.account}</Text>
       <View style={styles.card}>
         <View style={styles.row}>
@@ -131,7 +133,7 @@ export default function MyProfileScreen() {
 const styles = StyleSheet.create({
   avatarSection: {
     alignItems: "center",
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
   },
   avatar: {
     width: 72,
@@ -140,7 +142,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.badgeBg,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
@@ -159,6 +161,9 @@ const styles = StyleSheet.create({
   email: {
     ...typography.bodySmall,
     color: colors.textMuted,
+  },
+  scrollTopPad: {
+    height: spacing.lg,
   },
   divider: {
     height: 1,
