@@ -113,12 +113,13 @@ const styles = StyleSheet.create({
   },
   avatarInitials: {
     fontSize: 24,
-    fontWeight: "500" as const,
+    fontFamily: "Lora_400Regular",
     color: colors.text,
   },
   name: {
     fontSize: 20,
     fontWeight: "400" as const,
+    fontFamily: "Lora_400Regular",
     color: colors.text,
     marginBottom: spacing.xs,
   },
