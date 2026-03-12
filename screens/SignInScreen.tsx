@@ -74,7 +74,7 @@ export default function SignInScreen({
         <Text style={styles.titleText}>Welcome to</Text>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
         <Text style={styles.titleText}>ValMia</Text>
-          <Text style={styles.titleText}> La Punt</Text>
+          {/* <Text style={styles.titleText}> La Punt</Text> */}
   
         </View>
       </View>

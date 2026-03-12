@@ -48,15 +48,15 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         <View style={styles.divider} />
 
         <View style={styles.metaRow}>
-          <Ionicons name="calendar-outline" size={16} color={colors.textMuted} style={styles.metaIcon} />
+          <Ionicons name="calendar-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
           <Text style={styles.metaText}>{date}</Text>
         </View>
         <View style={styles.metaRow}>
-          <Ionicons name="time-outline" size={16} color={colors.textMuted} style={styles.metaIcon} />
+          <Ionicons name="time-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
           <Text style={styles.metaText}>{time}</Text>
         </View>
         <View style={styles.metaRow}>
-          <Ionicons name="location-outline" size={16} color={colors.textMuted} style={styles.metaIcon} />
+          <Ionicons name="location-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
           <Text style={styles.metaText}>{location}</Text>
         </View>
 
@@ -68,7 +68,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
 
         {/* Attendees */}
         <View style={styles.attendeesHeader}>
-          <Ionicons name="people-outline" size={16} color={colors.textMuted} style={styles.metaIcon} />
+          <Ionicons name="people-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
           <Text style={styles.sectionLabel}>ATTENDEES</Text>
         </View>
         <View style={styles.attendeesRow}>
@@ -163,10 +163,10 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "500" as const,
+    fontSize: 32,
+    fontFamily: "CormorantGaramond_300Light",
     color: colors.text,
-    lineHeight: 34,
+    lineHeight: 38,
     marginBottom: spacing.sm,
   },
   organizer: {
