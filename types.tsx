@@ -7,6 +7,7 @@ declare global {
 }
 
 export type EventDetailParams = {
+  id: string;
   title: string;
   organizer: string;
   date: string;
