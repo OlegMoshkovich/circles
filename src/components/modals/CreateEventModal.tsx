@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     height: 54,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 100,
+    marginTop: 20,
     marginBottom: 8,
   },
   saveButtonDisabled: {
