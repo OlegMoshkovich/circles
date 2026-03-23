@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Platform,
   ScrollView,
@@ -10,18 +10,119 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useUser } from "@clerk/clerk-expo";
 import { RootStackParamList } from "../types";
 import { colors } from "../src/theme/colors";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
+import { supabase } from "../lib/supabase";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EventDetail">;
 
 export default function EventDetailScreen({ route, navigation }: Props) {
-  const { title, organizer, date, time, location, going, maybe, rsvp, description } =
-    route.params;
-
+  const { id, title, organizer, date, time, location, description } = route.params;
   const insets = useSafeAreaInsets();
+  const { user } = useUser();
+
+  const [going, setGoing] = useState(route.params.going);
+  const [maybe, setMaybe] = useState(route.params.maybe);
+  const [rsvp, setRsvp] = useState<"going" | "maybe" | undefined>(route.params.rsvp);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Load fresh counts + this user's RSVP on every mount
+  useEffect(() => {
+    const queries: [Promise<any>, Promise<any>, Promise<any>] = [
+      supabase
+        .from("event_rsvps")
+        .select("*", { count: "exact", head: true })
+        .eq("event_id", id)
+        .eq("status", "going"),
+      supabase
+        .from("event_rsvps")
+        .select("*", { count: "exact", head: true })
+        .eq("event_id", id)
+        .eq("status", "maybe"),
+      user
+        ? supabase
+            .from("event_rsvps")
+            .select("status")
+            .eq("event_id", id)
+            .eq("user_id", user.id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ];
+
+    Promise.all(queries).then(([{ count: g }, { count: m }, { data: rsvpData }]) => {
+      if (g !== null) setGoing(g);
+      if (m !== null) setMaybe(m);
+      if (rsvpData) setRsvp(rsvpData.status as "going" | "maybe");
+    });
+  }, [id, user]);
+
+  async function handleRsvp(newStatus: "going" | "maybe") {
+    if (!user || submitting) return;
+    setSubmitting(true);
+
+    const prevRsvp = rsvp;
+    const prevGoing = going;
+    const prevMaybe = maybe;
+    const isToggleOff = rsvp === newStatus;
+
+    // Optimistic UI update
+    if (isToggleOff) {
+      setRsvp(undefined);
+      if (newStatus === "going") setGoing((g) => g - 1);
+      else setMaybe((m) => m - 1);
+    } else {
+      if (rsvp === "going") setGoing((g) => g - 1);
+      if (rsvp === "maybe") setMaybe((m) => m - 1);
+      setRsvp(newStatus);
+      if (newStatus === "going") setGoing((g) => g + 1);
+      else setMaybe((m) => m + 1);
+    }
+
+    // Write to DB — revert optimistic update if it fails
+    let error;
+    if (isToggleOff) {
+      ({ error } = await supabase
+        .from("event_rsvps")
+        .delete()
+        .eq("event_id", id)
+        .eq("user_id", user.id));
+    } else {
+      ({ error } = await supabase
+        .from("event_rsvps")
+        .upsert(
+          { event_id: id, user_id: user.id, status: newStatus },
+          { onConflict: "event_id,user_id" }
+        ));
+    }
+
+    if (error) {
+      // Write failed — revert optimistic update
+      setRsvp(prevRsvp);
+      setGoing(prevGoing);
+      setMaybe(prevMaybe);
+    } else {
+      // Write succeeded — confirm real counts from event_rsvps directly
+      const [{ count: goingCount }, { count: maybeCount }] = await Promise.all([
+        supabase
+          .from("event_rsvps")
+          .select("*", { count: "exact", head: true })
+          .eq("event_id", id)
+          .eq("status", "going"),
+        supabase
+          .from("event_rsvps")
+          .select("*", { count: "exact", head: true })
+          .eq("event_id", id)
+          .eq("status", "maybe"),
+      ]);
+      if (goingCount !== null) setGoing(goingCount);
+      if (maybeCount !== null) setMaybe(maybeCount);
+    }
+
+    setSubmitting(false);
+  }
 
   return (
     <View style={[styles.wrapper, { paddingBottom: insets.bottom }]}>
@@ -97,39 +198,27 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         <View style={styles.divider} />
         <View style={styles.rsvpButtons}>
           <TouchableOpacity
-            style={[
-              styles.rsvpButton,
-              rsvp === "going" ? styles.rsvpButtonActive : styles.rsvpButtonOutline,
-            ]}
+            style={[styles.rsvpButton, rsvp === "going" ? styles.rsvpButtonActive : styles.rsvpButtonOutline]}
+            onPress={() => handleRsvp("going")}
+            disabled={submitting}
           >
             {rsvp === "going" && (
               <Ionicons name="checkmark" size={15} color={colors.card} style={styles.rsvpIcon} />
             )}
-            <Text
-              style={[
-                styles.rsvpButtonText,
-                rsvp === "going" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline,
-              ]}
-            >
+            <Text style={[styles.rsvpButtonText, rsvp === "going" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline]}>
               Going
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[
-              styles.rsvpButton,
-              rsvp === "maybe" ? styles.rsvpButtonActive : styles.rsvpButtonOutline,
-            ]}
+            style={[styles.rsvpButton, rsvp === "maybe" ? styles.rsvpButtonActive : styles.rsvpButtonOutline]}
+            onPress={() => handleRsvp("maybe")}
+            disabled={submitting}
           >
             {rsvp === "maybe" && (
               <Ionicons name="checkmark" size={15} color={colors.card} style={styles.rsvpIcon} />
             )}
-            <Text
-              style={[
-                styles.rsvpButtonText,
-                rsvp === "maybe" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline,
-              ]}
-            >
+            <Text style={[styles.rsvpButtonText, rsvp === "maybe" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline]}>
               Maybe
             </Text>
           </TouchableOpacity>

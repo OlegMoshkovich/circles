@@ -1,75 +1,117 @@
-import React from "react";
-import { StyleSheet, TouchableOpacity } from "react-native";
+import React, { useCallback, useState } from "react";
+import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
 import { ScreenLayout } from "../src/components/layout/ScreenLayout";
 import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { TextBlock } from "../src/components/blocks/TextBlock";
 import { EventCard } from "../src/components/cards/EventCard";
+import { CreateEventModal, NewEventData } from "../src/components/modals/CreateEventModal";
 import { colors } from "../src/theme/colors";
 import { useLanguage } from "../src/i18n/LanguageContext";
+import { supabase, Event } from "../lib/supabase";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-
-const STATIC_EVENTS = [
-  { organizer: "Sophie Martin", date: "Dec 18", time: "7:00 AM",  location: "Lake",           going: 5, maybe: 2, rsvp: "going" as const },
-  { organizer: "Lucas Weber",   date: "Dec 19", time: "3:00 PM",  location: "Common Room",    going: 4, maybe: 1, rsvp: undefined },
-  { organizer: "Emma Schneider",date: "Dec 21", time: "10:00 AM", location: "Rooftop Garden", going: 6, maybe: 3, rsvp: "maybe" as const },
-];
 
 export default function EventsScreen() {
   const navigation = useNavigation<Nav>();
   const { t } = useLanguage();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchEvents = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("events")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (!error && data) setEvents(data);
+    setLoading(false);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchEvents();
+    }, [fetchEvents])
+  );
+
+  async function handleSave(event: NewEventData) {
+    const { error } = await supabase.from("events").insert({
+      title: event.title,
+      organizer: event.organizer,
+      date_label: event.date,
+      time_label: event.time,
+      location: event.location,
+      description: event.description,
+    });
+    if (!error) {
+      setModalVisible(false);
+      fetchEvents();
+    }
+  }
 
   return (
-    <ScreenLayout
-      header={
-        <NavbarTitle
-          title={t.nav.events}
-          rightElement={
-            <TouchableOpacity
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              style={styles.addButton}
-            >
-              <Ionicons name="add" size={16} color={colors.card} />
-            </TouchableOpacity>
-          }
-        />
-      }
-    >
-      <TextBlock subtitle={t.events.subtitle} />
-      {t.events.items.map((item, i) => {
-        const s = STATIC_EVENTS[i];
-        return (
-          <EventCard
-            key={i}
-            title={item.title}
-            organizer={s.organizer}
-            date={s.date}
-            time={s.time}
-            location={s.location}
-            going={s.going}
-            maybe={s.maybe}
-            rsvp={s.rsvp}
-            onPress={() =>
-              navigation.navigate("EventDetail", {
-                title: item.title,
-                organizer: s.organizer,
-                date: s.date,
-                time: s.time,
-                location: s.location,
-                going: s.going,
-                maybe: s.maybe,
-                rsvp: s.rsvp,
-                description: item.description,
-              })
+    <>
+      <ScreenLayout
+        header={
+          <NavbarTitle
+            title={t.nav.events}
+            rightElement={
+              <TouchableOpacity
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                style={styles.addButton}
+                onPress={() => setModalVisible(true)}
+              >
+                <Ionicons name="add" size={16} color={colors.card} />
+              </TouchableOpacity>
             }
           />
-        );
-      })}
-    </ScreenLayout>
+        }
+      >
+        <TextBlock subtitle={t.events.subtitle} />
+
+        {loading ? (
+          <View style={styles.loader}>
+            <ActivityIndicator size="small" color={colors.textMuted} />
+          </View>
+        ) : (
+          events.map((event) => (
+            <EventCard
+              key={event.id}
+              title={event.title}
+              organizer={event.organizer}
+              date={event.date_label}
+              time={event.time_label}
+              location={event.location}
+              going={event.going}
+              maybe={event.maybe}
+              onPress={() =>
+                navigation.navigate("EventDetail", {
+                  id: event.id,
+                  title: event.title,
+                  organizer: event.organizer,
+                  date: event.date_label,
+                  time: event.time_label,
+                  location: event.location,
+                  going: event.going,
+                  maybe: event.maybe,
+                  description: event.description,
+                })
+              }
+            />
+          ))
+        )}
+      </ScreenLayout>
+
+      <CreateEventModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSave={handleSave}
+      />
+    </>
   );
 }
 
@@ -81,5 +123,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.iconbBg,
     alignItems: "center",
     justifyContent: "center",
+  },
+  loader: {
+    paddingVertical: 12,
+    alignItems: "center",
   },
 });

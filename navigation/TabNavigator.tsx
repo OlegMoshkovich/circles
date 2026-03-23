@@ -67,17 +67,17 @@ export default function TabNavigator() {
       }}
     >
       <Tab.Screen
-        name="LocalLiving"
-        component={HomeScreen}
-        options={{
-          tabBarButton: makeTabButton((t) => t.nav.villageLiving),
-        }}
-      />
-      <Tab.Screen
         name="Events"
         component={EventsScreen}
         options={{
           tabBarButton: makeTabButton((t) => t.nav.events),
+        }}
+      />
+      <Tab.Screen
+        name="LocalLiving"
+        component={HomeScreen}
+        options={{
+          tabBarButton: makeTabButton((t) => t.nav.villageLiving),
         }}
       />
       <Tab.Screen
