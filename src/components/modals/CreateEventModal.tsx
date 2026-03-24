@@ -46,18 +46,23 @@ export function CreateEventModal({ visible, onClose, onSave }: Props) {
 
   useEffect(() => {
     if (!visible || !user) return;
+    // Two-step fetch: get circle_ids the user belongs to, then fetch those circles
     supabase
       .from("circle_members")
-      .select("circle_id, circles(*)")
+      .select("circle_id")
       .eq("user_id", user.id)
       .eq("status", "active")
-      .then(({ data }) => {
-        if (data) {
-          const circles = data
-            .map((row: any) => row.circles)
-            .filter(Boolean) as Circle[];
-          setMyCircles(circles);
+      .then(async ({ data: memberships }) => {
+        const circleIds = memberships?.map((m: any) => m.circle_id) ?? [];
+        if (circleIds.length === 0) {
+          setMyCircles([]);
+          return;
         }
+        const { data: circles } = await supabase
+          .from("circles")
+          .select("*")
+          .in("id", circleIds);
+        if (circles) setMyCircles(circles as Circle[]);
       });
   }, [visible, user]);
 

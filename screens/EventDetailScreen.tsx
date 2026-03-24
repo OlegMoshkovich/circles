@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  Alert,
   Platform,
   ScrollView,
   StyleSheet,
@@ -20,9 +21,29 @@ import { supabase } from "../lib/supabase";
 type Props = NativeStackScreenProps<RootStackParamList, "EventDetail">;
 
 export default function EventDetailScreen({ route, navigation }: Props) {
-  const { id, title, organizer, date, time, location, description } = route.params;
+  const { id, title, organizer, date, time, location, description, created_by } = route.params;
   const insets = useSafeAreaInsets();
   const { user } = useUser();
+
+  const isCreator = !!user && !!created_by && user.id === created_by;
+
+  async function handleDelete() {
+    Alert.alert(
+      "Delete Event",
+      "This will permanently delete the event. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            const { error } = await supabase.from("events").delete().eq("id", id);
+            if (!error) navigation.goBack();
+          },
+        },
+      ]
+    );
+  }
 
   const [going, setGoing] = useState(route.params.going);
   const [maybe, setMaybe] = useState(route.params.maybe);
@@ -136,6 +157,14 @@ export default function EventDetailScreen({ route, navigation }: Props) {
           <Ionicons name="chevron-back" size={18} color={colors.text} />
           <Text style={styles.backLabel}>Back</Text>
         </TouchableOpacity>
+        {isCreator && (
+          <TouchableOpacity
+            onPress={handleDelete}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Scrollable content */}
@@ -236,6 +265,9 @@ const styles = StyleSheet.create({
   backRow: {
     paddingHorizontal: spacing.pageHorizontal,
     paddingBottom: spacing.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   backButton: {
     flexDirection: "row",

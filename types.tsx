@@ -17,6 +17,7 @@ export type EventDetailParams = {
   maybe: number;
   rsvp?: "going" | "maybe";
   description: string;
+  created_by?: string | null;
 };
 
 export type PromptDetailParams = {

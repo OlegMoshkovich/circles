@@ -421,6 +421,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                     going: event.going,
                     maybe: event.maybe,
                     description: event.description,
+                    created_by: event.created_by,
                   })
                 }
               />

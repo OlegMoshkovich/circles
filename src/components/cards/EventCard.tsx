@@ -15,6 +15,7 @@ type EventCardProps = {
   going: number;
   maybe: number;
   rsvp?: "going" | "maybe";
+  circleName?: string | null;
   onPress?: () => void;
 };
 
@@ -27,6 +28,7 @@ export function EventCard({
   going,
   maybe,
   rsvp,
+  circleName,
   onPress,
 }: EventCardProps) {
   const { t } = useLanguage();
@@ -54,6 +56,13 @@ export function EventCard({
         <Ionicons name="location-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
         <Text style={styles.metaText}>{location}</Text>
       </View>
+
+      {circleName ? (
+        <View style={styles.metaRow}>
+          <Ionicons name="people-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
+          <Text style={styles.metaText}>{circleName}</Text>
+        </View>
+      ) : null}
 
       <View style={styles.divider} />
 

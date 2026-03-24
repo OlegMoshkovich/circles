@@ -19,6 +19,7 @@ export type Event = {
   created_at: string;
   circle_id: string | null;
   visibility: 'public' | 'circle';
+  created_by: string | null;
 };
 
 export type Circle = {
