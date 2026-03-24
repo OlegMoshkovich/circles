@@ -136,6 +136,7 @@ export default function EventsScreen() {
                   rsvp: rsvpStatusMap[event.id],
                   description: event.description,
                   created_by: event.created_by,
+                  circleName: event.circles?.name ?? null,
                 })
               }
             />

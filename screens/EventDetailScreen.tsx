@@ -21,7 +21,7 @@ import { supabase } from "../lib/supabase";
 type Props = NativeStackScreenProps<RootStackParamList, "EventDetail">;
 
 export default function EventDetailScreen({ route, navigation }: Props) {
-  const { id, title, organizer, date, time, location, description, created_by } = route.params;
+  const { id, title, organizer, date, time, location, description, created_by, circleName } = route.params;
   const insets = useSafeAreaInsets();
   const { user } = useUser();
 
@@ -173,7 +173,15 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.title}>{title}</Text>
-        <Text style={styles.organizer}>Hosted by {organizer}</Text>
+        <View style={styles.organizerRow}>
+          <Text style={styles.organizer}>Hosted by {organizer}</Text>
+          {circleName ? (
+            <View style={styles.circlePill}>
+              <Ionicons name="people-outline" size={11} color={colors.textMuted} style={{ marginRight: 4 }} />
+              <Text style={styles.circlePillText}>{circleName}</Text>
+            </View>
+          ) : null}
+        </View>
 
         <View style={styles.divider} />
 
@@ -290,10 +298,31 @@ const styles = StyleSheet.create({
     lineHeight: 38,
     marginBottom: spacing.sm,
   },
+  organizerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.md,
+  },
   organizer: {
     ...typography.bodySmall,
     color: colors.textMuted,
-    marginBottom: spacing.md,
+    flex: 1,
+  },
+  circlePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.badgeBg,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    marginLeft: spacing.sm,
+  },
+  circlePillText: {
+    fontSize: 11,
+    fontWeight: "600" as const,
+    color: colors.textMuted,
+    letterSpacing: 0.3,
   },
   divider: {
     height: 1,
