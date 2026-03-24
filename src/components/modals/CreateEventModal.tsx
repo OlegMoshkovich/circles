@@ -117,7 +117,7 @@ export function CreateEventModal({ visible, onClose, onSave }: Props) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <Field label="Title" value={title} onChangeText={setTitle} placeholder="Morning Lake Swim" />
               <Field label="Organiser" value={organizer} onChangeText={setOrganizer} placeholder="Your name" />
               <View style={styles.row}>
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
     paddingTop: 12,
-    maxHeight: "90%",
+    height: "92%",
   },
   handle: {
     width: 36,

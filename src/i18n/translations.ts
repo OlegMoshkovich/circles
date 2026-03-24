@@ -4,7 +4,7 @@ export const en = {
   locale: "en-US",
   nav: {
     villageLiving: "Village Living",
-    events: "Events",
+    events: "My Events",
     circles: "Circles",
     profile: "Profile",
   },
@@ -99,7 +99,7 @@ export const de: Translations = {
   locale: "de-CH",
   nav: {
     villageLiving: "Dorfleben",
-    events: "Veranstaltungen",
+    events: "Meine Events",
     circles: "Kreise",
     profile: "Profil",
   },
@@ -194,7 +194,7 @@ export const fr: Translations = {
   locale: "fr-CH",
   nav: {
     villageLiving: "Vie de Village",
-    events: "Événements",
+    events: "Mes Événements",
     circles: "Cercles",
     profile: "Profil",
   },
@@ -289,7 +289,7 @@ export const it: Translations = {
   locale: "it-CH",
   nav: {
     villageLiving: "Vita del Villaggio",
-    events: "Eventi",
+    events: "I Miei Eventi",
     circles: "Cerchi",
     profile: "Profilo",
   },
