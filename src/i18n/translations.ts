@@ -5,6 +5,7 @@ export const en = {
   nav: {
     villageLiving: "Village Living",
     events: "Events",
+    circles: "Circles",
     profile: "Profile",
   },
   home: {
@@ -72,6 +73,26 @@ export const en = {
     neighboursValue: "24 members",
     language: "LANGUAGE",
   },
+  circles: {
+    subtitle: "Communities that gather around shared interests \nand places",
+    createTitle: "New Circle",
+    name: "Name",
+    description: "Description",
+    category: "Category",
+    visibility: "Visibility",
+    location: "Location",
+    public: "Public",
+    request: "Request",
+    private: "Private",
+    join: "Join Circle",
+    requestToJoin: "Request to Join",
+    leave: "Leave Circle",
+    requested: "Requested",
+    members: "Members",
+    feed: "Feed",
+    noEvents: "No events yet",
+    noMembers: "No members yet",
+  },
 };
 
 export const de: Translations = {
@@ -79,6 +100,7 @@ export const de: Translations = {
   nav: {
     villageLiving: "Dorfleben",
     events: "Veranstaltungen",
+    circles: "Kreise",
     profile: "Profil",
   },
   home: {
@@ -146,6 +168,26 @@ export const de: Translations = {
     neighboursValue: "24 Mitglieder",
     language: "SPRACHE",
   },
+  circles: {
+    subtitle: "Gemeinschaften rund um gemeinsame Interessen \nund Orte",
+    createTitle: "Neuer Kreis",
+    name: "Name",
+    description: "Beschreibung",
+    category: "Kategorie",
+    visibility: "Sichtbarkeit",
+    location: "Standort",
+    public: "Öffentlich",
+    request: "Anfrage",
+    private: "Privat",
+    join: "Kreis beitreten",
+    requestToJoin: "Beitritt anfragen",
+    leave: "Kreis verlassen",
+    requested: "Angefragt",
+    members: "Mitglieder",
+    feed: "Feed",
+    noEvents: "Noch keine Veranstaltungen",
+    noMembers: "Noch keine Mitglieder",
+  },
 };
 
 export const fr: Translations = {
@@ -153,6 +195,7 @@ export const fr: Translations = {
   nav: {
     villageLiving: "Vie de Village",
     events: "Événements",
+    circles: "Cercles",
     profile: "Profil",
   },
   home: {
@@ -220,6 +263,26 @@ export const fr: Translations = {
     neighboursValue: "24 membres",
     language: "LANGUE",
   },
+  circles: {
+    subtitle: "Communautés qui se rassemblent autour d'intérêts \net de lieux communs",
+    createTitle: "Nouveau Cercle",
+    name: "Nom",
+    description: "Description",
+    category: "Catégorie",
+    visibility: "Visibilité",
+    location: "Lieu",
+    public: "Public",
+    request: "Sur demande",
+    private: "Privé",
+    join: "Rejoindre",
+    requestToJoin: "Demander à rejoindre",
+    leave: "Quitter",
+    requested: "Demandé",
+    members: "Membres",
+    feed: "Fil",
+    noEvents: "Pas encore d'événements",
+    noMembers: "Pas encore de membres",
+  },
 };
 
 export const it: Translations = {
@@ -227,6 +290,7 @@ export const it: Translations = {
   nav: {
     villageLiving: "Vita del Villaggio",
     events: "Eventi",
+    circles: "Cerchi",
     profile: "Profilo",
   },
   home: {
@@ -293,6 +357,26 @@ export const it: Translations = {
     neighbours: "Vicini",
     neighboursValue: "24 membri",
     language: "LINGUA",
+  },
+  circles: {
+    subtitle: "Comunità che si riuniscono attorno a interessi \ne luoghi condivisi",
+    createTitle: "Nuovo Cerchio",
+    name: "Nome",
+    description: "Descrizione",
+    category: "Categoria",
+    visibility: "Visibilità",
+    location: "Luogo",
+    public: "Pubblico",
+    request: "Su richiesta",
+    private: "Privato",
+    join: "Unisciti",
+    requestToJoin: "Richiedi di unirti",
+    leave: "Lascia",
+    requested: "Richiesto",
+    members: "Membri",
+    feed: "Feed",
+    noEvents: "Nessun evento ancora",
+    noMembers: "Nessun membro ancora",
   },
 };
 

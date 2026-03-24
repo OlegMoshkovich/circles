@@ -28,6 +28,15 @@ export type PromptDetailParams = {
   attribution: string;
 };
 
+export type CircleDetailParams = {
+  id: string;
+  name: string;
+  description: string | null;
+  visibility: 'public' | 'request' | 'private';
+  owner_id: string;
+  member_count: number;
+};
+
 export type RootStackParamList = {
   Root: undefined;
   Home: undefined;
@@ -37,6 +46,7 @@ export type RootStackParamList = {
   VerifyCode: undefined;
   EventDetail: EventDetailParams;
   PromptDetail: PromptDetailParams;
+  CircleDetail: CircleDetailParams;
 };
 
 export type RootStackScreenProps<Screen extends keyof RootStackParamList> =

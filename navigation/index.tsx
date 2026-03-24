@@ -13,6 +13,7 @@ import VerifyCodeScreen from "../screens/VerifyCodeScreen";
 import MyProfileScreen from "../screens/MyProfileScreen";
 import EventDetailScreen from "../screens/EventDetailScreen";
 import PromptDetailScreen from "../screens/PromptDetailScreen";
+import CircleDetailScreen from "../screens/CircleDetailScreen";
 import TabNavigator from "./TabNavigator";
 import { RootStackParamList } from "../types";
 import LinkingConfiguration from "./LinkingConfiguration";
@@ -66,6 +67,11 @@ const RootNavigator = () => {
             <Stack.Screen
               name="PromptDetail"
               component={PromptDetailScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="CircleDetail"
+              component={CircleDetailScreen}
               options={{ headerShown: false }}
             />
           </>

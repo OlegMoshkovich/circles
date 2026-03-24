@@ -46,6 +46,8 @@ export default function EventsScreen() {
       time_label: event.time,
       location: event.location,
       description: event.description,
+      visibility: event.visibility,
+      circle_id: event.circle_id,
     });
     if (!error) {
       setModalVisible(false);

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Modal,
   View,
@@ -11,7 +11,9 @@ import {
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useUser } from "@clerk/clerk-expo";
 import { colors } from "../../theme/colors";
+import { supabase, Circle } from "../../../lib/supabase";
 
 export type NewEventData = {
   title: string;
@@ -20,6 +22,8 @@ export type NewEventData = {
   time: string;
   location: string;
   description: string;
+  visibility: "public" | "circle";
+  circle_id: string | null;
 };
 
 type Props = {
@@ -29,18 +33,54 @@ type Props = {
 };
 
 export function CreateEventModal({ visible, onClose, onSave }: Props) {
+  const { user } = useUser();
   const [title, setTitle] = useState("");
   const [organizer, setOrganizer] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
+  const [eventVisibility, setEventVisibility] = useState<"public" | "circle">("public");
+  const [selectedCircleId, setSelectedCircleId] = useState<string | null>(null);
+  const [myCircles, setMyCircles] = useState<Circle[]>([]);
 
-  const canSave = title.trim() && organizer.trim() && date.trim() && time.trim() && location.trim();
+  useEffect(() => {
+    if (!visible || !user) return;
+    supabase
+      .from("circle_members")
+      .select("circle_id, circles(*)")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .then(({ data }) => {
+        if (data) {
+          const circles = data
+            .map((row: any) => row.circles)
+            .filter(Boolean) as Circle[];
+          setMyCircles(circles);
+        }
+      });
+  }, [visible, user]);
+
+  const canSave =
+    title.trim() &&
+    organizer.trim() &&
+    date.trim() &&
+    time.trim() &&
+    location.trim() &&
+    (eventVisibility === "public" || selectedCircleId !== null);
 
   function handleSave() {
     if (!canSave) return;
-    onSave({ title: title.trim(), organizer: organizer.trim(), date: date.trim(), time: time.trim(), location: location.trim(), description: description.trim() });
+    onSave({
+      title: title.trim(),
+      organizer: organizer.trim(),
+      date: date.trim(),
+      time: time.trim(),
+      location: location.trim(),
+      description: description.trim(),
+      visibility: eventVisibility,
+      circle_id: eventVisibility === "circle" ? selectedCircleId : null,
+    });
     resetForm();
   }
 
@@ -56,6 +96,8 @@ export function CreateEventModal({ visible, onClose, onSave }: Props) {
     setTime("");
     setLocation("");
     setDescription("");
+    setEventVisibility("public");
+    setSelectedCircleId(null);
   }
 
   return (
@@ -88,6 +130,58 @@ export function CreateEventModal({ visible, onClose, onSave }: Props) {
               </View>
               <Field label="Location" value={location} onChangeText={setLocation} placeholder="Lakeside Dock" />
               <Field label="Description" value={description} onChangeText={setDescription} placeholder="A few words about the event…" multiline />
+
+              <View style={styles.fieldContainer}>
+                <Text style={styles.fieldLabel}>Visibility</Text>
+                <View style={styles.toggleRow}>
+                  {(["public", "circle"] as const).map((opt) => (
+                    <TouchableOpacity
+                      key={opt}
+                      style={[
+                        styles.toggleButton,
+                        eventVisibility === opt && styles.toggleButtonActive,
+                      ]}
+                      onPress={() => {
+                        setEventVisibility(opt);
+                        if (opt === "public") setSelectedCircleId(null);
+                      }}
+                    >
+                      <Text style={[styles.toggleText, eventVisibility === opt && styles.toggleTextActive]}>
+                        {opt === "public" ? "Public" : "Circle"}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {eventVisibility === "circle" && myCircles.length > 0 && (
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.fieldLabel}>Select Circle</Text>
+                  {myCircles.map((circle) => (
+                    <TouchableOpacity
+                      key={circle.id}
+                      style={[
+                        styles.circleRow,
+                        selectedCircleId === circle.id && styles.circleRowActive,
+                      ]}
+                      onPress={() => setSelectedCircleId(circle.id)}
+                    >
+                      {selectedCircleId === circle.id && (
+                        <Ionicons name="checkmark" size={14} color={colors.card} style={styles.circleCheck} />
+                      )}
+                      <Text style={[styles.circleName, selectedCircleId === circle.id && styles.circleNameActive]}>
+                        {circle.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
+              {eventVisibility === "circle" && myCircles.length === 0 && (
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.noCirclesHint}>Join a circle first to post circle-only events.</Text>
+                </View>
+              )}
             </ScrollView>
 
             <TouchableOpacity
@@ -220,5 +314,60 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
+  },
+  toggleRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    alignItems: "center",
+    backgroundColor: colors.card,
+  },
+  toggleButtonActive: {
+    backgroundColor: colors.text,
+    borderColor: colors.text,
+  },
+  toggleText: {
+    fontSize: 14,
+    fontWeight: "500" as const,
+    color: colors.textMuted,
+  },
+  toggleTextActive: {
+    color: colors.card,
+  },
+  circleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    marginBottom: 8,
+    backgroundColor: colors.card,
+  },
+  circleRowActive: {
+    backgroundColor: colors.text,
+    borderColor: colors.text,
+  },
+  circleCheck: {
+    marginRight: 6,
+  },
+  circleName: {
+    fontSize: 15,
+    color: colors.text,
+  },
+  circleNameActive: {
+    color: colors.card,
+  },
+  noCirclesHint: {
+    fontSize: 13,
+    color: colors.textMuted,
+    fontStyle: "italic",
   },
 });

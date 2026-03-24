@@ -3,14 +3,30 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import useCachedResources from "./hooks/useCachedResources";
 import Navigation from "./navigation";
-import { ClerkProvider } from "@clerk/clerk-expo";
+import { ClerkProvider, useUser } from "@clerk/clerk-expo";
 import { tokenCache } from "./cache";
 import * as SplashScreen from "expo-splash-screen";
 import { LanguageProvider } from "./src/i18n/LanguageContext";
+import { supabase } from "./lib/supabase";
 
 SplashScreen.preventAutoHideAsync();
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
+
+// Upserts the signed-in user's name to user_profiles on every app open
+function ProfileSync() {
+  const { user } = useUser();
+  React.useEffect(() => {
+    if (!user) return;
+    const displayName = user.fullName ?? user.firstName ?? null;
+    if (!displayName) return;
+    supabase.from("user_profiles").upsert(
+      { user_id: user.id, display_name: displayName, updated_at: new Date().toISOString() },
+      { onConflict: "user_id" }
+    ).then(() => {});
+  }, [user?.id]);
+  return null;
+}
 
 export default function App() {
   const isLoadingComplete = useCachedResources();
@@ -28,6 +44,7 @@ export default function App() {
       <LanguageProvider>
         <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
           <SafeAreaProvider>
+            <ProfileSync />
             <Navigation />
             <StatusBar />
           </SafeAreaProvider>

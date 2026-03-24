@@ -17,4 +17,35 @@ export type Event = {
   going: number;
   maybe: number;
   created_at: string;
+  circle_id: string | null;
+  visibility: 'public' | 'circle';
+};
+
+export type Circle = {
+  id: string;
+  name: string;
+  description: string | null;
+  image_url: string | null;
+  visibility: 'public' | 'request' | 'private';
+  category: string | null;
+  location: string | null;
+  owner_id: string;
+  created_at: string;
+  member_count?: number;
+};
+
+export type UserProfile = {
+  user_id: string;
+  display_name: string | null;
+  updated_at: string;
+};
+
+export type CircleMember = {
+  id: string;
+  circle_id: string;
+  user_id: string;
+  display_name: string | null;
+  role: 'owner' | 'admin' | 'member';
+  status: 'active' | 'requested' | 'invited';
+  joined_at: string;
 };
