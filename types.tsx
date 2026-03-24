@@ -19,6 +19,7 @@ export type EventDetailParams = {
   description: string;
   created_by?: string | null;
   circleName?: string | null;
+  circle_id?: string | null;
 };
 
 export type PromptDetailParams = {

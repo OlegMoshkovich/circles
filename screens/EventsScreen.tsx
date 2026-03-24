@@ -137,6 +137,7 @@ export default function EventsScreen() {
                   description: event.description,
                   created_by: event.created_by,
                   circleName: event.circles?.name ?? null,
+                  circle_id: event.circle_id,
                 })
               }
             />

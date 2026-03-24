@@ -17,15 +17,17 @@ import { colors } from "../src/theme/colors";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase } from "../lib/supabase";
+import { InviteModal } from "../src/components/modals/InviteModal";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EventDetail">;
 
 export default function EventDetailScreen({ route, navigation }: Props) {
-  const { id, title, organizer, date, time, location, description, created_by, circleName } = route.params;
+  const { id, title, organizer, date, time, location, description, created_by, circleName, circle_id } = route.params;
   const insets = useSafeAreaInsets();
   const { user } = useUser();
 
   const isCreator = !!user && !!created_by && user.id === created_by;
+  const [inviteVisible, setInviteVisible] = useState(false);
 
   async function handleDelete() {
     Alert.alert(
@@ -233,34 +235,53 @@ export default function EventDetailScreen({ route, navigation }: Props) {
       {/* Fixed RSVP bar */}
       <View style={styles.rsvpBar}>
         <View style={styles.divider} />
-        <View style={styles.rsvpButtons}>
+        {isCreator && circle_id ? (
           <TouchableOpacity
-            style={[styles.rsvpButton, rsvp === "going" ? styles.rsvpButtonActive : styles.rsvpButtonOutline]}
-            onPress={() => handleRsvp("going")}
-            disabled={submitting}
+            style={styles.inviteButton}
+            onPress={() => setInviteVisible(true)}
           >
-            {rsvp === "going" && (
-              <Ionicons name="checkmark" size={15} color={colors.card} style={styles.rsvpIcon} />
-            )}
-            <Text style={[styles.rsvpButtonText, rsvp === "going" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline]}>
-              Going
-            </Text>
+            <Ionicons name="person-add-outline" size={16} color={colors.card} style={styles.rsvpIcon} />
+            <Text style={styles.inviteButtonText}>Invite Members</Text>
           </TouchableOpacity>
+        ) : (
+          <View style={styles.rsvpButtons}>
+            <TouchableOpacity
+              style={[styles.rsvpButton, rsvp === "going" ? styles.rsvpButtonActive : styles.rsvpButtonOutline]}
+              onPress={() => handleRsvp("going")}
+              disabled={submitting}
+            >
+              {rsvp === "going" && (
+                <Ionicons name="checkmark" size={15} color={colors.card} style={styles.rsvpIcon} />
+              )}
+              <Text style={[styles.rsvpButtonText, rsvp === "going" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline]}>
+                Going
+              </Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.rsvpButton, rsvp === "maybe" ? styles.rsvpButtonActive : styles.rsvpButtonOutline]}
-            onPress={() => handleRsvp("maybe")}
-            disabled={submitting}
-          >
-            {rsvp === "maybe" && (
-              <Ionicons name="checkmark" size={15} color={colors.card} style={styles.rsvpIcon} />
-            )}
-            <Text style={[styles.rsvpButtonText, rsvp === "maybe" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline]}>
-              Maybe
-            </Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              style={[styles.rsvpButton, rsvp === "maybe" ? styles.rsvpButtonActive : styles.rsvpButtonOutline]}
+              onPress={() => handleRsvp("maybe")}
+              disabled={submitting}
+            >
+              {rsvp === "maybe" && (
+                <Ionicons name="checkmark" size={15} color={colors.card} style={styles.rsvpIcon} />
+              )}
+              <Text style={[styles.rsvpButtonText, rsvp === "maybe" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline]}>
+                Maybe
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
+
+      <InviteModal
+        visible={inviteVisible}
+        onClose={() => setInviteVisible(false)}
+        eventId={id}
+        eventTitle={title}
+        circleId={circle_id ?? ""}
+        circleName={circleName ?? ""}
+      />
     </View>
   );
 }
@@ -411,6 +432,20 @@ const styles = StyleSheet.create({
   rsvpButtons: {
     flexDirection: "row",
     gap: spacing.md,
+  },
+  inviteButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.text,
+    borderRadius: 999,
+    height: 54,
+    gap: 8,
+  },
+  inviteButtonText: {
+    color: colors.card,
+    fontSize: 16,
+    fontWeight: "500" as const,
   },
   rsvpButton: {
     flex: 1,

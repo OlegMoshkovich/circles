@@ -9,6 +9,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLanguage, Language } from "../src/i18n/LanguageContext";
 import { Translations } from "../src/i18n/translations";
+import { useNotificationContext } from "../src/contexts/NotificationContext";
 
 const Tab = createBottomTabNavigator();
 
@@ -25,15 +26,21 @@ function GlassBackground() {
   );
 }
 
-function makeTabButton(getLabel: (t: Translations) => string) {
+function makeTabButton(getLabel: (t: Translations) => string, showBadge = false) {
   return function TabButton({ onPress, accessibilityState }: any) {
     const { t } = useLanguage();
+    const { unreadCount } = useNotificationContext();
     const focused = accessibilityState?.selected;
     return (
       <TouchableOpacity onPress={onPress} style={styles.tabButton} activeOpacity={0.7}>
-        <Text style={[styles.labelText, { color: focused ? colors.text : colors.textMuted }]}>
-          {getLabel(t)}
-        </Text>
+        <View style={styles.tabLabelRow}>
+          <Text style={[styles.labelText, { color: focused ? colors.text : colors.textMuted }]}>
+            {getLabel(t)}
+          </Text>
+          {showBadge && unreadCount > 0 && (
+            <View style={styles.tabDot} />
+          )}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -84,7 +91,7 @@ export default function TabNavigator() {
         name="Profile"
         component={MyProfileScreen}
         options={{
-          tabBarButton: makeTabButton((t) => t.nav.profile),
+          tabBarButton: makeTabButton((t) => t.nav.profile, true),
         }}
       />
     </Tab.Navigator>
@@ -103,6 +110,18 @@ const styles = StyleSheet.create({
     height: 56,
     justifyContent: "center",
     alignItems: "center",
+  },
+  tabLabelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  tabDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.text,
+    marginTop: -6,
   },
   labelText: {
     fontSize: 14,
