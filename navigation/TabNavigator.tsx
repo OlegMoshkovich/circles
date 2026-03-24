@@ -1,7 +1,7 @@
 import React from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import HomeScreen from "../screens/HomeScreen";
 import EventsScreen from "../screens/EventsScreen";
+import CirclesScreen from "../screens/CirclesScreen";
 import MyProfileScreen from "../screens/MyProfileScreen";
 import { colors } from "../src/theme/colors";
 import { BlurView } from "expo-blur";
@@ -67,17 +67,17 @@ export default function TabNavigator() {
       }}
     >
       <Tab.Screen
+        name="Circles"
+        component={CirclesScreen}
+        options={{
+          tabBarButton: makeTabButton((t) => t.nav.circles),
+        }}
+      />
+      <Tab.Screen
         name="Events"
         component={EventsScreen}
         options={{
           tabBarButton: makeTabButton((t) => t.nav.events),
-        }}
-      />
-      <Tab.Screen
-        name="LocalLiving"
-        component={HomeScreen}
-        options={{
-          tabBarButton: makeTabButton((t) => t.nav.villageLiving),
         }}
       />
       <Tab.Screen
