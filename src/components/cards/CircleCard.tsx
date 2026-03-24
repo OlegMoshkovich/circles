@@ -14,6 +14,7 @@ type CircleCardProps = {
   visibility: "public" | "request" | "private";
   memberCount: number;
   memberStatus: MemberStatus;
+  pendingRequests?: number;
   onPress?: () => void;
 };
 
@@ -30,6 +31,7 @@ export function CircleCard({
   visibility,
   memberCount,
   memberStatus,
+  pendingRequests = 0,
   onPress,
 }: CircleCardProps) {
   return (
@@ -58,8 +60,15 @@ export function CircleCard({
         <View style={styles.footerRight}>
           <Ionicons name={VISIBILITY_ICON[visibility]} size={14} color={colors.textMuted} style={styles.footerIcon} />
           {memberStatus === "owner" && (
-            <View style={styles.statusBadge}>
-              <Text style={styles.statusBadgeText}>Owner</Text>
+            <View style={styles.ownerBadgeRow}>
+              <View style={styles.statusBadge}>
+                <Text style={styles.statusBadgeText}>Owner</Text>
+              </View>
+              {pendingRequests > 0 && (
+                <View style={styles.requestDot}>
+                  <Text style={styles.requestDotText}>{pendingRequests}</Text>
+                </View>
+              )}
             </View>
           )}
           {memberStatus === "active" && (
@@ -189,5 +198,24 @@ const styles = StyleSheet.create({
     fontWeight: "600" as const,
     color: colors.card,
     letterSpacing: 0.3,
+  },
+  ownerBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  requestDot: {
+    backgroundColor: colors.text,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  requestDotText: {
+    color: colors.card,
+    fontSize: 10,
+    fontWeight: "700" as const,
   },
 });

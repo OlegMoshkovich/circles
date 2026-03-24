@@ -24,7 +24,7 @@ import { EventCard } from "../src/components/cards/EventCard";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CircleDetail">;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-type Tab = "feed" | "members";
+type Tab = "feed" | "members" | "requests";
 
 const VISIBILITY_LABEL: Record<string, string> = {
   public: "Public",
@@ -38,14 +38,19 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const { user } = useUser();
   const nav = useNavigation<Nav>();
 
+  const isOwner = user?.id === owner_id;
+
   const [activeTab, setActiveTab] = useState<Tab>("feed");
   const [memberCount, setMemberCount] = useState(route.params.member_count);
   const [membership, setMembership] = useState<CircleMember | null>(null);
   const [members, setMembers] = useState<CircleMember[]>([]);
   const [profileMap, setProfileMap] = useState<Record<string, string>>({});
   const [events, setEvents] = useState<Event[]>([]);
+  const [requests, setRequests] = useState<CircleMember[]>([]);
+  const [requestCount, setRequestCount] = useState(0);
   const [loadingFeed, setLoadingFeed] = useState(false);
   const [loadingMembers, setLoadingMembers] = useState(false);
+  const [loadingRequests, setLoadingRequests] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   // Load current user's membership status
@@ -71,6 +76,71 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         if (count !== null) setMemberCount(count);
       });
   }, [id]);
+
+  // Load pending request count for owner badge
+  useEffect(() => {
+    if (!isOwner) return;
+    supabase
+      .from("circle_members")
+      .select("*", { count: "exact", head: true })
+      .eq("circle_id", id)
+      .eq("status", "requested")
+      .then(({ count }) => setRequestCount(count ?? 0));
+  }, [id, isOwner]);
+
+  // Load requests list when on requests tab
+  useEffect(() => {
+    if (activeTab !== "requests" || !isOwner) return;
+    setLoadingRequests(true);
+    supabase
+      .from("circle_members")
+      .select("*")
+      .eq("circle_id", id)
+      .eq("status", "requested")
+      .then(async ({ data, error }) => {
+        if (!error && data) {
+          setRequests(data);
+          const userIds = data.map((m: CircleMember) => m.user_id);
+          if (userIds.length > 0) {
+            const { data: profiles } = await supabase
+              .from("user_profiles")
+              .select("user_id, display_name")
+              .in("user_id", userIds);
+            if (profiles) {
+              const map: Record<string, string> = { ...profileMap };
+              for (const p of profiles as UserProfile[]) {
+                if (p.display_name) map[p.user_id] = p.display_name;
+              }
+              setProfileMap(map);
+            }
+          }
+        }
+        setLoadingRequests(false);
+      });
+  }, [id, activeTab, isOwner]);
+
+  async function handleAccept(member: CircleMember) {
+    const { error } = await supabase
+      .from("circle_members")
+      .update({ status: "active" })
+      .eq("id", member.id);
+    if (!error) {
+      setRequests((prev) => prev.filter((r) => r.id !== member.id));
+      setRequestCount((c) => Math.max(0, c - 1));
+      setMemberCount((c) => c + 1);
+    }
+  }
+
+  async function handleDecline(member: CircleMember) {
+    const { error } = await supabase
+      .from("circle_members")
+      .delete()
+      .eq("id", member.id);
+    if (!error) {
+      setRequests((prev) => prev.filter((r) => r.id !== member.id));
+      setRequestCount((c) => Math.max(0, c - 1));
+    }
+  }
 
   // Load feed
   useEffect(() => {
@@ -187,7 +257,6 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     setSubmitting(false);
   }
 
-  const isOwner = user?.id === owner_id;
   const isMember = membership?.status === "active";
   const isRequested = membership?.status === "requested";
 
@@ -303,6 +372,21 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           >
             <Text style={[styles.tabText, activeTab === "members" && styles.tabTextActive]}>Members</Text>
           </TouchableOpacity>
+          {isOwner && (
+            <TouchableOpacity
+              style={[styles.tab, activeTab === "requests" && styles.tabActive]}
+              onPress={() => setActiveTab("requests")}
+            >
+              <View style={styles.tabWithBadge}>
+                <Text style={[styles.tabText, activeTab === "requests" && styles.tabTextActive]}>Requests</Text>
+                {requestCount > 0 && (
+                  <View style={styles.tabBadge}>
+                    <Text style={styles.tabBadgeText}>{requestCount}</Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.divider} />
@@ -363,6 +447,48 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                 profileMap={profileMap}
               />
             ))
+          )
+        )}
+
+        {/* Requests tab (owner only) */}
+        {activeTab === "requests" && (
+          loadingRequests ? (
+            <View style={styles.loader}>
+              <ActivityIndicator size="small" color={colors.textMuted} />
+            </View>
+          ) : requests.length === 0 ? (
+            <Text style={styles.emptyText}>No pending requests</Text>
+          ) : (
+            requests.map((req) => {
+              const name =
+                (req.user_id === user?.id && (user?.fullName ?? user?.firstName))
+                  ? (user.fullName ?? user.firstName ?? req.user_id)
+                  : (profileMap[req.user_id] ?? req.display_name ?? req.user_id);
+              const parts = name.trim().split(" ");
+              const initials = parts.length >= 2
+                ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+                : name.slice(0, 2).toUpperCase();
+              return (
+                <View key={req.id} style={styles.requestRow}>
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{initials}</Text>
+                  </View>
+                  <Text style={styles.memberUserId} numberOfLines={1}>{name}</Text>
+                  <TouchableOpacity
+                    style={styles.acceptButton}
+                    onPress={() => handleAccept(req)}
+                  >
+                    <Text style={styles.acceptButtonText}>Accept</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.declineButton}
+                    onPress={() => handleDecline(req)}
+                  >
+                    <Ionicons name="close" size={16} color={colors.textMuted} />
+                  </TouchableOpacity>
+                </View>
+              );
+            })
           )
         )}
       </ScrollView>
@@ -587,5 +713,51 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 16,
     fontWeight: "500" as const,
+  },
+  requestRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.divider,
+  },
+  acceptButton: {
+    backgroundColor: colors.text,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 999,
+    marginLeft: spacing.sm,
+  },
+  acceptButtonText: {
+    color: colors.card,
+    fontSize: 13,
+    fontWeight: "600" as const,
+  },
+  declineButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 4,
+  },
+  tabWithBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  tabBadge: {
+    backgroundColor: colors.text,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  tabBadgeText: {
+    color: colors.card,
+    fontSize: 10,
+    fontWeight: "700" as const,
   },
 });

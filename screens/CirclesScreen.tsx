@@ -16,6 +16,7 @@ import { supabase, Circle } from "../lib/supabase";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type MemberStatusMap = Record<string, "owner" | "active" | "requested">;
+type PendingRequestsMap = Record<string, number>;
 
 export default function CirclesScreen() {
   const navigation = useNavigation<Nav>();
@@ -24,6 +25,7 @@ export default function CirclesScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [circles, setCircles] = useState<(Circle & { member_count: number })[]>([]);
   const [memberStatusMap, setMemberStatusMap] = useState<MemberStatusMap>({});
+  const [pendingRequestsMap, setPendingRequestsMap] = useState<PendingRequestsMap>({});
   const [loading, setLoading] = useState(true);
 
   const fetchCircles = useCallback(async () => {
@@ -56,6 +58,25 @@ export default function CirclesScreen() {
         map[m.circle_id] = m.role === "owner" ? "owner" : m.status;
       }
       setMemberStatusMap(map);
+
+      // Fetch pending request counts for circles the current user owns
+      const ownedIds = Object.entries(map).filter(([, v]) => v === "owner").map(([k]) => k);
+      if (ownedIds.length > 0) {
+        const { data: pending } = await supabase
+          .from("circle_members")
+          .select("circle_id")
+          .in("circle_id", ownedIds)
+          .eq("status", "requested");
+        if (pending) {
+          const reqMap: PendingRequestsMap = {};
+          for (const row of pending as any[]) {
+            reqMap[row.circle_id] = (reqMap[row.circle_id] ?? 0) + 1;
+          }
+          setPendingRequestsMap(reqMap);
+        }
+      } else {
+        setPendingRequestsMap({});
+      }
     }
 
     setLoading(false);
@@ -149,6 +170,7 @@ export default function CirclesScreen() {
               visibility={circle.visibility}
               memberCount={circle.member_count}
               memberStatus={memberStatusMap[circle.id] ?? null}
+              pendingRequests={pendingRequestsMap[circle.id] ?? 0}
               onPress={() =>
                 navigation.navigate("CircleDetail", {
                   id: circle.id,
