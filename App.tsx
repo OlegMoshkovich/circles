@@ -7,6 +7,7 @@ import { ClerkProvider, useUser } from "@clerk/clerk-expo";
 import { tokenCache } from "./cache";
 import * as SplashScreen from "expo-splash-screen";
 import { LanguageProvider } from "./src/i18n/LanguageContext";
+import { NotificationProvider } from "./src/contexts/NotificationContext";
 import { supabase } from "./lib/supabase";
 
 SplashScreen.preventAutoHideAsync();
@@ -44,9 +45,11 @@ export default function App() {
       <LanguageProvider>
         <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
           <SafeAreaProvider>
-            <ProfileSync />
-            <Navigation />
-            <StatusBar />
+            <NotificationProvider>
+              <ProfileSync />
+              <Navigation />
+              <StatusBar />
+            </NotificationProvider>
           </SafeAreaProvider>
         </ClerkProvider>
       </LanguageProvider>

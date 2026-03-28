@@ -44,20 +44,29 @@ export default function CirclesScreen() {
         : Promise.resolve({ data: [], error: null }),
     ]);
 
-    if (!circlesResult.error && circlesResult.data) {
-      const mapped = circlesResult.data.map((row: any) => ({
-        ...row,
-        member_count: row.circle_members?.[0]?.count ?? 0,
-      }));
-      setCircles(mapped);
-    }
-
+    // Build membership map first so we can filter private circles
+    const map: MemberStatusMap = {};
     if (!membershipsResult.error && membershipsResult.data) {
-      const map: MemberStatusMap = {};
       for (const m of membershipsResult.data as any[]) {
         map[m.circle_id] = m.role === "owner" ? "owner" : m.status;
       }
       setMemberStatusMap(map);
+    }
+
+    if (!circlesResult.error && circlesResult.data) {
+      const mapped = circlesResult.data
+        .map((row: any) => ({
+          ...row,
+          member_count: row.circle_members?.[0]?.count ?? 0,
+        }))
+        // Hide private circles unless the user is already a member/owner
+        .filter((circle: any) =>
+          circle.visibility !== "private" || map[circle.id] != null
+        );
+      setCircles(mapped);
+    }
+
+    if (!membershipsResult.error && membershipsResult.data) {
 
       // Fetch pending request counts for circles the current user owns
       const ownedIds = Object.entries(map).filter(([, v]) => v === "owner").map(([k]) => k);

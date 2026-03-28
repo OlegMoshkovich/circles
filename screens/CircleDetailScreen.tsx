@@ -20,6 +20,7 @@ import { colors } from "../src/theme/colors";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, CircleMember, Event, UserProfile } from "../lib/supabase";
+import { CircleInviteModal } from "../src/components/modals/CircleInviteModal";
 import { EventCard } from "../src/components/cards/EventCard";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CircleDetail">;
@@ -44,6 +45,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [memberCount, setMemberCount] = useState(route.params.member_count);
   const [membership, setMembership] = useState<CircleMember | null>(null);
   const [members, setMembers] = useState<CircleMember[]>([]);
+  const [invitedUsers, setInvitedUsers] = useState<{ user_id: string; name: string }[]>([]);
   const [profileMap, setProfileMap] = useState<Record<string, string>>({});
   const [events, setEvents] = useState<Event[]>([]);
   const [requests, setRequests] = useState<CircleMember[]>([]);
@@ -52,6 +54,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [circleInviteVisible, setCircleInviteVisible] = useState(false);
 
   // Load current user's membership status
   useEffect(() => {
@@ -161,45 +164,81 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   useEffect(() => {
     if (activeTab !== "members") return;
     setLoadingMembers(true);
-    supabase
-      .from("circle_members")
-      .select("*")
-      .eq("circle_id", id)
-      .eq("status", "active")
-      .then(async ({ data, error }) => {
-        if (!error && data) {
-          setMembers(data);
 
-          // Fetch profiles for all members to resolve names
-          const userIds = data.map((m: CircleMember) => m.user_id);
-          if (userIds.length > 0) {
-            const { data: profiles } = await supabase
-              .from("user_profiles")
-              .select("user_id, display_name")
-              .in("user_id", userIds);
+    Promise.all([
+      supabase.from("circle_members").select("*").eq("circle_id", id).eq("status", "active"),
+      supabase
+        .from("notifications")
+        .select("data")
+        .eq("type", "circle_invitation")
+        .filter("data->>circle_id", "eq", id)
+        .eq("read", false),
+    ]).then(async ([membersResult, notifsResult]) => {
+      if (!membersResult.error && membersResult.data) {
+        setMembers(membersResult.data);
 
-            if (profiles) {
-              const map: Record<string, string> = {};
-              for (const p of profiles as UserProfile[]) {
-                if (p.display_name) map[p.user_id] = p.display_name;
-              }
-              setProfileMap(map);
+        // Fetch profiles for active members
+        const userIds = membersResult.data.map((m: CircleMember) => m.user_id);
+        if (userIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from("user_profiles")
+            .select("user_id, display_name")
+            .in("user_id", userIds);
+
+          if (profiles) {
+            const map: Record<string, string> = {};
+            for (const p of profiles as UserProfile[]) {
+              if (p.display_name) map[p.user_id] = p.display_name;
             }
-          }
-
-          // Upsert current user's profile so others can see their name
-          if (user) {
-            const displayName = user.fullName ?? user.firstName ?? null;
-            if (displayName) {
-              supabase.from("user_profiles").upsert(
-                { user_id: user.id, display_name: displayName, updated_at: new Date().toISOString() },
-                { onConflict: "user_id" }
-              ).then(() => {});
-            }
+            setProfileMap(map);
           }
         }
-        setLoadingMembers(false);
-      });
+
+        // Upsert current user's profile so others can see their name
+        if (user) {
+          const displayName = user.fullName ?? user.firstName ?? null;
+          if (displayName) {
+            supabase.from("user_profiles").upsert(
+              { user_id: user.id, display_name: displayName, updated_at: new Date().toISOString() },
+              { onConflict: "user_id" }
+            ).then(() => {});
+          }
+        }
+      }
+
+      // Extract invited users from pending notifications
+      if (!notifsResult.error && notifsResult.data) {
+        const seen = new Set<string>();
+        const invited = (notifsResult.data as any[])
+          .filter((n) => n.data?.invitee_id && !seen.has(n.data.invitee_id) && seen.add(n.data.invitee_id))
+          .map((n) => ({
+            user_id: n.data.invitee_id as string,
+            name: n.data.invitee_id as string,
+          }));
+
+        // Resolve names for invited users
+        const invitedIds = invited.map((u) => u.user_id);
+        if (invitedIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from("user_profiles")
+            .select("user_id, display_name")
+            .in("user_id", invitedIds);
+          if (profiles) {
+            const nameMap: Record<string, string> = {};
+            for (const p of profiles as UserProfile[]) {
+              if (p.display_name) nameMap[p.user_id] = p.display_name;
+            }
+            setInvitedUsers(invited.map((u) => ({ ...u, name: nameMap[u.user_id] ?? u.user_id })));
+          } else {
+            setInvitedUsers(invited);
+          }
+        } else {
+          setInvitedUsers([]);
+        }
+      }
+
+      setLoadingMembers(false);
+    });
   }, [id, activeTab, user]);
 
   async function handleJoin() {
@@ -423,6 +462,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                     description: event.description,
                     created_by: event.created_by,
                     circleName: name,
+                    circle_id: id,
                   })
                 }
               />
@@ -436,19 +476,38 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
             <View style={styles.loader}>
               <ActivityIndicator size="small" color={colors.textMuted} />
             </View>
-          ) : members.length === 0 ? (
+          ) : members.length === 0 && invitedUsers.length === 0 ? (
             <Text style={styles.emptyText}>No members yet</Text>
           ) : (
-            members.map((member) => (
-              <MemberRow
-                key={member.id}
-                member={member}
-                isOwner={member.user_id === owner_id}
-                currentUserId={user?.id}
-                currentUserName={user?.fullName ?? user?.firstName ?? null}
-                profileMap={profileMap}
-              />
-            ))
+            <>
+              {members.map((member) => (
+                <MemberRow
+                  key={member.id}
+                  member={member}
+                  isOwner={member.user_id === owner_id}
+                  currentUserId={user?.id}
+                  currentUserName={user?.fullName ?? user?.firstName ?? null}
+                  profileMap={profileMap}
+                />
+              ))}
+              {invitedUsers.map((u) => {
+                const parts = u.name.trim().split(" ");
+                const ini = parts.length >= 2
+                  ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+                  : u.name.slice(0, 2).toUpperCase();
+                return (
+                  <View key={u.user_id} style={styles.memberRow}>
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarText}>{ini}</Text>
+                    </View>
+                    <Text style={styles.memberUserId} numberOfLines={1}>{u.name}</Text>
+                    <View style={styles.invitedBadge}>
+                      <Text style={styles.invitedBadgeText}>INVITED</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </>
           )
         )}
 
@@ -495,11 +554,28 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         )}
       </ScrollView>
 
-      {/* Fixed footer: join/leave */}
+      {/* Fixed footer: join/leave or invite */}
       <View style={styles.footer}>
         <View style={styles.footerDivider} />
-        {renderJoinButton()}
+        {isOwner ? (
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => setCircleInviteVisible(true)}
+          >
+            <Ionicons name="person-add-outline" size={16} color={colors.card} style={{ marginRight: 8 }} />
+            <Text style={styles.actionButtonText}>Invite Members</Text>
+          </TouchableOpacity>
+        ) : (
+          renderJoinButton()
+        )}
       </View>
+
+      <CircleInviteModal
+        visible={circleInviteVisible}
+        onClose={() => setCircleInviteVisible(false)}
+        circleId={id}
+        circleName={name}
+      />
     </View>
   );
 }
@@ -685,11 +761,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   actionButton: {
+    flexDirection: "row",
     backgroundColor: colors.text,
     borderRadius: 999,
     height: 54,
     alignItems: "center",
     justifyContent: "center",
+    gap: 8,
     ...Platform.select({
       ios: {
         shadowColor: "#2C2A26",
@@ -761,5 +839,18 @@ const styles = StyleSheet.create({
     color: colors.card,
     fontSize: 10,
     fontWeight: "700" as const,
+  },
+  invitedBadge: {
+    backgroundColor: colors.badgeBg,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  invitedBadgeText: {
+    fontSize: 10,
+    fontWeight: "600" as const,
+    letterSpacing: 0.6,
+    color: colors.textMuted,
+    textTransform: "uppercase" as const,
   },
 });

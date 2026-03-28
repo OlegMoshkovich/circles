@@ -41,6 +41,24 @@ export type UserProfile = {
   updated_at: string;
 };
 
+export type AppNotification = {
+  id: string;
+  user_id: string;
+  type: string;
+  title: string;
+  body: string | null;
+  data: {
+    event_id?: string;
+    event_title?: string;
+    circle_id?: string;
+    circle_name?: string;
+    inviter_name?: string;
+    invitee_id?: string;
+  } | null;
+  read: boolean;
+  created_at: string;
+};
+
 export type CircleMember = {
   id: string;
   circle_id: string;

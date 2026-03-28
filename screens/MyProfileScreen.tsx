@@ -1,13 +1,16 @@
-import React from "react";
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useCallback, useState } from "react";
+import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth, useUser } from "@clerk/clerk-expo";
+import { useFocusEffect } from "@react-navigation/native";
 import { ScreenLayout } from "../src/components/layout/ScreenLayout";
 import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { colors } from "../src/theme/colors";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { useLanguage, Language } from "../src/i18n/LanguageContext";
+import { supabase, AppNotification } from "../lib/supabase";
+import { useNotificationContext } from "../src/contexts/NotificationContext";
 
 async function handleSignOut(signOut: () => Promise<void>) {
   try {
@@ -27,6 +30,58 @@ export default function MyProfileScreen() {
   const { signOut } = useAuth();
   const { user } = useUser();
   const { language, setLanguage, t } = useLanguage();
+  const { setUnreadCount } = useNotificationContext();
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [loadingNotifs, setLoadingNotifs] = useState(false);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!user) return;
+    setLoadingNotifs(true);
+    const { data } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("read", false)
+      .order("created_at", { ascending: false });
+    if (data) {
+      setNotifications(data as AppNotification[]);
+      setUnreadCount(data.length);
+    }
+    setLoadingNotifs(false);
+  }, [user, setUnreadCount]);
+
+  useFocusEffect(useCallback(() => {
+    fetchNotifications();
+  }, [fetchNotifications]));
+
+  async function handleAccept(notif: AppNotification) {
+    if (!user) return;
+
+    if (notif.type === "circle_invitation" && notif.data?.circle_id) {
+      await Promise.all([
+        supabase.from("circle_members").upsert(
+          { circle_id: notif.data.circle_id, user_id: user.id, role: "member", status: "active" },
+          { onConflict: "circle_id,user_id" }
+        ),
+        supabase.from("notifications").update({ read: true }).eq("id", notif.id),
+      ]);
+    } else if (notif.type === "event_invitation" && notif.data?.event_id) {
+      await Promise.all([
+        supabase.from("event_rsvps").upsert(
+          { event_id: notif.data.event_id, user_id: user.id, status: "going" },
+          { onConflict: "event_id,user_id" }
+        ),
+        supabase.from("notifications").update({ read: true }).eq("id", notif.id),
+      ]);
+    }
+
+    fetchNotifications();
+  }
+
+  async function handleDecline(notif: AppNotification) {
+    await supabase.from("notifications").update({ read: true }).eq("id", notif.id);
+    fetchNotifications();
+  }
 
   const name =
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Member";
@@ -72,8 +127,37 @@ export default function MyProfileScreen() {
         </>
       }
     >
-      {/* Account card */}
+      {/* Notifications */}
       <View style={styles.scrollTopPad} />
+      {loadingNotifs ? (
+        <ActivityIndicator size="small" color={colors.textMuted} style={{ marginBottom: spacing.lg }} />
+      ) : notifications.length > 0 ? (
+        <>
+          <Text style={styles.sectionLabel}>Notifications</Text>
+          {notifications.map((notif) => (
+            <View key={notif.id} style={styles.notifCard}>
+              <View style={styles.notifIcon}>
+                <Ionicons name="mail-outline" size={16} color={colors.textMuted} />
+              </View>
+              <View style={styles.notifContent}>
+                <Text style={styles.notifTitle}>{notif.title}</Text>
+                {notif.body ? <Text style={styles.notifBody}>{notif.body}</Text> : null}
+              </View>
+              <View style={styles.notifActions}>
+                <TouchableOpacity style={styles.acceptBtn} onPress={() => handleAccept(notif)}>
+                  <Text style={styles.acceptBtnText}>Accept</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.declineBtn} onPress={() => handleDecline(notif)}>
+                  <Ionicons name="close" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+          <View style={styles.divider} />
+        </>
+      ) : null}
+
+      {/* Account card */}
       <Text style={styles.sectionLabel}>{t.profile.account}</Text>
       <View style={styles.card}>
         <View style={styles.row}>
@@ -251,5 +335,60 @@ const styles = StyleSheet.create({
   },
   flagLabelSelected: {
     color: colors.text,
+  },
+  notifCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    padding: 12,
+    marginBottom: spacing.sm,
+  },
+  notifIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.badgeBg,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+  },
+  notifContent: {
+    flex: 1,
+    marginRight: 8,
+  },
+  notifTitle: {
+    fontSize: 13,
+    fontWeight: "500" as const,
+    color: colors.text,
+    marginBottom: 2,
+  },
+  notifBody: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  notifActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  acceptBtn: {
+    backgroundColor: colors.text,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  acceptBtnText: {
+    color: colors.card,
+    fontSize: 12,
+    fontWeight: "600" as const,
+  },
+  declineBtn: {
+    width: 30,
+    height: 30,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
