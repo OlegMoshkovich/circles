@@ -18,16 +18,26 @@ import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase } from "../lib/supabase";
 import { InviteModal } from "../src/components/modals/InviteModal";
+import { EditEventModal, EditEventData } from "../src/components/modals/EditEventModal";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EventDetail">;
 
 export default function EventDetailScreen({ route, navigation }: Props) {
-  const { id, title, organizer, date, time, location, description, created_by, circleName, circle_id } = route.params;
+  const { id, created_by, circleName, circle_id } = route.params;
   const insets = useSafeAreaInsets();
   const { user } = useUser();
 
   const isCreator = !!user && !!created_by && user.id === created_by;
   const [inviteVisible, setInviteVisible] = useState(false);
+  const [editVisible, setEditVisible] = useState(false);
+
+  // Mutable local copies of editable fields
+  const [title, setTitle] = useState(route.params.title);
+  const [organizer, setOrganizer] = useState(route.params.organizer);
+  const [date, setDate] = useState(route.params.date);
+  const [time, setTime] = useState(route.params.time);
+  const [location, setLocation] = useState(route.params.location);
+  const [description, setDescription] = useState(route.params.description ?? "");
 
   async function handleDelete() {
     Alert.alert(
@@ -160,12 +170,21 @@ export default function EventDetailScreen({ route, navigation }: Props) {
           <Text style={styles.backLabel}>Back</Text>
         </TouchableOpacity>
         {isCreator && (
-          <TouchableOpacity
-            onPress={handleDelete}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={() => setEditVisible(true)}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={styles.headerAction}
+            >
+              <Ionicons name="create-outline" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleDelete}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
@@ -281,6 +300,21 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         eventTitle={title}
         circleId={circle_id ?? ""}
         circleName={circleName ?? ""}
+      />
+
+      <EditEventModal
+        visible={editVisible}
+        onClose={() => setEditVisible(false)}
+        onSaved={(data: EditEventData) => {
+          setTitle(data.title);
+          setOrganizer(data.organizer);
+          setDate(data.date);
+          setTime(data.time);
+          setLocation(data.location);
+          setDescription(data.description);
+        }}
+        eventId={id}
+        initialValues={{ title, organizer, date, time, location, description }}
       />
     </View>
   );
@@ -476,4 +510,10 @@ const styles = StyleSheet.create({
   rsvpButtonTextActive: {
     color: colors.card,
   },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  headerAction: {},
 });

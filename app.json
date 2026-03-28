@@ -26,12 +26,24 @@
       "associatedDomains": [
         "applinks:clerk.helping.lemming-64.lclstage.dev"
       ],
-      "bundleIdentifier": "dev.clerk.clerkexpostarter"
+      "bundleIdentifier": "dev.clerk.clerkexpostarter",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Used to help you set a meeting location for events and circles."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+        }
       },
       "intentFilters": [
         {
@@ -65,7 +77,9 @@
       "expo-asset",
       "expo-font",
       "expo-secure-store",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-location",
+      "@react-native-community/datetimepicker"
     ]
   }
 }

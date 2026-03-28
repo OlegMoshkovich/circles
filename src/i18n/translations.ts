@@ -4,7 +4,7 @@ export const en = {
   locale: "en-US",
   nav: {
     villageLiving: "Village Living",
-    events: "My Events",
+    events: "Events",
     circles: "Circles",
     profile: "Profile",
   },
@@ -41,6 +41,8 @@ export const en = {
   },
   events: {
     subtitle: "Gentle opportunities for connection \nsmall, meaningful gatherings",
+    filterAll: "All",
+    filterMyCircles: "My Circles",
     badgeGoing: "GOING",
     badgeMaybe: "MAYBE",
     by: "by",
@@ -75,6 +77,8 @@ export const en = {
   },
   circles: {
     subtitle: "Communities that gather around shared interests \nand places",
+    filterAll: "All",
+    filterMyCircles: "My Circles",
     createTitle: "New Circle",
     name: "Name",
     description: "Description",
@@ -99,7 +103,7 @@ export const de: Translations = {
   locale: "de-CH",
   nav: {
     villageLiving: "Dorfleben",
-    events: "Meine Events",
+    events: "Events",
     circles: "Kreise",
     profile: "Profil",
   },
@@ -136,6 +140,8 @@ export const de: Translations = {
   },
   events: {
     subtitle: "Sanfte Gelegenheiten zur Begegnung –\nkleine, bedeutungsvolle Zusammenkünfte",
+    filterAll: "Alle",
+    filterMyCircles: "Meine Kreise",
     badgeGoing: "DABEI",
     badgeMaybe: "VIELLEICHT",
     by: "von",
@@ -170,6 +176,8 @@ export const de: Translations = {
   },
   circles: {
     subtitle: "Gemeinschaften rund um gemeinsame Interessen \nund Orte",
+    filterAll: "Alle",
+    filterMyCircles: "Meine Kreise",
     createTitle: "Neuer Kreis",
     name: "Name",
     description: "Beschreibung",
@@ -194,7 +202,7 @@ export const fr: Translations = {
   locale: "fr-CH",
   nav: {
     villageLiving: "Vie de Village",
-    events: "Mes Événements",
+    events: "Événements",
     circles: "Cercles",
     profile: "Profil",
   },
@@ -231,6 +239,8 @@ export const fr: Translations = {
   },
   events: {
     subtitle: "De douces occasions de rencontre –\nde petits rassemblements porteurs de sens",
+    filterAll: "Tous",
+    filterMyCircles: "Mes Cercles",
     badgeGoing: "PRÉSENT",
     badgeMaybe: "PEUT-ÊTRE",
     by: "par",
@@ -265,6 +275,8 @@ export const fr: Translations = {
   },
   circles: {
     subtitle: "Communautés qui se rassemblent autour d'intérêts \net de lieux communs",
+    filterAll: "Tous",
+    filterMyCircles: "Mes Cercles",
     createTitle: "Nouveau Cercle",
     name: "Nom",
     description: "Description",
@@ -289,7 +301,7 @@ export const it: Translations = {
   locale: "it-CH",
   nav: {
     villageLiving: "Vita del Villaggio",
-    events: "I Miei Eventi",
+    events: "Eventi",
     circles: "Cerchi",
     profile: "Profilo",
   },
@@ -326,6 +338,8 @@ export const it: Translations = {
   },
   events: {
     subtitle: "Dolci occasioni di connessione –\npiccoli incontri ricchi di significato",
+    filterAll: "Tutti",
+    filterMyCircles: "I Miei Cerchi",
     badgeGoing: "PRESENTE",
     badgeMaybe: "FORSE",
     by: "di",
@@ -360,6 +374,8 @@ export const it: Translations = {
   },
   circles: {
     subtitle: "Comunità che si riuniscono attorno a interessi \ne luoghi condivisi",
+    filterAll: "Tutti",
+    filterMyCircles: "I Miei Cerchi",
     createTitle: "Nuovo Cerchio",
     name: "Nome",
     description: "Descrizione",
