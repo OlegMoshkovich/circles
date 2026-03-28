@@ -34,10 +34,13 @@ const VISIBILITY_OPTIONS: { value: "public" | "request" | "private"; label: stri
   { value: "private", label: "Private" },
 ];
 
+const PRESET_CATEGORIES = ["Culture", "Friends", "Nature", "Sport", "Food", "Travel"];
+
 export function CreateCircleModal({ visible, onClose, onSave }: Props) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("");
+  const [categoryPreset, setCategoryPreset] = useState("");
+  const [customCategoryText, setCustomCategoryText] = useState("");
   const [visibility, setVisibility] = useState<"public" | "request" | "private">("public");
   const [location, setLocation] = useState("");
   const [showMap, setShowMap] = useState(false);
@@ -48,7 +51,8 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
     if (visible) {
       setName("");
       setDescription("");
-      setCategory("");
+      setCategoryPreset("");
+      setCustomCategoryText("");
       setVisibility("public");
       setLocation("");
       setShowMap(false);
@@ -63,10 +67,11 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
     setSaving(true);
     setError(null);
     try {
+      const category = categoryPreset === "custom" ? customCategoryText.trim() : categoryPreset;
       await onSave({
         name: name.trim(),
         description: description.trim(),
-        category: category.trim(),
+        category,
         visibility,
         location: location.trim(),
       });
@@ -118,7 +123,41 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
               <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 <Field label="Name" value={name} onChangeText={setName} placeholder="Hiking Group" />
                 <Field label="Description" value={description} onChangeText={setDescription} placeholder="A few words about this circle…" multiline />
-                <Field label="Category" value={category} onChangeText={setCategory} placeholder="Hiking, Tennis, Families…" />
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.fieldLabel}>Category</Text>
+                  <View style={styles.categoryGrid}>
+                    {PRESET_CATEGORIES.map((cat) => (
+                      <TouchableOpacity
+                        key={cat}
+                        style={[styles.categoryPill, categoryPreset === cat && styles.categoryPillActive]}
+                        onPress={() => setCategoryPreset(categoryPreset === cat ? "" : cat)}
+                      >
+                        <Text style={[styles.categoryPillText, categoryPreset === cat && styles.categoryPillTextActive]}>
+                          {cat}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                    <TouchableOpacity
+                      style={[styles.categoryPill, categoryPreset === "custom" && styles.categoryPillActive]}
+                      onPress={() => setCategoryPreset(categoryPreset === "custom" ? "" : "custom")}
+                    >
+                      <Text style={[styles.categoryPillText, categoryPreset === "custom" && styles.categoryPillTextActive]}>
+                        Custom
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  {categoryPreset === "custom" && (
+                    <View style={[styles.inputRow, { marginTop: 12 }]}>
+                      <TextInput
+                        value={customCategoryText}
+                        onChangeText={setCustomCategoryText}
+                        placeholder="e.g. Yoga, Chess, Photography…"
+                        placeholderTextColor={colors.textMuted}
+                        style={styles.input}
+                      />
+                    </View>
+                  )}
+                </View>
 
                 <View style={styles.fieldContainer}>
                   <Text style={styles.fieldLabel}>Visibility</Text>
@@ -276,6 +315,31 @@ const styles = StyleSheet.create({
     height: 72,
     textAlignVertical: "top",
     paddingTop: 4,
+  },
+  categoryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  categoryPill: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.card,
+  },
+  categoryPillActive: {
+    backgroundColor: colors.text,
+    borderColor: colors.text,
+  },
+  categoryPillText: {
+    fontSize: 14,
+    fontWeight: "500" as const,
+    color: colors.textMuted,
+  },
+  categoryPillTextActive: {
+    color: colors.card,
   },
   toggleRow: {
     flexDirection: "row",

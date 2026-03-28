@@ -21,6 +21,7 @@ import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, CircleMember, Event, UserProfile } from "../lib/supabase";
 import { CircleInviteModal } from "../src/components/modals/CircleInviteModal";
+import { EditCircleModal, EditCircleData } from "../src/components/modals/EditCircleModal";
 import { EventCard } from "../src/components/cards/EventCard";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CircleDetail">;
@@ -34,12 +35,17 @@ const VISIBILITY_LABEL: Record<string, string> = {
 };
 
 export default function CircleDetailScreen({ route, navigation }: Props) {
-  const { id, name, description, visibility, owner_id } = route.params;
+  const { id, owner_id } = route.params;
   const insets = useSafeAreaInsets();
   const { user } = useUser();
   const nav = useNavigation<Nav>();
 
   const isOwner = user?.id === owner_id;
+
+  // Mutable display fields (can be updated via edit modal)
+  const [name, setName] = useState(route.params.name);
+  const [description, setDescription] = useState(route.params.description ?? "");
+  const [visibility, setVisibility] = useState(route.params.visibility);
 
   const [activeTab, setActiveTab] = useState<Tab>("feed");
   const [memberCount, setMemberCount] = useState(route.params.member_count);
@@ -55,6 +61,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [circleInviteVisible, setCircleInviteVisible] = useState(false);
+  const [editVisible, setEditVisible] = useState(false);
 
   // Load current user's membership status
   useEffect(() => {
@@ -371,12 +378,20 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           <Text style={styles.backLabel}>Back</Text>
         </TouchableOpacity>
         {isOwner && (
-          <TouchableOpacity
-            onPress={handleDelete}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={() => setEditVisible(true)}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Ionicons name="create-outline" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleDelete}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
@@ -575,6 +590,18 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         onClose={() => setCircleInviteVisible(false)}
         circleId={id}
         circleName={name}
+      />
+
+      <EditCircleModal
+        visible={editVisible}
+        onClose={() => setEditVisible(false)}
+        onSaved={(data: EditCircleData) => {
+          setName(data.name);
+          setDescription(data.description);
+          setVisibility(data.visibility);
+        }}
+        circleId={id}
+        initialValues={{ name, description, visibility }}
       />
     </View>
   );
@@ -852,5 +879,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     color: colors.textMuted,
     textTransform: "uppercase" as const,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
   },
 });
