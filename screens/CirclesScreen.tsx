@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, StyleSheet, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -17,12 +17,14 @@ import { supabase, Circle } from "../lib/supabase";
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type MemberStatusMap = Record<string, "owner" | "active" | "requested">;
 type PendingRequestsMap = Record<string, number>;
+type Filter = "all" | "mine";
 
 export default function CirclesScreen() {
   const navigation = useNavigation<Nav>();
   const { t } = useLanguage();
   const { user } = useUser();
   const [modalVisible, setModalVisible] = useState(false);
+  const [filter, setFilter] = useState<Filter>("all");
   const [circles, setCircles] = useState<(Circle & { member_count: number })[]>([]);
   const [memberStatusMap, setMemberStatusMap] = useState<MemberStatusMap>({});
   const [pendingRequestsMap, setPendingRequestsMap] = useState<PendingRequestsMap>({});
@@ -165,12 +167,39 @@ export default function CirclesScreen() {
       >
         <TextBlock subtitle={t.circles.subtitle} />
 
+        <View style={styles.toggle}>
+          <TouchableOpacity
+            style={[styles.toggleOption, filter === "all" && styles.toggleOptionActive]}
+            onPress={() => setFilter("all")}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.toggleLabel, filter === "all" && styles.toggleLabelActive]}>
+              {t.circles.filterAll}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.toggleOption, filter === "mine" && styles.toggleOptionActive]}
+            onPress={() => setFilter("mine")}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.toggleLabel, filter === "mine" && styles.toggleLabelActive]}>
+              {t.circles.filterMyCircles}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         {loading ? (
           <View style={styles.loader}>
             <ActivityIndicator size="small" color={colors.textMuted} />
           </View>
         ) : (
-          circles.map((circle) => (
+          circles
+            .filter((circle) =>
+              filter === "mine"
+                ? memberStatusMap[circle.id] === "owner" || memberStatusMap[circle.id] === "active"
+                : true
+            )
+            .map((circle) => (
             <CircleCard
               key={circle.id}
               name={circle.name}
@@ -192,7 +221,7 @@ export default function CirclesScreen() {
               }
             />
           ))
-        )}
+          )}
       </ScreenLayout>
 
       <CreateCircleModal
@@ -216,5 +245,30 @@ const styles = StyleSheet.create({
   loader: {
     paddingVertical: 12,
     alignItems: "center",
+  },
+  toggle: {
+    flexDirection: "row",
+    marginBottom: 16,
+    borderRadius: 20,
+    backgroundColor: colors.cardBorder,
+    padding: 3,
+    alignSelf: "flex-start",
+  },
+  toggleOption: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 17,
+  },
+  toggleOptionActive: {
+    backgroundColor: colors.card,
+  },
+  toggleLabel: {
+    fontSize: 13,
+    fontFamily: "Lora_400Regular",
+    color: colors.textMuted,
+    letterSpacing: 0.2,
+  },
+  toggleLabelActive: {
+    color: colors.text,
   },
 });

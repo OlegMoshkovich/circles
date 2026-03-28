@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@clerk/clerk-expo";
 import { colors } from "../../theme/colors";
 import { supabase, Circle } from "../../../lib/supabase";
+import { MapPickerView } from "./LocationPickerModal";
 
 export type NewEventData = {
   title: string;
@@ -39,6 +40,7 @@ export function CreateEventModal({ visible, onClose, onSave }: Props) {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [location, setLocation] = useState("");
+  const [showMap, setShowMap] = useState(false);
   const [description, setDescription] = useState("");
   const [eventVisibility, setEventVisibility] = useState<"public" | "circle">("public");
   const [selectedCircleId, setSelectedCircleId] = useState<string | null>(null);
@@ -46,7 +48,6 @@ export function CreateEventModal({ visible, onClose, onSave }: Props) {
 
   useEffect(() => {
     if (!visible || !user) return;
-    // Two-step fetch: get circle_ids the user belongs to, then fetch those circles
     supabase
       .from("circle_members")
       .select("circle_id")
@@ -54,14 +55,8 @@ export function CreateEventModal({ visible, onClose, onSave }: Props) {
       .eq("status", "active")
       .then(async ({ data: memberships }) => {
         const circleIds = memberships?.map((m: any) => m.circle_id) ?? [];
-        if (circleIds.length === 0) {
-          setMyCircles([]);
-          return;
-        }
-        const { data: circles } = await supabase
-          .from("circles")
-          .select("*")
-          .in("id", circleIds);
+        if (circleIds.length === 0) { setMyCircles([]); return; }
+        const { data: circles } = await supabase.from("circles").select("*").in("id", circleIds);
         if (circles) setMyCircles(circles as Circle[]);
       });
   }, [visible, user]);
@@ -100,104 +95,136 @@ export function CreateEventModal({ visible, onClose, onSave }: Props) {
     setDate("");
     setTime("");
     setLocation("");
+    setShowMap(false);
     setDescription("");
     setEventVisibility("public");
     setSelectedCircleId(null);
   }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={showMap ? () => setShowMap(false) : handleClose}
+    >
       <View style={styles.overlay}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.kav}
-        >
-          <View style={styles.sheet}>
-            <View style={styles.handle} />
+        {showMap ? (
+          <View style={styles.mapSheet}>
+            <MapPickerView
+              onBack={() => setShowMap(false)}
+              onConfirm={(addr) => {
+                setLocation(addr);
+                setShowMap(false);
+              }}
+            />
+          </View>
+        ) : (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.kav}
+          >
+            <View style={styles.sheet}>
+              <View style={styles.handle} />
 
-            <View style={styles.header}>
-              <Text style={styles.headerTitle}>New Event</Text>
-              <TouchableOpacity onPress={handleClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-                <Ionicons name="close" size={20} color={colors.textMuted} />
+              <View style={styles.header}>
+                <Text style={styles.headerTitle}>New Event</Text>
+                <TouchableOpacity onPress={handleClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                  <Ionicons name="close" size={20} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                <Field label="Title" value={title} onChangeText={setTitle} placeholder="Morning Lake Swim" />
+                <Field label="Organiser" value={organizer} onChangeText={setOrganizer} placeholder="Your name" />
+                <View style={styles.row}>
+                  <View style={styles.halfField}>
+                    <Field label="Date" value={date} onChangeText={setDate} placeholder="Jan 10" />
+                  </View>
+                  <View style={styles.halfField}>
+                    <Field label="Time" value={time} onChangeText={setTime} placeholder="7:00 AM" />
+                  </View>
+                </View>
+
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.fieldLabel}>Location</Text>
+                  <TouchableOpacity
+                    style={styles.locationButton}
+                    onPress={() => setShowMap(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={location ? "location" : "location-outline"}
+                      size={16}
+                      color={location ? colors.iconbBg : colors.textMuted}
+                      style={styles.locationIcon}
+                    />
+                    <Text style={[styles.locationButtonText, !location && styles.locationButtonPlaceholder]} numberOfLines={1}>
+                      {location || "Tap to choose on map"}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+                  </TouchableOpacity>
+                </View>
+
+                <Field label="Description" value={description} onChangeText={setDescription} placeholder="A few words about the event…" multiline />
+
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.fieldLabel}>Visibility</Text>
+                  <View style={styles.toggleRow}>
+                    {(["public", "circle"] as const).map((opt) => (
+                      <TouchableOpacity
+                        key={opt}
+                        style={[styles.toggleButton, eventVisibility === opt && styles.toggleButtonActive]}
+                        onPress={() => {
+                          setEventVisibility(opt);
+                          if (opt === "public") setSelectedCircleId(null);
+                        }}
+                      >
+                        <Text style={[styles.toggleText, eventVisibility === opt && styles.toggleTextActive]}>
+                          {opt === "public" ? "Public" : "Circle"}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                {eventVisibility === "circle" && myCircles.length > 0 && (
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Select Circle</Text>
+                    {myCircles.map((circle) => (
+                      <TouchableOpacity
+                        key={circle.id}
+                        style={[styles.circleRow, selectedCircleId === circle.id && styles.circleRowActive]}
+                        onPress={() => setSelectedCircleId(circle.id)}
+                      >
+                        {selectedCircleId === circle.id && (
+                          <Ionicons name="checkmark" size={14} color={colors.card} style={styles.circleCheck} />
+                        )}
+                        <Text style={[styles.circleName, selectedCircleId === circle.id && styles.circleNameActive]}>
+                          {circle.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
+                {eventVisibility === "circle" && myCircles.length === 0 && (
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.noCirclesHint}>Join a circle first to post circle-only events.</Text>
+                  </View>
+                )}
+              </ScrollView>
+
+              <TouchableOpacity
+                style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+                onPress={handleSave}
+                disabled={!canSave}
+              >
+                <Text style={styles.saveButtonText}>Create Event</Text>
               </TouchableOpacity>
             </View>
-
-            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              <Field label="Title" value={title} onChangeText={setTitle} placeholder="Morning Lake Swim" />
-              <Field label="Organiser" value={organizer} onChangeText={setOrganizer} placeholder="Your name" />
-              <View style={styles.row}>
-                <View style={styles.halfField}>
-                  <Field label="Date" value={date} onChangeText={setDate} placeholder="Jan 10" />
-                </View>
-                <View style={styles.halfField}>
-                  <Field label="Time" value={time} onChangeText={setTime} placeholder="7:00 AM" />
-                </View>
-              </View>
-              <Field label="Location" value={location} onChangeText={setLocation} placeholder="Lakeside Dock" />
-              <Field label="Description" value={description} onChangeText={setDescription} placeholder="A few words about the event…" multiline />
-
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Visibility</Text>
-                <View style={styles.toggleRow}>
-                  {(["public", "circle"] as const).map((opt) => (
-                    <TouchableOpacity
-                      key={opt}
-                      style={[
-                        styles.toggleButton,
-                        eventVisibility === opt && styles.toggleButtonActive,
-                      ]}
-                      onPress={() => {
-                        setEventVisibility(opt);
-                        if (opt === "public") setSelectedCircleId(null);
-                      }}
-                    >
-                      <Text style={[styles.toggleText, eventVisibility === opt && styles.toggleTextActive]}>
-                        {opt === "public" ? "Public" : "Circle"}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              {eventVisibility === "circle" && myCircles.length > 0 && (
-                <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>Select Circle</Text>
-                  {myCircles.map((circle) => (
-                    <TouchableOpacity
-                      key={circle.id}
-                      style={[
-                        styles.circleRow,
-                        selectedCircleId === circle.id && styles.circleRowActive,
-                      ]}
-                      onPress={() => setSelectedCircleId(circle.id)}
-                    >
-                      {selectedCircleId === circle.id && (
-                        <Ionicons name="checkmark" size={14} color={colors.card} style={styles.circleCheck} />
-                      )}
-                      <Text style={[styles.circleName, selectedCircleId === circle.id && styles.circleNameActive]}>
-                        {circle.name}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-
-              {eventVisibility === "circle" && myCircles.length === 0 && (
-                <View style={styles.fieldContainer}>
-                  <Text style={styles.noCirclesHint}>Join a circle first to post circle-only events.</Text>
-                </View>
-              )}
-            </ScrollView>
-
-            <TouchableOpacity
-              style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
-              onPress={handleSave}
-              disabled={!canSave}
-            >
-              <Text style={styles.saveButtonText}>Create Event</Text>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
+          </KeyboardAvoidingView>
+        )}
       </View>
     </Modal>
   );
@@ -247,6 +274,12 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     paddingTop: 12,
     height: "92%",
+  },
+  mapSheet: {
+    flex: 1,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    overflow: "hidden",
   },
   handle: {
     width: 36,
@@ -374,5 +407,25 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textMuted,
     fontStyle: "italic",
+  },
+  locationButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorder,
+    paddingBottom: 10,
+    paddingTop: 2,
+  },
+  locationIcon: {
+    marginRight: 8,
+  },
+  locationButtonText: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: "Lora_400Regular",
+    color: colors.text,
+  },
+  locationButtonPlaceholder: {
+    color: colors.textMuted,
   },
 });

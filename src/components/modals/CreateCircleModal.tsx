@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../theme/colors";
+import { MapPickerView } from "./LocationPickerModal";
 
 export type NewCircleData = {
   name: string;
@@ -39,10 +40,10 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
   const [category, setCategory] = useState("");
   const [visibility, setVisibility] = useState<"public" | "request" | "private">("public");
   const [location, setLocation] = useState("");
+  const [showMap, setShowMap] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Reset form each time modal opens
   useEffect(() => {
     if (visible) {
       setName("");
@@ -50,6 +51,7 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
       setCategory("");
       setVisibility("public");
       setLocation("");
+      setShowMap(false);
       setError(null);
     }
   }, [visible]);
@@ -81,66 +83,93 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
   }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={showMap ? () => setShowMap(false) : handleClose}
+    >
       <View style={styles.overlay}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.kav}
-        >
-          <View style={styles.sheet}>
-            <View style={styles.handle} />
+        {showMap ? (
+          <View style={styles.mapSheet}>
+            <MapPickerView
+              onBack={() => setShowMap(false)}
+              onConfirm={(addr) => {
+                setLocation(addr);
+                setShowMap(false);
+              }}
+            />
+          </View>
+        ) : (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.kav}
+          >
+            <View style={styles.sheet}>
+              <View style={styles.handle} />
 
-            <View style={styles.header}>
-              <Text style={styles.headerTitle}>New Circle</Text>
-              <TouchableOpacity onPress={handleClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-                <Ionicons name="close" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              <Field label="Name" value={name} onChangeText={setName} placeholder="Hiking Group" />
-              <Field label="Description" value={description} onChangeText={setDescription} placeholder="A few words about this circle…" multiline />
-              <Field label="Category" value={category} onChangeText={setCategory} placeholder="Hiking, Tennis, Families…" />
-
-              <View style={styles.fieldContainer}>
-                <Text style={styles.fieldLabel}>Visibility</Text>
-                <View style={styles.toggleRow}>
-                  {VISIBILITY_OPTIONS.map((opt) => (
-                    <TouchableOpacity
-                      key={opt.value}
-                      style={[
-                        styles.toggleButton,
-                        visibility === opt.value && styles.toggleButtonActive,
-                      ]}
-                      onPress={() => setVisibility(opt.value)}
-                    >
-                      <Text
-                        style={[
-                          styles.toggleText,
-                          visibility === opt.value && styles.toggleTextActive,
-                        ]}
-                      >
-                        {opt.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+              <View style={styles.header}>
+                <Text style={styles.headerTitle}>New Circle</Text>
+                <TouchableOpacity onPress={handleClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                  <Ionicons name="close" size={20} color={colors.textMuted} />
+                </TouchableOpacity>
               </View>
 
-              <Field label="Location" value={location} onChangeText={setLocation} placeholder="Village, neighbourhood… (optional)" />
-            </ScrollView>
+              <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                <Field label="Name" value={name} onChangeText={setName} placeholder="Hiking Group" />
+                <Field label="Description" value={description} onChangeText={setDescription} placeholder="A few words about this circle…" multiline />
+                <Field label="Category" value={category} onChangeText={setCategory} placeholder="Hiking, Tennis, Families…" />
 
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.fieldLabel}>Visibility</Text>
+                  <View style={styles.toggleRow}>
+                    {VISIBILITY_OPTIONS.map((opt) => (
+                      <TouchableOpacity
+                        key={opt.value}
+                        style={[styles.toggleButton, visibility === opt.value && styles.toggleButtonActive]}
+                        onPress={() => setVisibility(opt.value)}
+                      >
+                        <Text style={[styles.toggleText, visibility === opt.value && styles.toggleTextActive]}>
+                          {opt.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
 
-            <TouchableOpacity
-              style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
-              onPress={handleSave}
-              disabled={!canSave}
-            >
-              <Text style={styles.saveButtonText}>{saving ? "Creating…" : "Create Circle"}</Text>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.fieldLabel}>Location</Text>
+                  <TouchableOpacity
+                    style={styles.locationButton}
+                    onPress={() => setShowMap(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={location ? "location" : "location-outline"}
+                      size={16}
+                      color={location ? colors.iconbBg : colors.textMuted}
+                      style={styles.locationIcon}
+                    />
+                    <Text style={[styles.locationButtonText, !location && styles.locationButtonPlaceholder]} numberOfLines={1}>
+                      {location || "Tap to choose on map (optional)"}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+              <TouchableOpacity
+                style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+                onPress={handleSave}
+                disabled={!canSave}
+              >
+                <Text style={styles.saveButtonText}>{saving ? "Creating…" : "Create Circle"}</Text>
+              </TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        )}
       </View>
     </Modal>
   );
@@ -179,9 +208,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.35)",
     justifyContent: "flex-end",
   },
-  scroll: {
-    flex: 1,
-  },
   kav: {
     justifyContent: "flex-end",
   },
@@ -193,6 +219,15 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     paddingTop: 12,
     height: "88%",
+  },
+  mapSheet: {
+    flex: 1,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    overflow: "hidden",
+  },
+  scroll: {
+    flex: 1,
   },
   handle: {
     width: 36,
@@ -289,5 +324,25 @@ const styles = StyleSheet.create({
     color: "#C0392B",
     marginBottom: 8,
     textAlign: "center",
+  },
+  locationButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorder,
+    paddingBottom: 10,
+    paddingTop: 2,
+  },
+  locationIcon: {
+    marginRight: 8,
+  },
+  locationButtonText: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: "Lora_400Regular",
+    color: colors.text,
+  },
+  locationButtonPlaceholder: {
+    color: colors.textMuted,
   },
 });
