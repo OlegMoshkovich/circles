@@ -18,6 +18,9 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 type MemberStatusMap = Record<string, "owner" | "active" | "requested">;
 type PendingRequestsMap = Record<string, number>;
 type Filter = "all" | "mine";
+type SortBy = "newest" | "members";
+
+const PRESET_CATEGORIES = ["Culture", "Friends", "Nature", "Sport", "Food", "Travel"];
 
 export default function CirclesScreen() {
   const navigation = useNavigation<Nav>();
@@ -25,6 +28,9 @@ export default function CirclesScreen() {
   const { user } = useUser();
   const [modalVisible, setModalVisible] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [sortBy, setSortBy] = useState<SortBy>("newest");
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [circles, setCircles] = useState<(Circle & { member_count: number })[]>([]);
   const [memberStatusMap, setMemberStatusMap] = useState<MemberStatusMap>({});
   const [pendingRequestsMap, setPendingRequestsMap] = useState<PendingRequestsMap>({});
@@ -167,26 +173,78 @@ export default function CirclesScreen() {
       >
         <TextBlock subtitle={t.circles.subtitle} />
 
-        <View style={styles.toggle}>
+        <View style={styles.filterRow}>
+          <View style={styles.toggle}>
+            <TouchableOpacity
+              style={[styles.toggleOption, filter === "all" && styles.toggleOptionActive]}
+              onPress={() => setFilter("all")}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.toggleLabel, filter === "all" && styles.toggleLabelActive]}>
+                {t.circles.filterAll}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toggleOption, filter === "mine" && styles.toggleOptionActive]}
+              onPress={() => setFilter("mine")}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.toggleLabel, filter === "mine" && styles.toggleLabelActive]}>
+                {t.circles.filterMyCircles}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity
-            style={[styles.toggleOption, filter === "all" && styles.toggleOptionActive]}
-            onPress={() => setFilter("all")}
+            style={[styles.filterIconButton, (sortBy !== "newest" || categoryFilter !== null) && styles.filterIconButtonActive]}
+            onPress={() => setShowFilterPanel((v) => !v)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             activeOpacity={0.7}
           >
-            <Text style={[styles.toggleLabel, filter === "all" && styles.toggleLabelActive]}>
-              {t.circles.filterAll}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.toggleOption, filter === "mine" && styles.toggleOptionActive]}
-            onPress={() => setFilter("mine")}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.toggleLabel, filter === "mine" && styles.toggleLabelActive]}>
-              {t.circles.filterMyCircles}
-            </Text>
+            <Ionicons
+              name="options-outline"
+              size={17}
+              color={(sortBy !== "newest" || categoryFilter !== null) ? colors.iconbBg : colors.textMuted}
+            />
           </TouchableOpacity>
         </View>
+
+        {showFilterPanel && (
+          <View style={styles.filterPanel}>
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionLabel}>Sort</Text>
+              <View style={styles.filterChipRow}>
+                {(["newest", "members"] as SortBy[]).map((opt) => (
+                  <TouchableOpacity
+                    key={opt}
+                    style={[styles.filterChip, sortBy === opt && styles.filterChipActive]}
+                    onPress={() => setSortBy(opt)}
+                  >
+                    <Text style={[styles.filterChipText, sortBy === opt && styles.filterChipTextActive]}>
+                      {opt === "newest" ? "Newest" : "Most Members"}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionLabel}>Category</Text>
+              <View style={styles.filterChipRow}>
+                {PRESET_CATEGORIES.map((cat) => (
+                  <TouchableOpacity
+                    key={cat}
+                    style={[styles.filterChip, categoryFilter === cat && styles.filterChipActive]}
+                    onPress={() => setCategoryFilter(categoryFilter === cat ? null : cat)}
+                  >
+                    <Text style={[styles.filterChipText, categoryFilter === cat && styles.filterChipTextActive]}>
+                      {cat}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+        )}
 
         {loading ? (
           <View style={styles.loader}>
@@ -194,10 +252,15 @@ export default function CirclesScreen() {
           </View>
         ) : (
           circles
-            .filter((circle) =>
-              filter === "mine"
-                ? memberStatusMap[circle.id] === "owner" || memberStatusMap[circle.id] === "active"
-                : true
+            .filter((circle) => {
+              if (filter === "mine" && memberStatusMap[circle.id] !== "owner" && memberStatusMap[circle.id] !== "active") return false;
+              if (categoryFilter !== null && circle.category !== categoryFilter) return false;
+              return true;
+            })
+            .sort((a, b) =>
+              sortBy === "members"
+                ? b.member_count - a.member_count
+                : new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
             )
             .map((circle) => (
             <CircleCard
@@ -246,9 +309,71 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
   },
+  filterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  filterIconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  filterIconButtonActive: {
+    borderColor: colors.iconbBg,
+  },
+  filterPanel: {
+    backgroundColor: colors.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    padding: 14,
+    marginBottom: 14,
+    gap: 12,
+  },
+  filterSection: {
+    gap: 8,
+  },
+  filterSectionLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 0.8,
+    color: colors.textMuted,
+    textTransform: "uppercase",
+  },
+  filterChipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  filterChip: {
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: colors.card,
+  },
+  filterChipActive: {
+    backgroundColor: colors.text,
+    borderColor: colors.text,
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontFamily: "Lora_400Regular",
+    color: colors.textMuted,
+  },
+  filterChipTextActive: {
+    color: colors.card,
+  },
   toggle: {
     flexDirection: "row",
-    marginBottom: 16,
     borderRadius: 20,
     backgroundColor: colors.cardBorder,
     padding: 3,
