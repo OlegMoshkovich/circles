@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -16,7 +17,7 @@ import { supabase, Event } from "../lib/supabase";
 
 type EventWithCircle = Event & { circles?: { name: string } | null };
 type Filter = "all" | "circles";
-type SortBy = "newest" | "popular" | "activity";
+type SortBy = "newest" | "popular" | "activity" | "new_activity";
 type RsvpFilter = "all" | "going" | "maybe";
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -33,6 +34,8 @@ export default function EventsScreen() {
   const [rsvpStatusMap, setRsvpStatusMap] = useState<Record<string, "going" | "maybe">>({});
   const [noteCountMap, setNoteCountMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [activityMap, setActivityMap] = useState<Record<string, number>>({});
+  const [lastViewedMap, setLastViewedMap] = useState<Record<string, number>>({});
 
   const fetchEvents = useCallback(async () => {
     if (!user) {
@@ -89,14 +92,29 @@ export default function EventsScreen() {
       if (eventIds.length > 0) {
         const { data: noteCounts } = await supabase
           .from("event_notes")
-          .select("event_id")
+          .select("event_id, created_at")
           .in("event_id", eventIds);
         if (noteCounts) {
           const map: Record<string, number> = {};
+          const latestMap: Record<string, number> = {};
           for (const row of noteCounts as any[]) {
             map[row.event_id] = (map[row.event_id] ?? 0) + 1;
+            const t = new Date(row.created_at).getTime();
+            if (!latestMap[row.event_id] || t > latestMap[row.event_id]) latestMap[row.event_id] = t;
           }
           setNoteCountMap(map);
+          setActivityMap(latestMap);
+
+          // Read last-viewed timestamps
+          const keys = Object.keys(latestMap).map((id) => `lastViewed_event_${id}`);
+          if (keys.length > 0) {
+            const pairs = await AsyncStorage.multiGet(keys);
+            const lvMap: Record<string, number> = {};
+            for (const [key, val] of pairs) {
+              if (val) lvMap[key.replace("lastViewed_event_", "")] = parseInt(val, 10);
+            }
+            setLastViewedMap(lvMap);
+          }
         }
       }
     }
@@ -130,6 +148,11 @@ export default function EventsScreen() {
   const displayedEvents = events
     .filter((e) => rsvpFilter === "all" || rsvpStatusMap[e.id] === rsvpFilter)
     .sort((a, b) => {
+      if (sortBy === "new_activity") {
+        const aNew = (activityMap[a.id] ?? 0) > (lastViewedMap[a.id] ?? 0) ? 1 : 0;
+        const bNew = (activityMap[b.id] ?? 0) > (lastViewedMap[b.id] ?? 0) ? 1 : 0;
+        return bNew - aNew;
+      }
       if (sortBy === "popular") return (b.going + b.maybe) - (a.going + a.maybe);
       if (sortBy === "activity") return (noteCountMap[b.id] ?? 0) - (noteCountMap[a.id] ?? 0);
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -199,14 +222,14 @@ export default function EventsScreen() {
                 <View style={styles.filterSection}>
                   <Text style={styles.filterSectionLabel}>Sort</Text>
                   <View style={styles.filterChipRow}>
-                    {(["newest", "popular", "activity"] as SortBy[]).map((opt) => (
+                    {(["newest", "popular", "activity", "new_activity"] as SortBy[]).map((opt) => (
                       <TouchableOpacity
                         key={opt}
                         style={[styles.filterChip, sortBy === opt && styles.filterChipActive]}
                         onPress={() => setSortBy(opt)}
                       >
                         <Text style={[styles.filterChipText, sortBy === opt && styles.filterChipTextActive]}>
-                          {opt === "newest" ? "Newest" : opt === "popular" ? "Most Popular" : "Most Active"}
+                          {opt === "newest" ? "Newest" : opt === "popular" ? "Most Popular" : opt === "activity" ? "Most Active" : "New Activity"}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -257,7 +280,10 @@ export default function EventsScreen() {
               rsvp={rsvpStatusMap[event.id]}
               circleName={event.circles?.name ?? null}
               noteCount={noteCountMap[event.id] ?? 0}
-              onPress={() =>
+              hasNewActivity={(activityMap[event.id] ?? 0) > (lastViewedMap[event.id] ?? 0)}
+              onPress={() => {
+                AsyncStorage.setItem(`lastViewed_event_${event.id}`, Date.now().toString());
+                setLastViewedMap((prev) => ({ ...prev, [event.id]: Date.now() }));
                 navigation.navigate("EventDetail", {
                   id: event.id,
                   title: event.title,
@@ -272,8 +298,8 @@ export default function EventsScreen() {
                   created_by: event.created_by,
                   circleName: event.circles?.name ?? null,
                   circle_id: event.circle_id,
-                })
-              }
+                });
+              }}
             />
           ))
         )}

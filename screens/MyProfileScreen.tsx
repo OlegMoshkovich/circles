@@ -87,10 +87,11 @@ export default function MyProfileScreen() {
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Member";
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
   const photoUrl = (() => {
-    const ext = user?.externalAccounts?.find(
-      (a: any) => a.provider === "oauth_google" || a.provider === "google"
-    ) as any;
-    return ext?.imageUrl ?? ext?.avatarUrl ?? user?.imageUrl ?? null;
+    for (const account of (user?.externalAccounts ?? [])) {
+      const url = (account as any).imageUrl || (account as any).avatarUrl;
+      if (url) return url as string;
+    }
+    return user?.imageUrl || null;
   })();
   const initials =
     [user?.firstName?.[0], user?.lastName?.[0]]

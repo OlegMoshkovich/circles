@@ -17,6 +17,7 @@ type EventCardProps = {
   rsvp?: "going" | "maybe";
   circleName?: string | null;
   noteCount?: number;
+  hasNewActivity?: boolean;
   onPress?: () => void;
 };
 
@@ -31,6 +32,7 @@ export function EventCard({
   rsvp,
   circleName,
   noteCount = 0,
+  hasNewActivity = false,
   onPress,
 }: EventCardProps) {
   const { t } = useLanguage();
@@ -38,6 +40,11 @@ export function EventCard({
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
       <View style={styles.header}>
         <Text style={styles.title}>{title}</Text>
+        {hasNewActivity && (
+          <View style={styles.activityBell}>
+            <Ionicons name="notifications-outline" size={11} color="#FFFFFF" />
+          </View>
+        )}
         {rsvp != null && (
           <View style={[styles.badge, rsvp === "going" ? styles.badgeGoing : styles.badgeMaybe]}>
             <Text style={[styles.badgeText, rsvp === "going" ? styles.badgeTextGoing : styles.badgeTextMaybe]}>
@@ -179,6 +186,15 @@ const styles = StyleSheet.create({
   },
   footerLabel: {
     color: colors.textMuted,
+  },
+  activityBell: {
+    backgroundColor: "#FF4D00",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    marginRight: spacing.sm,
+    alignItems: "center",
+    justifyContent: "center",
   },
   noteCountRow: {
     flexDirection: "row",

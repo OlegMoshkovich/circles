@@ -17,6 +17,7 @@ type CircleCardProps = {
   location?: string | null;
   organizer?: string | null;
   pendingRequests?: number;
+  hasNewActivity?: boolean;
   onPress?: () => void;
 };
 
@@ -36,12 +37,18 @@ export function CircleCard({
   location,
   organizer,
   pendingRequests = 0,
+  hasNewActivity = false,
   onPress,
 }: CircleCardProps) {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
       <View style={styles.header}>
         <Text style={styles.name} numberOfLines={1}>{name}</Text>
+        {hasNewActivity && (
+          <View style={styles.activityBell}>
+            <Ionicons name="notifications-outline" size={11} color="#FFFFFF" />
+          </View>
+        )}
         {category ? (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{category}</Text>
@@ -113,6 +120,15 @@ export function CircleCard({
 }
 
 const styles = StyleSheet.create({
+  activityBell: {
+    backgroundColor: "#FF4D00",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    marginRight: spacing.sm,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   card: {
     backgroundColor: colors.card,
     borderRadius: 14,

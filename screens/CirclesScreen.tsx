@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,7 +20,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 type MemberStatusMap = Record<string, "owner" | "active" | "requested">;
 type PendingRequestsMap = Record<string, number>;
 type Filter = "all" | "mine";
-type SortBy = "newest" | "members";
+type SortBy = "newest" | "members" | "new_activity";
 
 const PRESET_CATEGORIES = ["Culture", "Friends", "Nature", "Sport", "Food", "Travel"];
 
@@ -41,6 +42,8 @@ export default function CirclesScreen() {
   const [memberStatusMap, setMemberStatusMap] = useState<MemberStatusMap>({});
   const [pendingRequestsMap, setPendingRequestsMap] = useState<PendingRequestsMap>({});
   const [loading, setLoading] = useState(true);
+  const [activityMap, setActivityMap] = useState<Record<string, number>>({});
+  const [lastViewedMap, setLastViewedMap] = useState<Record<string, number>>({});
 
   async function handleNearMe() {
     if (nearMe) {
@@ -121,6 +124,37 @@ export default function CirclesScreen() {
       } else {
         setPendingRequestsMap({});
       }
+    }
+
+    // Fetch latest activity per circle (notes + events)
+    const [notesActivity, eventsActivity] = await Promise.all([
+      supabase.from("circle_notes").select("circle_id, created_at").order("created_at", { ascending: false }),
+      supabase.from("events").select("circle_id, created_at").not("circle_id", "is", null).order("created_at", { ascending: false }),
+    ]);
+    const newActivityMap: Record<string, number> = {};
+    for (const row of (notesActivity.data ?? []) as any[]) {
+      const t = new Date(row.created_at).getTime();
+      if (!newActivityMap[row.circle_id] || t > newActivityMap[row.circle_id]) newActivityMap[row.circle_id] = t;
+    }
+    for (const row of (eventsActivity.data ?? []) as any[]) {
+      const t = new Date(row.created_at).getTime();
+      if (!newActivityMap[row.circle_id] || t > newActivityMap[row.circle_id]) newActivityMap[row.circle_id] = t;
+    }
+    setActivityMap(newActivityMap);
+
+    // Read last-viewed timestamps from AsyncStorage
+    const circleIds = (circlesResult.data ?? []).map((c: any) => c.id);
+    if (circleIds.length > 0) {
+      const keys = circleIds.map((id: string) => `lastViewed_circle_${id}`);
+      const pairs = await AsyncStorage.multiGet(keys);
+      const lvMap: Record<string, number> = {};
+      for (const [key, val] of pairs) {
+        if (val) {
+          const id = key.replace("lastViewed_circle_", "");
+          lvMap[id] = parseInt(val, 10);
+        }
+      }
+      setLastViewedMap(lvMap);
     }
 
     setLoading(false);
@@ -243,14 +277,14 @@ export default function CirclesScreen() {
                 <View style={styles.filterSection}>
                   <Text style={styles.filterSectionLabel}>Sort</Text>
                   <View style={styles.filterChipRow}>
-                    {(["newest", "members"] as SortBy[]).map((opt) => (
+                    {(["newest", "members", "new_activity"] as SortBy[]).map((opt) => (
                       <TouchableOpacity
                         key={opt}
                         style={[styles.filterChip, sortBy === opt && styles.filterChipActive]}
                         onPress={() => setSortBy(opt)}
                       >
                         <Text style={[styles.filterChipText, sortBy === opt && styles.filterChipTextActive]}>
-                          {opt === "newest" ? "Newest" : "Most Members"}
+                          {opt === "newest" ? "Newest" : opt === "members" ? "Most Members" : "New Activity"}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -333,11 +367,16 @@ export default function CirclesScreen() {
               if (nearMe && nearMeCity && !(circle.location ?? "").toLowerCase().includes(nearMeCity.toLowerCase())) return false;
               return true;
             })
-            .sort((a, b) =>
-              sortBy === "members"
+            .sort((a, b) => {
+              if (sortBy === "new_activity") {
+                const aNew = (activityMap[a.id] ?? 0) > (lastViewedMap[a.id] ?? 0) ? 1 : 0;
+                const bNew = (activityMap[b.id] ?? 0) > (lastViewedMap[b.id] ?? 0) ? 1 : 0;
+                return bNew - aNew;
+              }
+              return sortBy === "members"
                 ? b.member_count - a.member_count
-                : new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            )
+                : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            })
             .map((circle) => (
             <CircleCard
               key={circle.id}
@@ -350,7 +389,12 @@ export default function CirclesScreen() {
               location={circle.location}
               organizer={circle.organizer}
               pendingRequests={pendingRequestsMap[circle.id] ?? 0}
-              onPress={() =>
+              hasNewActivity={
+                (activityMap[circle.id] ?? 0) > (lastViewedMap[circle.id] ?? 0)
+              }
+              onPress={() => {
+                AsyncStorage.setItem(`lastViewed_circle_${circle.id}`, Date.now().toString());
+                setLastViewedMap((prev) => ({ ...prev, [circle.id]: Date.now() }));
                 navigation.navigate("CircleDetail", {
                   id: circle.id,
                   name: circle.name,
@@ -359,8 +403,8 @@ export default function CirclesScreen() {
                   owner_id: circle.owner_id,
                   member_count: circle.member_count,
                   organizer: circle.organizer,
-                })
-              }
+                });
+              }}
             />
           ))
           )}
