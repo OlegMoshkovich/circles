@@ -152,6 +152,7 @@ export default function CirclesScreen() {
         category: data.category || null,
         visibility: data.visibility,
         location: data.location || null,
+        organizer: data.organizer || null,
         owner_id: user.id,
       })
       .select()
@@ -347,6 +348,7 @@ export default function CirclesScreen() {
               memberCount={circle.member_count}
               memberStatus={memberStatusMap[circle.id] ?? null}
               location={circle.location}
+              organizer={circle.organizer}
               pendingRequests={pendingRequestsMap[circle.id] ?? 0}
               onPress={() =>
                 navigation.navigate("CircleDetail", {
@@ -356,6 +358,7 @@ export default function CirclesScreen() {
                   visibility: circle.visibility,
                   owner_id: circle.owner_id,
                   member_count: circle.member_count,
+                  organizer: circle.organizer,
                 })
               }
             />

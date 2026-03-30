@@ -30,6 +30,7 @@ export type Circle = {
   visibility: 'public' | 'request' | 'private';
   category: string | null;
   location: string | null;
+  organizer: string | null;
   owner_id: string;
   created_at: string;
   member_count?: number;

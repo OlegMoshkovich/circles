@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useUser } from "@clerk/clerk-expo";
 import {
   Modal,
   View,
@@ -20,6 +21,7 @@ export type NewCircleData = {
   category: string;
   visibility: "public" | "request" | "private";
   location: string;
+  organizer: string;
 };
 
 type Props = {
@@ -37,7 +39,18 @@ const VISIBILITY_OPTIONS: { value: "public" | "request" | "private"; label: stri
 const PRESET_CATEGORIES = ["Culture", "Friends", "Nature", "Sport", "Food", "Travel"];
 
 export function CreateCircleModal({ visible, onClose, onSave }: Props) {
+  const { user } = useUser();
+
+  function defaultOrganizer() {
+    return user?.fullName
+      ?? user?.firstName
+      ?? user?.username
+      ?? user?.emailAddresses?.[0]?.emailAddress
+      ?? "";
+  }
+
   const [name, setName] = useState("");
+  const [organizer, setOrganizer] = useState(defaultOrganizer);
   const [description, setDescription] = useState("");
   const [categoryPreset, setCategoryPreset] = useState("");
   const [customCategoryText, setCustomCategoryText] = useState("");
@@ -50,6 +63,7 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
   useEffect(() => {
     if (visible) {
       setName("");
+      setOrganizer(defaultOrganizer());
       setDescription("");
       setCategoryPreset("");
       setCustomCategoryText("");
@@ -74,6 +88,7 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
         category,
         visibility,
         location: location.trim(),
+        organizer: organizer.trim(),
       });
     } catch (e: any) {
       setError(e?.message ?? "Failed to create circle. Please try again.");
@@ -122,6 +137,12 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
 
               <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 <Field label="Name" value={name} onChangeText={setName} placeholder="Hiking Group" />
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.fieldLabel}>Organiser</Text>
+                  <View style={styles.inputRow}>
+                    <Text style={styles.readOnlyValue}>{organizer}</Text>
+                  </View>
+                </View>
                 <Field label="Description" value={description} onChangeText={setDescription} placeholder="A few words about this circle…" multiline />
                 <View style={styles.fieldContainer}>
                   <Text style={styles.fieldLabel}>Category</Text>
@@ -257,7 +278,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
     paddingTop: 12,
-    height: "88%",
+    height: "94%",
   },
   mapSheet: {
     flex: 1,
@@ -409,4 +430,5 @@ const styles = StyleSheet.create({
   locationButtonPlaceholder: {
     color: colors.textMuted,
   },
+  readOnlyValue: { fontSize: 16, color: colors.textMuted, height: 36, textAlignVertical: "center" },
 });

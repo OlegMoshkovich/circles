@@ -51,6 +51,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [name, setName] = useState(route.params.name);
   const [description, setDescription] = useState(route.params.description ?? "");
   const [visibility, setVisibility] = useState(route.params.visibility);
+  const [organizer] = useState(route.params.organizer ?? null);
 
   const [activeTab, setActiveTab] = useState<Tab>("feed");
   const [memberCount, setMemberCount] = useState(route.params.member_count);
@@ -474,6 +475,12 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           <Text style={styles.metaText}>{memberCount} {memberCount === 1 ? "member" : "members"}</Text>
           <Text style={styles.metaSep}>·</Text>
           <Text style={styles.metaText}>{VISIBILITY_LABEL[visibility]}</Text>
+          {organizer ? (
+            <>
+              <Text style={styles.metaSep}>·</Text>
+              <Text style={styles.metaText}>{organizer}</Text>
+            </>
+          ) : null}
         </View>
 
         <View style={styles.divider} />

@@ -15,6 +15,7 @@ type CircleCardProps = {
   memberCount: number;
   memberStatus: MemberStatus;
   location?: string | null;
+  organizer?: string | null;
   pendingRequests?: number;
   onPress?: () => void;
 };
@@ -33,6 +34,7 @@ export function CircleCard({
   memberCount,
   memberStatus,
   location,
+  organizer,
   pendingRequests = 0,
   onPress,
 }: CircleCardProps) {
@@ -63,6 +65,12 @@ export function CircleCard({
             <View style={styles.footerRow}>
               <Ionicons name="location-outline" size={14} color={colors.textMuted} style={styles.footerIcon} />
               <Text style={styles.footerText} numberOfLines={1}>{location}</Text>
+            </View>
+          ) : null}
+          {organizer ? (
+            <View style={styles.footerRow}>
+              <Ionicons name="person-outline" size={14} color={colors.textMuted} style={styles.footerIcon} />
+              <Text style={styles.footerText} numberOfLines={1}>{organizer}</Text>
             </View>
           ) : null}
         </View>

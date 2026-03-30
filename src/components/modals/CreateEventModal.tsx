@@ -53,8 +53,17 @@ function fmtTime(d: Date) {
 
 export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: Props) {
   const { user } = useUser();
+
+  function defaultOrganizer() {
+    return user?.fullName
+      ?? user?.firstName
+      ?? user?.username
+      ?? user?.emailAddresses?.[0]?.emailAddress
+      ?? "";
+  }
+
   const [title, setTitle] = useState("");
-  const [organizer, setOrganizer] = useState("");
+  const [organizer, setOrganizer] = useState(defaultOrganizer);
   const [selectedDate, setSelectedDate] = useState<Date>(defaultDate);
   const [pickerMode, setPickerMode] = useState<"date" | "time" | null>(null);
   const [location, setLocation] = useState("");
@@ -69,6 +78,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
 
   useEffect(() => {
     if (!visible || !user) return;
+    setOrganizer((prev) => prev || defaultOrganizer());
     supabase
       .from("circle_members")
       .select("circle_id")
@@ -110,7 +120,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
 
   function resetForm() {
     setTitle("");
-    setOrganizer("");
+    setOrganizer(defaultOrganizer());
     setSelectedDate(defaultDate());
     setPickerMode(null);
     setLocation("");
@@ -157,7 +167,12 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
 
               <ScrollView ref={scrollRef} style={{ flex: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 <Field label="Title" value={title} onChangeText={setTitle} placeholder="Morning Lake Swim" />
-                <Field label="Organiser" value={organizer} onChangeText={setOrganizer} placeholder="Your name" />
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.fieldLabel}>Organiser</Text>
+                  <View style={styles.inputRow}>
+                    <Text style={styles.readOnlyValue}>{organizer}</Text>
+                  </View>
+                </View>
 
                 {/* Date + Time row */}
                 <View style={styles.row}>
@@ -509,4 +524,5 @@ const styles = StyleSheet.create({
   circleName: { fontSize: 15, color: colors.text },
   circleNameActive: { color: colors.card },
   noCirclesHint: { fontSize: 13, color: colors.textMuted, fontStyle: "italic" },
+  readOnlyValue: { fontSize: 16, color: colors.textMuted, height: 36, textAlignVertical: "center" },
 });

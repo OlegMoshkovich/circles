@@ -38,6 +38,7 @@ export type CircleDetailParams = {
   visibility: 'public' | 'request' | 'private';
   owner_id: string;
   member_count: number;
+  organizer?: string | null;
 };
 
 export type RootStackParamList = {
