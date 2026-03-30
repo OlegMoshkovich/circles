@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from "react";
+import * as Location from "expo-location";
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -31,10 +32,35 @@ export default function CirclesScreen() {
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("newest");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [locationFilter, setLocationFilter] = useState<string | null>(null);
+  const [nearMe, setNearMe] = useState(false);
+  const [nearMeCity, setNearMeCity] = useState<string | null>(null);
+  const [nearMeLoading, setNearMeLoading] = useState(false);
   const [circles, setCircles] = useState<(Circle & { member_count: number })[]>([]);
   const [memberStatusMap, setMemberStatusMap] = useState<MemberStatusMap>({});
   const [pendingRequestsMap, setPendingRequestsMap] = useState<PendingRequestsMap>({});
   const [loading, setLoading] = useState(true);
+
+  async function handleNearMe() {
+    if (nearMe) {
+      setNearMe(false);
+      setNearMeCity(null);
+      return;
+    }
+    setNearMeLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") { setNearMeLoading(false); return; }
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const [geo] = await Location.reverseGeocodeAsync(pos.coords);
+      const city = geo?.city ?? geo?.subregion ?? geo?.region ?? null;
+      setNearMeCity(city);
+      setNearMe(true);
+      setLocationFilter(null);
+    } finally {
+      setNearMeLoading(false);
+    }
+  }
 
   const fetchCircles = useCallback(async () => {
     setLoading(true);
@@ -196,7 +222,7 @@ export default function CirclesScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.filterIconButton, (sortBy !== "newest" || categoryFilter !== null) && styles.filterIconButtonActive]}
+            style={[styles.filterIconButton, (sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe) && styles.filterIconButtonActive]}
             onPress={() => setShowFilterPanel((v) => !v)}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             activeOpacity={0.7}
@@ -204,7 +230,7 @@ export default function CirclesScreen() {
             <Ionicons
               name="options-outline"
               size={17}
-              color={(sortBy !== "newest" || categoryFilter !== null) ? colors.iconbBg : colors.textMuted}
+              color={(sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe) ? colors.iconbBg : colors.textMuted}
             />
           </TouchableOpacity>
         </View>
@@ -243,6 +269,26 @@ export default function CirclesScreen() {
                 ))}
               </View>
             </View>
+            <View style={styles.filterSection}>
+              <Text style={styles.filterSectionLabel}>Location</Text>
+              <View style={styles.filterChipRow}>
+                <TouchableOpacity
+                  style={[styles.filterChip, nearMe && styles.filterChipActive, styles.filterChipNearMe]}
+                  onPress={handleNearMe}
+                  disabled={nearMeLoading}
+                >
+                  <Ionicons
+                    name="navigate-outline"
+                    size={13}
+                    color={nearMe ? colors.card : colors.textMuted}
+                    style={{ marginRight: 4 }}
+                  />
+                  <Text style={[styles.filterChipText, nearMe && styles.filterChipTextActive]}>
+                    {nearMeLoading ? "Locating…" : nearMe && nearMeCity ? nearMeCity : "Near Me"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         )}
 
@@ -255,6 +301,8 @@ export default function CirclesScreen() {
             .filter((circle) => {
               if (filter === "mine" && memberStatusMap[circle.id] !== "owner" && memberStatusMap[circle.id] !== "active") return false;
               if (categoryFilter !== null && circle.category !== categoryFilter) return false;
+              if (locationFilter !== null && circle.location !== locationFilter) return false;
+              if (nearMe && nearMeCity && !(circle.location ?? "").toLowerCase().includes(nearMeCity.toLowerCase())) return false;
               return true;
             })
             .sort((a, b) =>
@@ -360,6 +408,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: colors.card,
+  },
+  filterChipNearMe: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   filterChipActive: {
     backgroundColor: colors.text,
