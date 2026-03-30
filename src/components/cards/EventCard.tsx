@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   metaText: {
-    ...typography.body,
+    ...typography.bodySmall,
     color: colors.text,
   },
   divider: {
