@@ -1,17 +1,20 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { Animated, PanResponder } from "react-native";
 
 type Props = {
   children: React.ReactNode;
   onDismiss?: () => void;
   onRestore?: () => void;
+  disabled?: boolean;
 };
 
-export function SwipeableCard({ children, onDismiss, onRestore }: Props) {
+export function SwipeableCard({ children, onDismiss, onRestore, disabled }: Props) {
   const translateX = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(1)).current;
   const height = useRef(new Animated.Value(0)).current;
-  const cardHeight = useRef(0);
+  const [measured, setMeasured] = useState(false);
+  const disabledRef = useRef(disabled);
+  disabledRef.current = disabled;
 
   const collapseAndCall = (cb?: () => void) => {
     Animated.timing(height, {
@@ -26,7 +29,7 @@ export function SwipeableCard({ children, onDismiss, onRestore }: Props) {
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, g) =>
-        Math.abs(g.dx) > 8 && Math.abs(g.dy) < 15,
+        !disabledRef.current && Math.abs(g.dx) > 8 && Math.abs(g.dy) < 15,
       onPanResponderMove: (_, g) => {
         if (g.dx < 0 && onDismiss) {
           translateX.setValue(g.dx);
@@ -57,11 +60,11 @@ export function SwipeableCard({ children, onDismiss, onRestore }: Props) {
 
   return (
     <Animated.View
-      style={{ height: cardHeight.current === 0 ? undefined : height, overflow: "hidden" }}
+      style={{ height: measured ? height : undefined, overflow: "hidden" }}
       onLayout={(e) => {
-        if (cardHeight.current === 0) {
-          cardHeight.current = e.nativeEvent.layout.height;
+        if (!measured) {
           height.setValue(e.nativeEvent.layout.height);
+          setMeasured(true);
         }
       }}
     >

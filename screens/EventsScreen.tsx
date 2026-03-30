@@ -347,6 +347,7 @@ export default function EventsScreen() {
             .map((event) => (
             <SwipeableCard
               key={event.id}
+              disabled={!!user && event.created_by === user.id}
               onDismiss={() => {
                 setDismissedIds((prev) => new Set(prev).add(event.id));
                 if (user) {

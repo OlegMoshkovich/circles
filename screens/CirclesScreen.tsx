@@ -449,6 +449,7 @@ export default function CirclesScreen() {
             .map((circle) => (
             <SwipeableCard
               key={circle.id}
+              disabled={memberStatusMap[circle.id] === "owner"}
               onDismiss={() => {
                 setDismissedIds((prev) => new Set(prev).add(circle.id));
                 if (user) {
