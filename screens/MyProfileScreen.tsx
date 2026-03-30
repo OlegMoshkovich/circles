@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import { useFocusEffect } from "@react-navigation/native";
@@ -86,6 +86,12 @@ export default function MyProfileScreen() {
   const name =
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Member";
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
+  const photoUrl = (() => {
+    const ext = user?.externalAccounts?.find(
+      (a: any) => a.provider === "oauth_google" || a.provider === "google"
+    ) as any;
+    return ext?.imageUrl ?? ext?.avatarUrl ?? user?.imageUrl ?? null;
+  })();
   const initials =
     [user?.firstName?.[0], user?.lastName?.[0]]
       .filter(Boolean)
@@ -118,7 +124,11 @@ export default function MyProfileScreen() {
         <>
           <View style={styles.avatarSection}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarInitials}>{initials}</Text>
+              {photoUrl ? (
+                <Image source={{ uri: photoUrl }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarInitials}>{initials}</Text>
+              )}
             </View>
             <Text style={styles.name}>{name}</Text>
             {email.length > 0 && <Text style={styles.email}>{email}</Text>}
@@ -229,6 +239,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     borderWidth: 1,
     borderColor: colors.cardBorder,
+  },
+  avatarImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
   },
   avatarInitials: {
     fontSize: 24,

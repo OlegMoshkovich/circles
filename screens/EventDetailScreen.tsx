@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -116,6 +117,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         event_id: id,
         user_id: user.id,
         display_name: user.fullName ?? user.firstName ?? user.username ?? null,
+        avatar_url: (user.externalAccounts?.find((a: any) => a.provider === "oauth_google" || a.provider === "google") as any)?.imageUrl ?? user.imageUrl ?? null,
         content: noteText.trim(),
       })
       .select()
@@ -325,12 +327,27 @@ export default function EventDetailScreen({ route, navigation }: Props) {
             <View key={note.id} style={styles.noteCard}>
               <View style={styles.noteHeader}>
                 <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{initials}</Text>
+                  {note.avatar_url ? (
+                    <Image source={{ uri: note.avatar_url }} style={styles.avatarImage} />
+                  ) : (
+                    <Text style={styles.avatarText}>{initials}</Text>
+                  )}
                 </View>
                 <View style={styles.noteHeaderText}>
                   <Text style={styles.noteName}>{note.display_name ?? "Guest"}</Text>
                   <Text style={styles.noteTime}>{timeAgo}</Text>
                 </View>
+                {note.user_id === user?.id && (
+                  <TouchableOpacity
+                    onPress={async () => {
+                      await supabase.from("event_notes").delete().eq("id", note.id);
+                      setNotes((prev) => prev.filter((n) => n.id !== note.id));
+                    }}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
+                  </TouchableOpacity>
+                )}
               </View>
               <Text style={styles.noteContent}>{note.content}</Text>
             </View>
@@ -673,6 +690,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: spacing.sm,
+  },
+  avatarImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
   avatarText: {
     fontSize: 13,

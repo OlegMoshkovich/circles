@@ -65,6 +65,7 @@ export type EventNote = {
   event_id: string;
   user_id: string;
   display_name: string | null;
+  avatar_url: string | null;
   content: string;
   created_at: string;
 };
@@ -74,6 +75,7 @@ export type CircleNote = {
   circle_id: string;
   user_id: string;
   display_name: string | null;
+  avatar_url: string | null;
   content: string;
   created_at: string;
 };
