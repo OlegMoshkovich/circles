@@ -14,6 +14,7 @@ type CircleCardProps = {
   visibility: "public" | "request" | "private";
   memberCount: number;
   memberStatus: MemberStatus;
+  location?: string | null;
   pendingRequests?: number;
   onPress?: () => void;
 };
@@ -31,6 +32,7 @@ export function CircleCard({
   visibility,
   memberCount,
   memberStatus,
+  location,
   pendingRequests = 0,
   onPress,
 }: CircleCardProps) {
@@ -53,8 +55,16 @@ export function CircleCard({
 
       <View style={styles.footer}>
         <View style={styles.footerLeft}>
-          <Ionicons name="people-outline" size={14} color={colors.textMuted} style={styles.footerIcon} />
-          <Text style={styles.footerText}>{memberCount} {memberCount === 1 ? "member" : "members"}</Text>
+          <View style={styles.footerRow}>
+            <Ionicons name="people-outline" size={14} color={colors.textMuted} style={styles.footerIcon} />
+            <Text style={styles.footerText}>{memberCount} {memberCount === 1 ? "member" : "members"}</Text>
+          </View>
+          {location ? (
+            <View style={styles.footerRow}>
+              <Ionicons name="location-outline" size={14} color={colors.textMuted} style={styles.footerIcon} />
+              <Text style={styles.footerText} numberOfLines={1}>{location}</Text>
+            </View>
+          ) : null}
         </View>
 
         <View style={styles.footerRight}>
@@ -155,6 +165,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   footerLeft: {
+    flexDirection: "column",
+    gap: 4,
+    flex: 1,
+  },
+  footerRow: {
     flexDirection: "row",
     alignItems: "center",
   },

@@ -271,6 +271,7 @@ export default function CirclesScreen() {
               visibility={circle.visibility}
               memberCount={circle.member_count}
               memberStatus={memberStatusMap[circle.id] ?? null}
+              location={circle.location}
               pendingRequests={pendingRequestsMap[circle.id] ?? 0}
               onPress={() =>
                 navigation.navigate("CircleDetail", {
