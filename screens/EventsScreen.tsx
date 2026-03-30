@@ -16,7 +16,7 @@ import { supabase, Event } from "../lib/supabase";
 
 type EventWithCircle = Event & { circles?: { name: string } | null };
 type Filter = "all" | "circles";
-type SortBy = "newest" | "popular";
+type SortBy = "newest" | "popular" | "activity";
 type RsvpFilter = "all" | "going" | "maybe";
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -31,6 +31,7 @@ export default function EventsScreen() {
   const [rsvpFilter, setRsvpFilter] = useState<RsvpFilter>("all");
   const [events, setEvents] = useState<EventWithCircle[]>([]);
   const [rsvpStatusMap, setRsvpStatusMap] = useState<Record<string, "going" | "maybe">>({});
+  const [noteCountMap, setNoteCountMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   const fetchEvents = useCallback(async () => {
@@ -81,7 +82,24 @@ export default function EventsScreen() {
     }
 
     const { data, error } = await query.order("created_at", { ascending: false });
-    if (!error && data) setEvents(data as EventWithCircle[]);
+    if (!error && data) {
+      setEvents(data as EventWithCircle[]);
+      // Fetch note counts for all loaded events
+      const eventIds = data.map((e: any) => e.id);
+      if (eventIds.length > 0) {
+        const { data: noteCounts } = await supabase
+          .from("event_notes")
+          .select("event_id")
+          .in("event_id", eventIds);
+        if (noteCounts) {
+          const map: Record<string, number> = {};
+          for (const row of noteCounts as any[]) {
+            map[row.event_id] = (map[row.event_id] ?? 0) + 1;
+          }
+          setNoteCountMap(map);
+        }
+      }
+    }
     setLoading(false);
   }, [user, filter]);
 
@@ -111,11 +129,11 @@ export default function EventsScreen() {
 
   const displayedEvents = events
     .filter((e) => rsvpFilter === "all" || rsvpStatusMap[e.id] === rsvpFilter)
-    .sort((a, b) =>
-      sortBy === "popular"
-        ? (b.going + b.maybe) - (a.going + a.maybe)
-        : new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
+    .sort((a, b) => {
+      if (sortBy === "popular") return (b.going + b.maybe) - (a.going + a.maybe);
+      if (sortBy === "activity") return (noteCountMap[b.id] ?? 0) - (noteCountMap[a.id] ?? 0);
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
 
   const filterActive = sortBy !== "newest" || rsvpFilter !== "all";
 
@@ -180,14 +198,14 @@ export default function EventsScreen() {
             <View style={styles.filterSection}>
               <Text style={styles.filterSectionLabel}>Sort</Text>
               <View style={styles.filterChipRow}>
-                {(["newest", "popular"] as SortBy[]).map((opt) => (
+                {(["newest", "popular", "activity"] as SortBy[]).map((opt) => (
                   <TouchableOpacity
                     key={opt}
                     style={[styles.filterChip, sortBy === opt && styles.filterChipActive]}
                     onPress={() => setSortBy(opt)}
                   >
                     <Text style={[styles.filterChipText, sortBy === opt && styles.filterChipTextActive]}>
-                      {opt === "newest" ? "Newest" : "Most Popular"}
+                      {opt === "newest" ? "Newest" : opt === "popular" ? "Most Popular" : "Most Active"}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -235,6 +253,7 @@ export default function EventsScreen() {
               maybe={event.maybe}
               rsvp={rsvpStatusMap[event.id]}
               circleName={event.circles?.name ?? null}
+              noteCount={noteCountMap[event.id] ?? 0}
               onPress={() =>
                 navigation.navigate("EventDetail", {
                   id: event.id,

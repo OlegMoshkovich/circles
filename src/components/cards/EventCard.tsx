@@ -16,6 +16,7 @@ type EventCardProps = {
   maybe: number;
   rsvp?: "going" | "maybe";
   circleName?: string | null;
+  noteCount?: number;
   onPress?: () => void;
 };
 
@@ -29,6 +30,7 @@ export function EventCard({
   maybe,
   rsvp,
   circleName,
+  noteCount = 0,
   onPress,
 }: EventCardProps) {
   const { t } = useLanguage();
@@ -74,7 +76,12 @@ export function EventCard({
           <Text style={styles.footerCount}>{maybe}</Text>
           <Text style={styles.footerLabel}> {t.events.maybeLabel}</Text>
         </Text>
-        <Ionicons name="chatbubble-outline" size={16} color={colors.textMuted} />
+        <View style={styles.noteCountRow}>
+          {noteCount > 0 && (
+            <Text style={styles.noteCountText}>{noteCount}</Text>
+          )}
+          <Ionicons name="chatbubble-outline" size={16} color={noteCount > 0 ? colors.text : colors.textMuted} />
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -172,5 +179,15 @@ const styles = StyleSheet.create({
   },
   footerLabel: {
     color: colors.textMuted,
+  },
+  noteCountRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  noteCountText: {
+    fontSize: 12,
+    color: colors.text,
+    fontWeight: "500" as const,
   },
 });

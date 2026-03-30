@@ -59,6 +59,15 @@ export type AppNotification = {
   created_at: string;
 };
 
+export type EventNote = {
+  id: string;
+  event_id: string;
+  user_id: string;
+  display_name: string | null;
+  content: string;
+  created_at: string;
+};
+
 export type CircleNote = {
   id: string;
   circle_id: string;

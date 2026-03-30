@@ -59,6 +59,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [invitedUsers, setInvitedUsers] = useState<{ user_id: string; name: string }[]>([]);
   const [profileMap, setProfileMap] = useState<Record<string, string>>({});
   const [events, setEvents] = useState<Event[]>([]);
+  const [eventNoteCountMap, setEventNoteCountMap] = useState<Record<string, number>>({});
   const [notes, setNotes] = useState<CircleNote[]>([]);
   const [noteText, setNoteText] = useState("");
   const [postingNote, setPostingNote] = useState(false);
@@ -168,8 +169,24 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     Promise.all([
       supabase.from("events").select("*").eq("circle_id", id).order("created_at", { ascending: false }),
       supabase.from("circle_notes").select("*").eq("circle_id", id).order("created_at", { ascending: false }),
-    ]).then(([eventsResult, notesResult]) => {
-      if (!eventsResult.error && eventsResult.data) setEvents(eventsResult.data);
+    ]).then(async ([eventsResult, notesResult]) => {
+      if (!eventsResult.error && eventsResult.data) {
+        setEvents(eventsResult.data);
+        const eventIds = eventsResult.data.map((e: any) => e.id);
+        if (eventIds.length > 0) {
+          const { data: noteCounts } = await supabase
+            .from("event_notes")
+            .select("event_id")
+            .in("event_id", eventIds);
+          if (noteCounts) {
+            const map: Record<string, number> = {};
+            for (const row of noteCounts as any[]) {
+              map[row.event_id] = (map[row.event_id] ?? 0) + 1;
+            }
+            setEventNoteCountMap(map);
+          }
+        }
+      }
       if (!notesResult.error && notesResult.data) setNotes(notesResult.data);
       setLoadingFeed(false);
     });
@@ -514,15 +531,18 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           <>
             {(isOwner || isMember) && (
               <View style={styles.composeBox}>
-                <TextInput
-                  style={styles.composeInput}
-                  placeholder="Share a note with the circle…"
-                  placeholderTextColor={colors.textMuted}
-                  value={noteText}
-                  onChangeText={setNoteText}
-                  multiline
-                  maxLength={500}
-                />
+                <View style={styles.composeRow}>
+                  <Ionicons name="chatbubble-outline" size={18} color={colors.text} style={styles.composeIcon} />
+                  <TextInput
+                    style={styles.composeInput}
+                    placeholder="Share a note with the circle…"
+                    placeholderTextColor={colors.textMuted}
+                    value={noteText}
+                    onChangeText={setNoteText}
+                    multiline
+                    maxLength={500}
+                  />
+                </View>
                 {noteText.trim().length > 0 && (
                   <TouchableOpacity
                     style={styles.postButton}
@@ -563,6 +583,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                       location={event.location}
                       going={event.going}
                       maybe={event.maybe}
+                      noteCount={eventNoteCountMap[event.id] ?? 0}
                       onPress={() =>
                         nav.navigate("EventDetail", {
                           id: event.id,
@@ -1039,17 +1060,37 @@ const styles = StyleSheet.create({
   },
   composeBox: {
     backgroundColor: colors.card,
-    borderRadius: 14,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    padding: spacing.sm,
+    padding: spacing.cardPadding,
     marginBottom: spacing.md,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#2C2A26",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: { elevation: 1 },
+      default: {},
+    }),
+  },
+  composeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  composeIcon: {
+    marginRight: spacing.sm,
   },
   composeInput: {
     ...typography.body,
     color: colors.text,
-    minHeight: 44,
+    flex: 1,
     maxHeight: 120,
+    paddingTop: 0,
+    paddingBottom: 0,
+    textAlignVertical: "center",
   },
   postButton: {
     alignSelf: "flex-end",

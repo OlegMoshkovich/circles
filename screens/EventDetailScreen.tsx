@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -16,7 +18,7 @@ import { RootStackParamList } from "../types";
 import { colors } from "../src/theme/colors";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
-import { supabase } from "../lib/supabase";
+import { supabase, EventNote } from "../lib/supabase";
 import { InviteModal } from "../src/components/modals/InviteModal";
 import { EditEventModal, EditEventData } from "../src/components/modals/EditEventModal";
 
@@ -62,6 +64,10 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const [rsvp, setRsvp] = useState<"going" | "maybe" | undefined>(route.params.rsvp);
   const [submitting, setSubmitting] = useState(false);
 
+  const [notes, setNotes] = useState<EventNote[]>([]);
+  const [noteText, setNoteText] = useState("");
+  const [postingNote, setPostingNote] = useState(false);
+
   // Load fresh counts + this user's RSVP on every mount
   useEffect(() => {
     const queries: [Promise<any>, Promise<any>, Promise<any>] = [
@@ -91,6 +97,37 @@ export default function EventDetailScreen({ route, navigation }: Props) {
       if (rsvpData) setRsvp(rsvpData.status as "going" | "maybe");
     });
   }, [id, user]);
+
+  useEffect(() => {
+    supabase
+      .from("event_notes")
+      .select("*")
+      .eq("event_id", id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => { if (data) setNotes(data); });
+  }, [id]);
+
+  async function handlePostNote() {
+    if (!user || !noteText.trim() || postingNote) return;
+    setPostingNote(true);
+    const { data, error } = await supabase
+      .from("event_notes")
+      .insert({
+        event_id: id,
+        user_id: user.id,
+        display_name: user.fullName ?? user.firstName ?? user.username ?? null,
+        content: noteText.trim(),
+      })
+      .select()
+      .single();
+    if (error) {
+      Alert.alert("Could not post note", error.message);
+    } else if (data) {
+      setNotes((prev) => [data, ...prev]);
+      setNoteText("");
+    }
+    setPostingNote(false);
+  }
 
   async function handleRsvp(newStatus: "going" | "maybe") {
     if (!user || submitting) return;
@@ -243,12 +280,64 @@ export default function EventDetailScreen({ route, navigation }: Props) {
 
         <View style={styles.divider} />
 
-        {/* Event Chat */}
-        <View style={styles.chatRow}>
-          <Ionicons name="chatbubble-outline" size={18} color={colors.text} style={styles.metaIcon} />
-          <Text style={styles.chatLabel}>Event Chat</Text>
-          <View style={styles.chatDot} />
-        </View>
+        {/* Notes */}
+        {user && (
+          <View style={styles.composeBox}>
+            <View style={styles.composeRow}>
+              <Ionicons name="chatbubble-outline" size={18} color={colors.text} style={styles.composeIcon} />
+              <TextInput
+                style={styles.composeInput}
+                placeholder="Share a note with the event…"
+                placeholderTextColor={colors.textMuted}
+                value={noteText}
+                onChangeText={setNoteText}
+                multiline
+                maxLength={500}
+              />
+            </View>
+            {noteText.trim().length > 0 && (
+              <TouchableOpacity
+                style={styles.postButton}
+                onPress={handlePostNote}
+                disabled={postingNote}
+              >
+                {postingNote ? (
+                  <ActivityIndicator size="small" color={colors.card} />
+                ) : (
+                  <Text style={styles.postButtonText}>Post</Text>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {notes.map((note) => {
+          const n = note.display_name ?? "?";
+          const parts = n.trim().split(" ");
+          const initials = parts.length >= 2
+            ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+            : n.slice(0, 2).toUpperCase();
+          const diff = Date.now() - new Date(note.created_at).getTime();
+          const mins = Math.floor(diff / 60000);
+          const timeAgo = mins < 1 ? "just now"
+            : mins < 60 ? `${mins}m ago`
+            : mins < 1440 ? `${Math.floor(mins / 60)}h ago`
+            : `${Math.floor(mins / 1440)}d ago`;
+          return (
+            <View key={note.id} style={styles.noteCard}>
+              <View style={styles.noteHeader}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{initials}</Text>
+                </View>
+                <View style={styles.noteHeaderText}>
+                  <Text style={styles.noteName}>{note.display_name ?? "Guest"}</Text>
+                  <Text style={styles.noteTime}>{timeAgo}</Text>
+                </View>
+              </View>
+              <Text style={styles.noteContent}>{note.content}</Text>
+            </View>
+          );
+        })}
       </ScrollView>
 
       {/* Fixed RSVP bar */}
@@ -516,4 +605,98 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   headerAction: {},
+  composeBox: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    padding: spacing.cardPadding,
+    marginBottom: spacing.md,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#2C2A26",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: { elevation: 1 },
+      default: {},
+    }),
+  },
+  composeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  composeIcon: {
+    marginRight: spacing.sm,
+  },
+  composeInput: {
+    ...typography.body,
+    color: colors.text,
+    flex: 1,
+    maxHeight: 120,
+    paddingTop: 0,
+    paddingBottom: 0,
+    textAlignVertical: "center",
+  },
+  postButton: {
+    alignSelf: "flex-end",
+    backgroundColor: colors.text,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 999,
+    marginTop: 6,
+    minWidth: 60,
+    alignItems: "center",
+  },
+  postButtonText: {
+    color: colors.card,
+    fontSize: 13,
+    fontWeight: "600" as const,
+  },
+  noteCard: {
+    backgroundColor: colors.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    padding: spacing.cardPadding,
+    marginBottom: spacing.md,
+  },
+  noteHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.badgeBg,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: spacing.sm,
+  },
+  avatarText: {
+    fontSize: 13,
+    fontWeight: "600" as const,
+    color: colors.textMuted,
+  },
+  noteHeaderText: {
+    flex: 1,
+  },
+  noteName: {
+    fontSize: 13,
+    fontWeight: "600" as const,
+    color: colors.text,
+  },
+  noteTime: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 1,
+  },
+  noteContent: {
+    ...typography.body,
+    color: colors.text,
+    lineHeight: 21,
+  },
 });
