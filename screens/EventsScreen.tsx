@@ -38,6 +38,7 @@ export default function EventsScreen() {
   const [activityMap, setActivityMap] = useState<Record<string, number>>({});
   const [lastViewedMap, setLastViewedMap] = useState<Record<string, number>>({});
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+  const [showDismissed, setShowDismissed] = useState(false);
 
   const fetchEvents = useCallback(async () => {
     if (!user) {
@@ -262,6 +263,19 @@ export default function EventsScreen() {
                     ))}
                   </View>
                 </View>
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionLabel}>View</Text>
+                  <View style={styles.filterChipRow}>
+                    <TouchableOpacity
+                      style={[styles.filterChip, showDismissed && styles.filterChipActive]}
+                      onPress={() => setShowDismissed((v) => !v)}
+                    >
+                      <Text style={[styles.filterChipText, showDismissed && styles.filterChipTextActive]}>
+                        Dismissed
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
             )}
           </View>
@@ -271,7 +285,57 @@ export default function EventsScreen() {
           <View style={styles.loader}>
             <ActivityIndicator size="small" color={colors.textMuted} />
           </View>
-        ) : displayedEvents.length === 0 ? (
+        ) : showDismissed ? (
+          events.filter((e) => dismissedIds.has(e.id)).length === 0 ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyText}>No dismissed events</Text>
+            </View>
+          ) : (
+            events.filter((e) => dismissedIds.has(e.id)).map((event) => (
+              <SwipeableCard
+                key={event.id}
+                onRestore={() => {
+                  setDismissedIds((prev) => { const next = new Set(prev); next.delete(event.id); return next; });
+                  if (user) {
+                    supabase.from("dismissed_items").delete()
+                      .eq("user_id", user.id).eq("item_type", "event").eq("item_id", event.id).then(() => {});
+                  }
+                }}
+              >
+                <EventCard
+                  title={event.title}
+                  organizer={event.organizer}
+                  date={event.date_label}
+                  time={event.time_label}
+                  location={event.location}
+                  going={event.going}
+                  maybe={event.maybe}
+                  rsvp={rsvpStatusMap[event.id]}
+                  circleName={event.circles?.name ?? null}
+                  noteCount={noteCountMap[event.id] ?? 0}
+                  hasNewActivity={false}
+                  onPress={() => {
+                    navigation.navigate("EventDetail", {
+                      id: event.id,
+                      title: event.title,
+                      organizer: event.organizer,
+                      date: event.date_label,
+                      time: event.time_label,
+                      location: event.location,
+                      going: event.going,
+                      maybe: event.maybe,
+                      rsvp: rsvpStatusMap[event.id],
+                      description: event.description,
+                      created_by: event.created_by,
+                      circleName: event.circles?.name ?? null,
+                      circle_id: event.circle_id,
+                    });
+                  }}
+                />
+              </SwipeableCard>
+            ))
+          )
+        ) : displayedEvents.filter((e) => !dismissedIds.has(e.id)).length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyText}>
               {filter === "circles" ? "No events in your circles yet" : "No events yet"}

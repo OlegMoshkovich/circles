@@ -46,6 +46,7 @@ export default function CirclesScreen() {
   const [activityMap, setActivityMap] = useState<Record<string, number>>({});
   const [lastViewedMap, setLastViewedMap] = useState<Record<string, number>>({});
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+  const [showDismissed, setShowDismissed] = useState(false);
 
   async function handleNearMe() {
     if (nearMe) {
@@ -357,6 +358,19 @@ export default function CirclesScreen() {
                     </TouchableOpacity>
                   </View>
                 </View>
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionLabel}>View</Text>
+                  <View style={styles.filterChipRow}>
+                    <TouchableOpacity
+                      style={[styles.filterChip, showDismissed && styles.filterChipActive]}
+                      onPress={() => setShowDismissed((v) => !v)}
+                    >
+                      <Text style={[styles.filterChipText, showDismissed && styles.filterChipTextActive]}>
+                        Dismissed
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
             )}
           </View>
@@ -366,9 +380,53 @@ export default function CirclesScreen() {
           <View style={styles.loader}>
             <ActivityIndicator size="small" color={colors.textMuted} />
           </View>
+        ) : showDismissed ? (
+          circles.filter((c) => dismissedIds.has(c.id)).length === 0 ? (
+            <View style={styles.loader}>
+              <Text style={{ fontSize: 14, fontFamily: "Lora_400Regular", color: colors.textMuted }}>No dismissed circles</Text>
+            </View>
+          ) : (
+            circles.filter((c) => dismissedIds.has(c.id)).map((circle) => (
+              <SwipeableCard
+                key={circle.id}
+                onRestore={() => {
+                  setDismissedIds((prev) => { const next = new Set(prev); next.delete(circle.id); return next; });
+                  if (user) {
+                    supabase.from("dismissed_items").delete()
+                      .eq("user_id", user.id).eq("item_type", "circle").eq("item_id", circle.id).then(() => {});
+                  }
+                }}
+              >
+                <CircleCard
+                  name={circle.name}
+                  description={circle.description}
+                  category={circle.category}
+                  visibility={circle.visibility}
+                  memberCount={circle.member_count}
+                  memberStatus={memberStatusMap[circle.id] ?? null}
+                  location={circle.location}
+                  organizer={circle.organizer}
+                  pendingRequests={0}
+                  hasNewActivity={false}
+                  onPress={() => {
+                    navigation.navigate("CircleDetail", {
+                      id: circle.id,
+                      name: circle.name,
+                      description: circle.description,
+                      visibility: circle.visibility,
+                      owner_id: circle.owner_id,
+                      member_count: circle.member_count,
+                      organizer: circle.organizer,
+                    });
+                  }}
+                />
+              </SwipeableCard>
+            ))
+          )
         ) : (
           circles
             .filter((circle) => {
+              if (dismissedIds.has(circle.id)) return false;
               if (filter === "mine" && memberStatusMap[circle.id] !== "owner" && memberStatusMap[circle.id] !== "active") return false;
               if (roleFilter === "owner" && memberStatusMap[circle.id] !== "owner") return false;
               if (roleFilter === "active" && memberStatusMap[circle.id] !== "active") return false;
@@ -388,7 +446,6 @@ export default function CirclesScreen() {
                 ? b.member_count - a.member_count
                 : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
             })
-            .filter((circle) => !dismissedIds.has(circle.id))
             .map((circle) => (
             <SwipeableCard
               key={circle.id}
