@@ -246,9 +246,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         <View style={styles.metaRow}>
           <Ionicons name="calendar-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
           <Text style={styles.metaText}>{date}</Text>
-        </View>
-        <View style={styles.metaRow}>
-          <Ionicons name="time-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
+          <Ionicons name="time-outline" size={14} color={colors.textMuted} style={[styles.metaIcon, { marginLeft: 12 }]} />
           <Text style={styles.metaText}>{time}</Text>
         </View>
         <View style={styles.metaRow}>
