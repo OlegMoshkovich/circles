@@ -11,6 +11,7 @@ import { ScreenLayout } from "../src/components/layout/ScreenLayout";
 import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { TextBlock } from "../src/components/blocks/TextBlock";
 import { CircleCard } from "../src/components/cards/CircleCard";
+import { SwipeableCard } from "../src/components/layout/SwipeableCard";
 import { CreateCircleModal, NewCircleData } from "../src/components/modals/CreateCircleModal";
 import { colors } from "../src/theme/colors";
 import { useLanguage } from "../src/i18n/LanguageContext";
@@ -44,6 +45,7 @@ export default function CirclesScreen() {
   const [loading, setLoading] = useState(true);
   const [activityMap, setActivityMap] = useState<Record<string, number>>({});
   const [lastViewedMap, setLastViewedMap] = useState<Record<string, number>>({});
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
   async function handleNearMe() {
     if (nearMe) {
@@ -68,6 +70,15 @@ export default function CirclesScreen() {
 
   const fetchCircles = useCallback(async () => {
     setLoading(true);
+
+    if (user) {
+      const { data: dismissedData } = await supabase
+        .from("dismissed_items")
+        .select("item_id")
+        .eq("user_id", user.id)
+        .eq("item_type", "circle");
+      if (dismissedData) setDismissedIds(new Set(dismissedData.map((r: any) => r.item_id)));
+    }
 
     const [circlesResult, membershipsResult] = await Promise.all([
       supabase
@@ -377,9 +388,22 @@ export default function CirclesScreen() {
                 ? b.member_count - a.member_count
                 : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
             })
+            .filter((circle) => !dismissedIds.has(circle.id))
             .map((circle) => (
-            <CircleCard
+            <SwipeableCard
               key={circle.id}
+              onDismiss={() => {
+                setDismissedIds((prev) => new Set(prev).add(circle.id));
+                if (user) {
+                  supabase.from("dismissed_items").insert({
+                    user_id: user.id,
+                    item_type: "circle",
+                    item_id: circle.id,
+                  }).then(() => {});
+                }
+              }}
+            >
+            <CircleCard
               name={circle.name}
               description={circle.description}
               category={circle.category}
@@ -406,6 +430,7 @@ export default function CirclesScreen() {
                 });
               }}
             />
+            </SwipeableCard>
           ))
           )}
       </ScreenLayout>

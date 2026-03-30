@@ -9,6 +9,7 @@ import { ScreenLayout } from "../src/components/layout/ScreenLayout";
 import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { TextBlock } from "../src/components/blocks/TextBlock";
 import { EventCard } from "../src/components/cards/EventCard";
+import { SwipeableCard } from "../src/components/layout/SwipeableCard";
 import { CreateEventModal, NewEventData } from "../src/components/modals/CreateEventModal";
 import { colors } from "../src/theme/colors";
 import { useUser } from "@clerk/clerk-expo";
@@ -36,6 +37,7 @@ export default function EventsScreen() {
   const [loading, setLoading] = useState(true);
   const [activityMap, setActivityMap] = useState<Record<string, number>>({});
   const [lastViewedMap, setLastViewedMap] = useState<Record<string, number>>({});
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
   const fetchEvents = useCallback(async () => {
     if (!user) {
@@ -44,6 +46,15 @@ export default function EventsScreen() {
       return;
     }
     setLoading(true);
+
+    if (user) {
+      const { data: dismissedData } = await supabase
+        .from("dismissed_items")
+        .select("item_id")
+        .eq("user_id", user.id)
+        .eq("item_type", "event");
+      if (dismissedData) setDismissedIds(new Set(dismissedData.map((r: any) => r.item_id)));
+    }
 
     // Fetch user's RSVPs for badge display
     const { data: rsvps } = await supabase
@@ -267,9 +278,23 @@ export default function EventsScreen() {
             </Text>
           </View>
         ) : (
-          displayedEvents.map((event) => (
-            <EventCard
+          displayedEvents
+            .filter((e) => !dismissedIds.has(e.id))
+            .map((event) => (
+            <SwipeableCard
               key={event.id}
+              onDismiss={() => {
+                setDismissedIds((prev) => new Set(prev).add(event.id));
+                if (user) {
+                  supabase.from("dismissed_items").insert({
+                    user_id: user.id,
+                    item_type: "event",
+                    item_id: event.id,
+                  }).then(() => {});
+                }
+              }}
+            >
+            <EventCard
               title={event.title}
               organizer={event.organizer}
               date={event.date_label}
@@ -301,6 +326,7 @@ export default function EventsScreen() {
                 });
               }}
             />
+            </SwipeableCard>
           ))
         )}
       </ScreenLayout>
