@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -19,14 +20,18 @@ import { RootStackParamList } from "../types";
 import { colors } from "../src/theme/colors";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
-import { supabase, CircleMember, Event, UserProfile } from "../lib/supabase";
+import { supabase, CircleMember, CircleNote, Event, UserProfile } from "../lib/supabase";
 import { CircleInviteModal } from "../src/components/modals/CircleInviteModal";
 import { EditCircleModal, EditCircleData } from "../src/components/modals/EditCircleModal";
+import { CreateEventModal, NewEventData } from "../src/components/modals/CreateEventModal";
 import { EventCard } from "../src/components/cards/EventCard";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CircleDetail">;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Tab = "feed" | "members" | "requests";
+type FeedItem =
+  | { kind: "event"; data: Event }
+  | { kind: "note"; data: CircleNote };
 
 const VISIBILITY_LABEL: Record<string, string> = {
   public: "Public",
@@ -54,6 +59,9 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [invitedUsers, setInvitedUsers] = useState<{ user_id: string; name: string }[]>([]);
   const [profileMap, setProfileMap] = useState<Record<string, string>>({});
   const [events, setEvents] = useState<Event[]>([]);
+  const [notes, setNotes] = useState<CircleNote[]>([]);
+  const [noteText, setNoteText] = useState("");
+  const [postingNote, setPostingNote] = useState(false);
   const [requests, setRequests] = useState<CircleMember[]>([]);
   const [requestCount, setRequestCount] = useState(0);
   const [loadingFeed, setLoadingFeed] = useState(false);
@@ -62,6 +70,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [circleInviteVisible, setCircleInviteVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
+  const [createEventVisible, setCreateEventVisible] = useState(false);
 
   // Load current user's membership status
   useEffect(() => {
@@ -156,16 +165,56 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   useEffect(() => {
     if (activeTab !== "feed") return;
     setLoadingFeed(true);
-    supabase
-      .from("events")
-      .select("*")
-      .eq("circle_id", id)
-      .order("created_at", { ascending: false })
-      .then(({ data, error }) => {
-        if (!error && data) setEvents(data);
-        setLoadingFeed(false);
-      });
+    Promise.all([
+      supabase.from("events").select("*").eq("circle_id", id).order("created_at", { ascending: false }),
+      supabase.from("circle_notes").select("*").eq("circle_id", id).order("created_at", { ascending: false }),
+    ]).then(([eventsResult, notesResult]) => {
+      if (!eventsResult.error && eventsResult.data) setEvents(eventsResult.data);
+      if (!notesResult.error && notesResult.data) setNotes(notesResult.data);
+      setLoadingFeed(false);
+    });
   }, [id, activeTab]);
+
+  async function handleSaveEvent(data: NewEventData) {
+    const { error } = await supabase.from("events").insert({
+      title: data.title,
+      organizer: data.organizer,
+      date_label: data.date,
+      time_label: data.time,
+      location: data.location,
+      description: data.description,
+      visibility: "circle",
+      circle_id: id,
+      created_by: user?.id ?? null,
+    });
+    if (!error) {
+      setCreateEventVisible(false);
+      // Reload feed
+      setActiveTab("feed");
+      supabase.from("events").select("*").eq("circle_id", id).order("created_at", { ascending: false })
+        .then(({ data: rows }) => { if (rows) setEvents(rows); });
+    }
+  }
+
+  async function handlePostNote() {
+    if (!user || !noteText.trim() || postingNote) return;
+    setPostingNote(true);
+    const { data, error } = await supabase
+      .from("circle_notes")
+      .insert({
+        circle_id: id,
+        user_id: user.id,
+        display_name: user.fullName ?? user.firstName ?? user.username ?? null,
+        content: noteText.trim(),
+      })
+      .select()
+      .single();
+    if (!error && data) {
+      setNotes((prev) => [data, ...prev]);
+      setNoteText("");
+    }
+    setPostingNote(false);
+  }
 
   // Load members
   useEffect(() => {
@@ -395,8 +444,8 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         )}
       </View>
 
-      {/* Scrollable content */}
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      {/* Fixed header */}
+      <View style={styles.header}>
         <Text style={styles.title}>{name}</Text>
 
         {description ? (
@@ -414,75 +463,159 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
         {/* Tabs */}
         <View style={styles.tabRow}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === "feed" && styles.tabActive]}
-            onPress={() => setActiveTab("feed")}
-          >
-            <Text style={[styles.tabText, activeTab === "feed" && styles.tabTextActive]}>Feed</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === "members" && styles.tabActive]}
-            onPress={() => setActiveTab("members")}
-          >
-            <Text style={[styles.tabText, activeTab === "members" && styles.tabTextActive]}>Members</Text>
-          </TouchableOpacity>
-          {isOwner && (
+          <View style={styles.tabList}>
             <TouchableOpacity
-              style={[styles.tab, activeTab === "requests" && styles.tabActive]}
-              onPress={() => setActiveTab("requests")}
+              style={[styles.tab, activeTab === "feed" && styles.tabActive]}
+              onPress={() => setActiveTab("feed")}
             >
-              <View style={styles.tabWithBadge}>
-                <Text style={[styles.tabText, activeTab === "requests" && styles.tabTextActive]}>Requests</Text>
-                {requestCount > 0 && (
-                  <View style={styles.tabBadge}>
-                    <Text style={styles.tabBadgeText}>{requestCount}</Text>
-                  </View>
-                )}
-              </View>
+              <Text style={[styles.tabText, activeTab === "feed" && styles.tabTextActive]}>Feed</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === "members" && styles.tabActive]}
+              onPress={() => setActiveTab("members")}
+            >
+              <Text style={[styles.tabText, activeTab === "members" && styles.tabTextActive]}>Members</Text>
+            </TouchableOpacity>
+            {isOwner && (
+              <TouchableOpacity
+                style={[styles.tab, activeTab === "requests" && styles.tabActive]}
+                onPress={() => setActiveTab("requests")}
+              >
+                <View style={styles.tabWithBadge}>
+                  <Text style={[styles.tabText, activeTab === "requests" && styles.tabTextActive]}>Requests</Text>
+                  {requestCount > 0 && (
+                    <View style={styles.tabBadge}>
+                      <Text style={styles.tabBadgeText}>{requestCount}</Text>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            )}
+          </View>
+          {(isOwner || isMember) && activeTab === "feed" && (
+            <TouchableOpacity
+              onPress={() => setCreateEventVisible(true)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={styles.addEventButton}
+            >
+              <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
             </TouchableOpacity>
           )}
         </View>
 
         <View style={styles.divider} />
+      </View>
+
+      {/* Scrollable tab content only */}
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* Feed tab */}
         {activeTab === "feed" && (
-          loadingFeed ? (
-            <View style={styles.loader}>
-              <ActivityIndicator size="small" color={colors.textMuted} />
-            </View>
-          ) : events.length === 0 ? (
-            <Text style={styles.emptyText}>No events yet</Text>
-          ) : (
-            events.map((event) => (
-              <EventCard
-                key={event.id}
-                title={event.title}
-                organizer={event.organizer}
-                date={event.date_label}
-                time={event.time_label}
-                location={event.location}
-                going={event.going}
-                maybe={event.maybe}
-                onPress={() =>
-                  nav.navigate("EventDetail", {
-                    id: event.id,
-                    title: event.title,
-                    organizer: event.organizer,
-                    date: event.date_label,
-                    time: event.time_label,
-                    location: event.location,
-                    going: event.going,
-                    maybe: event.maybe,
-                    description: event.description,
-                    created_by: event.created_by,
-                    circleName: name,
-                    circle_id: id,
-                  })
+          <>
+            {(isOwner || isMember) && (
+              <View style={styles.composeBox}>
+                <TextInput
+                  style={styles.composeInput}
+                  placeholder="Share a note with the circle…"
+                  placeholderTextColor={colors.textMuted}
+                  value={noteText}
+                  onChangeText={setNoteText}
+                  multiline
+                  maxLength={500}
+                />
+                {noteText.trim().length > 0 && (
+                  <TouchableOpacity
+                    style={styles.postButton}
+                    onPress={handlePostNote}
+                    disabled={postingNote}
+                  >
+                    {postingNote ? (
+                      <ActivityIndicator size="small" color={colors.card} />
+                    ) : (
+                      <Text style={styles.postButtonText}>Post</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+            {loadingFeed ? (
+              <View style={styles.loader}>
+                <ActivityIndicator size="small" color={colors.textMuted} />
+              </View>
+            ) : (() => {
+              const feed: FeedItem[] = [
+                ...events.map((e): FeedItem => ({ kind: "event", data: e })),
+                ...notes.map((n): FeedItem => ({ kind: "note", data: n })),
+              ].sort((a, b) =>
+                new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime()
+              );
+              if (feed.length === 0) return <Text style={styles.emptyText}>No posts yet</Text>;
+              return feed.map((item) => {
+                if (item.kind === "event") {
+                  const event = item.data;
+                  return (
+                    <EventCard
+                      key={`event-${event.id}`}
+                      title={event.title}
+                      organizer={event.organizer}
+                      date={event.date_label}
+                      time={event.time_label}
+                      location={event.location}
+                      going={event.going}
+                      maybe={event.maybe}
+                      onPress={() =>
+                        nav.navigate("EventDetail", {
+                          id: event.id,
+                          title: event.title,
+                          organizer: event.organizer,
+                          date: event.date_label,
+                          time: event.time_label,
+                          location: event.location,
+                          going: event.going,
+                          maybe: event.maybe,
+                          description: event.description,
+                          created_by: event.created_by,
+                          circleName: name,
+                          circle_id: id,
+                        })
+                      }
+                    />
+                  );
                 }
-              />
-            ))
-          )
+                const note = item.data;
+                const initials = (() => {
+                  const n = note.display_name ?? "?";
+                  const parts = n.trim().split(" ");
+                  return parts.length >= 2
+                    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+                    : n.slice(0, 2).toUpperCase();
+                })();
+                const timeAgo = (() => {
+                  const diff = Date.now() - new Date(note.created_at).getTime();
+                  const mins = Math.floor(diff / 60000);
+                  if (mins < 1) return "just now";
+                  if (mins < 60) return `${mins}m ago`;
+                  const hrs = Math.floor(mins / 60);
+                  if (hrs < 24) return `${hrs}h ago`;
+                  return `${Math.floor(hrs / 24)}d ago`;
+                })();
+                return (
+                  <View key={`note-${note.id}`} style={styles.noteCard}>
+                    <View style={styles.noteHeader}>
+                      <View style={styles.avatar}>
+                        <Text style={styles.avatarText}>{initials}</Text>
+                      </View>
+                      <View style={styles.noteHeaderText}>
+                        <Text style={styles.noteName}>{note.display_name ?? "Member"}</Text>
+                        <Text style={styles.noteTime}>{timeAgo}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.noteContent}>{note.content}</Text>
+                  </View>
+                );
+              });
+            })()}
+          </>
         )}
 
         {/* Members tab */}
@@ -592,6 +725,13 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         circleName={name}
       />
 
+      <CreateEventModal
+        visible={createEventVisible}
+        onClose={() => setCreateEventVisible(false)}
+        onSave={handleSaveEvent}
+        defaultCircleId={id}
+      />
+
       <EditCircleModal
         visible={editVisible}
         onClose={() => setEditVisible(false)}
@@ -670,9 +810,13 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginLeft: 2,
   },
-  content: {
+  header: {
     paddingHorizontal: spacing.pageHorizontal,
     paddingTop: spacing.md,
+  },
+  content: {
+    paddingHorizontal: spacing.pageHorizontal,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.xl,
   },
   title: {
@@ -711,7 +855,15 @@ const styles = StyleSheet.create({
   },
   tabRow: {
     flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  tabList: {
+    flexDirection: "row",
     gap: spacing.md,
+  },
+  addEventButton: {
+    padding: 4,
   },
   tab: {
     paddingBottom: 8,
@@ -884,5 +1036,66 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
+  },
+  composeBox: {
+    backgroundColor: colors.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  composeInput: {
+    ...typography.body,
+    color: colors.text,
+    minHeight: 44,
+    maxHeight: 120,
+  },
+  postButton: {
+    alignSelf: "flex-end",
+    backgroundColor: colors.text,
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 999,
+    marginTop: 6,
+    minWidth: 60,
+    alignItems: "center",
+  },
+  postButtonText: {
+    color: colors.card,
+    fontSize: 13,
+    fontWeight: "600" as const,
+  },
+  noteCard: {
+    backgroundColor: colors.card,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    padding: spacing.cardPadding,
+    marginBottom: spacing.md,
+  },
+  noteHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+  },
+  noteHeaderText: {
+    marginLeft: spacing.sm,
+    flex: 1,
+  },
+  noteName: {
+    fontSize: 13,
+    fontWeight: "600" as const,
+    color: colors.text,
+  },
+  noteTime: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 1,
+  },
+  noteContent: {
+    ...typography.body,
+    color: colors.text,
+    lineHeight: 21,
   },
 });

@@ -32,6 +32,8 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   onSave: (event: NewEventData) => void;
+  /** When provided the modal defaults visibility to "circle" and hides the visibility picker */
+  defaultCircleId?: string | null;
 };
 
 function defaultDate() {
@@ -49,7 +51,7 @@ function fmtTime(d: Date) {
   return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 }
 
-export function CreateEventModal({ visible, onClose, onSave }: Props) {
+export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: Props) {
   const { user } = useUser();
   const [title, setTitle] = useState("");
   const [organizer, setOrganizer] = useState("");
@@ -58,8 +60,10 @@ export function CreateEventModal({ visible, onClose, onSave }: Props) {
   const [location, setLocation] = useState("");
   const [showMap, setShowMap] = useState(false);
   const [description, setDescription] = useState("");
-  const [eventVisibility, setEventVisibility] = useState<"public" | "circle">("public");
-  const [selectedCircleId, setSelectedCircleId] = useState<string | null>(null);
+  const [eventVisibility, setEventVisibility] = useState<"public" | "circle">(
+    defaultCircleId ? "circle" : "public"
+  );
+  const [selectedCircleId, setSelectedCircleId] = useState<string | null>(defaultCircleId ?? null);
   const [myCircles, setMyCircles] = useState<Circle[]>([]);
   const scrollRef = useRef<ScrollView>(null);
 
@@ -82,7 +86,7 @@ export function CreateEventModal({ visible, onClose, onSave }: Props) {
     !!title.trim() &&
     !!organizer.trim() &&
     !!location.trim() &&
-    (eventVisibility === "public" || selectedCircleId !== null);
+    (eventVisibility === "public" || selectedCircleId !== null || !!defaultCircleId);
 
   function handleSave() {
     if (!canSave) return;
@@ -112,8 +116,8 @@ export function CreateEventModal({ visible, onClose, onSave }: Props) {
     setLocation("");
     setShowMap(false);
     setDescription("");
-    setEventVisibility("public");
-    setSelectedCircleId(null);
+    setEventVisibility(defaultCircleId ? "circle" : "public");
+    setSelectedCircleId(defaultCircleId ?? null);
   }
 
   function handlePickerChange(_: DateTimePickerEvent, date?: Date) {
@@ -216,31 +220,33 @@ export function CreateEventModal({ visible, onClose, onSave }: Props) {
 
                 <Field label="Description" value={description} onChangeText={setDescription} placeholder="A few words about the event…" multiline />
 
-                <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>Visibility</Text>
-                  <View style={styles.toggleRow}>
-                    {(["public", "circle"] as const).map((opt) => (
-                      <TouchableOpacity
-                        key={opt}
-                        style={[styles.toggleButton, eventVisibility === opt && styles.toggleButtonActive]}
-                        onPress={() => {
-                          setEventVisibility(opt);
-                          if (opt === "public") {
-                            setSelectedCircleId(null);
-                          } else {
-                            setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-                          }
-                        }}
-                      >
-                        <Text style={[styles.toggleText, eventVisibility === opt && styles.toggleTextActive]}>
-                          {opt === "public" ? "Public" : "Circle"}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                {!defaultCircleId && (
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Visibility</Text>
+                    <View style={styles.toggleRow}>
+                      {(["public", "circle"] as const).map((opt) => (
+                        <TouchableOpacity
+                          key={opt}
+                          style={[styles.toggleButton, eventVisibility === opt && styles.toggleButtonActive]}
+                          onPress={() => {
+                            setEventVisibility(opt);
+                            if (opt === "public") {
+                              setSelectedCircleId(null);
+                            } else {
+                              setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+                            }
+                          }}
+                        >
+                          <Text style={[styles.toggleText, eventVisibility === opt && styles.toggleTextActive]}>
+                            {opt === "public" ? "Public" : "Circle"}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
                   </View>
-                </View>
+                )}
 
-                {eventVisibility === "circle" && myCircles.length > 0 && (
+                {!defaultCircleId && eventVisibility === "circle" && myCircles.length > 0 && (
                   <View style={styles.fieldContainer}>
                     <Text style={styles.fieldLabel}>Select Circle</Text>
                     {myCircles.map((circle) => (
@@ -260,7 +266,7 @@ export function CreateEventModal({ visible, onClose, onSave }: Props) {
                   </View>
                 )}
 
-                {eventVisibility === "circle" && myCircles.length === 0 && (
+                {!defaultCircleId && eventVisibility === "circle" && myCircles.length === 0 && (
                   <View style={styles.fieldContainer}>
                     <Text style={styles.noCirclesHint}>Join a circle first to post circle-only events.</Text>
                   </View>
