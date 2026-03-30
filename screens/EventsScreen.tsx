@@ -154,82 +154,85 @@ export default function EventsScreen() {
             }
           />
         }
+        stickyTop={
+          <View>
+            <TextBlock subtitle={t.events.subtitle} />
+
+            <View style={styles.filterRow}>
+              <View style={styles.toggle}>
+                <TouchableOpacity
+                  style={[styles.toggleOption, filter === "all" && styles.toggleOptionActive]}
+                  onPress={() => setFilter("all")}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.toggleLabel, filter === "all" && styles.toggleLabelActive]}>
+                    {t.events.filterAll}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.toggleOption, filter === "circles" && styles.toggleOptionActive]}
+                  onPress={() => setFilter("circles")}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.toggleLabel, filter === "circles" && styles.toggleLabelActive]}>
+                    {t.events.filterMyCircles}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.filterIconButton, filterActive && styles.filterIconButtonActive]}
+                onPress={() => setShowFilterPanel((v) => !v)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="options-outline"
+                  size={17}
+                  color={filterActive ? colors.iconbBg : colors.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {showFilterPanel && (
+              <View style={styles.filterPanel}>
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionLabel}>Sort</Text>
+                  <View style={styles.filterChipRow}>
+                    {(["newest", "popular", "activity"] as SortBy[]).map((opt) => (
+                      <TouchableOpacity
+                        key={opt}
+                        style={[styles.filterChip, sortBy === opt && styles.filterChipActive]}
+                        onPress={() => setSortBy(opt)}
+                      >
+                        <Text style={[styles.filterChipText, sortBy === opt && styles.filterChipTextActive]}>
+                          {opt === "newest" ? "Newest" : opt === "popular" ? "Most Popular" : "Most Active"}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionLabel}>RSVP</Text>
+                  <View style={styles.filterChipRow}>
+                    {(["all", "going", "maybe"] as RsvpFilter[]).map((opt) => (
+                      <TouchableOpacity
+                        key={opt}
+                        style={[styles.filterChip, rsvpFilter === opt && styles.filterChipActive]}
+                        onPress={() => setRsvpFilter(opt)}
+                      >
+                        <Text style={[styles.filterChipText, rsvpFilter === opt && styles.filterChipTextActive]}>
+                          {opt === "all" ? "All" : opt === "going" ? "Going" : "Maybe"}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            )}
+          </View>
+        }
       >
-        <TextBlock subtitle={t.events.subtitle} />
-
-        <View style={styles.filterRow}>
-          <View style={styles.toggle}>
-            <TouchableOpacity
-              style={[styles.toggleOption, filter === "all" && styles.toggleOptionActive]}
-              onPress={() => setFilter("all")}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.toggleLabel, filter === "all" && styles.toggleLabelActive]}>
-                {t.events.filterAll}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.toggleOption, filter === "circles" && styles.toggleOptionActive]}
-              onPress={() => setFilter("circles")}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.toggleLabel, filter === "circles" && styles.toggleLabelActive]}>
-                {t.events.filterMyCircles}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity
-            style={[styles.filterIconButton, filterActive && styles.filterIconButtonActive]}
-            onPress={() => setShowFilterPanel((v) => !v)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="options-outline"
-              size={17}
-              color={filterActive ? colors.iconbBg : colors.textMuted}
-            />
-          </TouchableOpacity>
-        </View>
-
-        {showFilterPanel && (
-          <View style={styles.filterPanel}>
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionLabel}>Sort</Text>
-              <View style={styles.filterChipRow}>
-                {(["newest", "popular", "activity"] as SortBy[]).map((opt) => (
-                  <TouchableOpacity
-                    key={opt}
-                    style={[styles.filterChip, sortBy === opt && styles.filterChipActive]}
-                    onPress={() => setSortBy(opt)}
-                  >
-                    <Text style={[styles.filterChipText, sortBy === opt && styles.filterChipTextActive]}>
-                      {opt === "newest" ? "Newest" : opt === "popular" ? "Most Popular" : "Most Active"}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionLabel}>RSVP</Text>
-              <View style={styles.filterChipRow}>
-                {(["all", "going", "maybe"] as RsvpFilter[]).map((opt) => (
-                  <TouchableOpacity
-                    key={opt}
-                    style={[styles.filterChip, rsvpFilter === opt && styles.filterChipActive]}
-                    onPress={() => setRsvpFilter(opt)}
-                  >
-                    <Text style={[styles.filterChipText, rsvpFilter === opt && styles.filterChipTextActive]}>
-                      {opt === "all" ? "All" : opt === "going" ? "Going" : "Maybe"}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </View>
-        )}
-
         {loading ? (
           <View style={styles.loader}>
             <ActivityIndicator size="small" color={colors.textMuted} />

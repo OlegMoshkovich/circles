@@ -197,122 +197,125 @@ export default function CirclesScreen() {
             }
           />
         }
-      >
-        <TextBlock subtitle={t.circles.subtitle} />
+        stickyTop={
+          <View>
+            <TextBlock subtitle={t.circles.subtitle} />
 
-        <View style={styles.filterRow}>
-          <View style={styles.toggle}>
-            <TouchableOpacity
-              style={[styles.toggleOption, filter === "all" && styles.toggleOptionActive]}
-              onPress={() => setFilter("all")}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.toggleLabel, filter === "all" && styles.toggleLabelActive]}>
-                {t.circles.filterAll}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.toggleOption, filter === "mine" && styles.toggleOptionActive]}
-              onPress={() => setFilter("mine")}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.toggleLabel, filter === "mine" && styles.toggleLabelActive]}>
-                {t.circles.filterMyCircles}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity
-            style={[styles.filterIconButton, (sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null) && styles.filterIconButtonActive]}
-            onPress={() => setShowFilterPanel((v) => !v)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name="options-outline"
-              size={17}
-              color={(sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null) ? colors.iconbBg : colors.textMuted}
-            />
-          </TouchableOpacity>
-        </View>
-
-        {showFilterPanel && (
-          <View style={styles.filterPanel}>
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionLabel}>Sort</Text>
-              <View style={styles.filterChipRow}>
-                {(["newest", "members"] as SortBy[]).map((opt) => (
-                  <TouchableOpacity
-                    key={opt}
-                    style={[styles.filterChip, sortBy === opt && styles.filterChipActive]}
-                    onPress={() => setSortBy(opt)}
-                  >
-                    <Text style={[styles.filterChipText, sortBy === opt && styles.filterChipTextActive]}>
-                      {opt === "newest" ? "Newest" : "Most Members"}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionLabel}>Type</Text>
-              <View style={styles.filterChipRow}>
-                {([
-                  { value: "owner", label: "Owner" },
-                  { value: "active", label: "Member" },
-                  { value: "join",   label: "Join" },
-                ] as { value: "owner" | "active" | "join"; label: string }[]).map(({ value, label }) => (
-                  <TouchableOpacity
-                    key={value}
-                    style={[styles.filterChip, roleFilter === value && styles.filterChipActive]}
-                    onPress={() => setRoleFilter(roleFilter === value ? null : value)}
-                  >
-                    <Text style={[styles.filterChipText, roleFilter === value && styles.filterChipTextActive]}>
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionLabel}>Category</Text>
-              <View style={styles.filterChipRow}>
-                {PRESET_CATEGORIES.map((cat) => (
-                  <TouchableOpacity
-                    key={cat}
-                    style={[styles.filterChip, categoryFilter === cat && styles.filterChipActive]}
-                    onPress={() => setCategoryFilter(categoryFilter === cat ? null : cat)}
-                  >
-                    <Text style={[styles.filterChipText, categoryFilter === cat && styles.filterChipTextActive]}>
-                      {cat}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionLabel}>Location</Text>
-              <View style={styles.filterChipRow}>
+            <View style={styles.filterRow}>
+              <View style={styles.toggle}>
                 <TouchableOpacity
-                  style={[styles.filterChip, nearMe && styles.filterChipActive, styles.filterChipNearMe]}
-                  onPress={handleNearMe}
-                  disabled={nearMeLoading}
+                  style={[styles.toggleOption, filter === "all" && styles.toggleOptionActive]}
+                  onPress={() => setFilter("all")}
+                  activeOpacity={0.7}
                 >
-                  <Ionicons
-                    name="navigate-outline"
-                    size={13}
-                    color={nearMe ? colors.card : colors.textMuted}
-                    style={{ marginRight: 4 }}
-                  />
-                  <Text style={[styles.filterChipText, nearMe && styles.filterChipTextActive]}>
-                    {nearMeLoading ? "Locating…" : nearMe && nearMeCity ? nearMeCity : "Near Me"}
+                  <Text style={[styles.toggleLabel, filter === "all" && styles.toggleLabelActive]}>
+                    {t.circles.filterAll}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.toggleOption, filter === "mine" && styles.toggleOptionActive]}
+                  onPress={() => setFilter("mine")}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.toggleLabel, filter === "mine" && styles.toggleLabelActive]}>
+                    {t.circles.filterMyCircles}
                   </Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          </View>
-        )}
 
+              <TouchableOpacity
+                style={[styles.filterIconButton, (sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null) && styles.filterIconButtonActive]}
+                onPress={() => setShowFilterPanel((v) => !v)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="options-outline"
+                  size={17}
+                  color={(sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null) ? colors.iconbBg : colors.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {showFilterPanel && (
+              <View style={styles.filterPanel}>
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionLabel}>Sort</Text>
+                  <View style={styles.filterChipRow}>
+                    {(["newest", "members"] as SortBy[]).map((opt) => (
+                      <TouchableOpacity
+                        key={opt}
+                        style={[styles.filterChip, sortBy === opt && styles.filterChipActive]}
+                        onPress={() => setSortBy(opt)}
+                      >
+                        <Text style={[styles.filterChipText, sortBy === opt && styles.filterChipTextActive]}>
+                          {opt === "newest" ? "Newest" : "Most Members"}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionLabel}>Type</Text>
+                  <View style={styles.filterChipRow}>
+                    {([
+                      { value: "owner", label: "Owner" },
+                      { value: "active", label: "Member" },
+                      { value: "join",   label: "Join" },
+                    ] as { value: "owner" | "active" | "join"; label: string }[]).map(({ value, label }) => (
+                      <TouchableOpacity
+                        key={value}
+                        style={[styles.filterChip, roleFilter === value && styles.filterChipActive]}
+                        onPress={() => setRoleFilter(roleFilter === value ? null : value)}
+                      >
+                        <Text style={[styles.filterChipText, roleFilter === value && styles.filterChipTextActive]}>
+                          {label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionLabel}>Category</Text>
+                  <View style={styles.filterChipRow}>
+                    {PRESET_CATEGORIES.map((cat) => (
+                      <TouchableOpacity
+                        key={cat}
+                        style={[styles.filterChip, categoryFilter === cat && styles.filterChipActive]}
+                        onPress={() => setCategoryFilter(categoryFilter === cat ? null : cat)}
+                      >
+                        <Text style={[styles.filterChipText, categoryFilter === cat && styles.filterChipTextActive]}>
+                          {cat}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionLabel}>Location</Text>
+                  <View style={styles.filterChipRow}>
+                    <TouchableOpacity
+                      style={[styles.filterChip, nearMe && styles.filterChipActive, styles.filterChipNearMe]}
+                      onPress={handleNearMe}
+                      disabled={nearMeLoading}
+                    >
+                      <Ionicons
+                        name="navigate-outline"
+                        size={13}
+                        color={nearMe ? colors.card : colors.textMuted}
+                        style={{ marginRight: 4 }}
+                      />
+                      <Text style={[styles.filterChipText, nearMe && styles.filterChipTextActive]}>
+                        {nearMeLoading ? "Locating…" : nearMe && nearMeCity ? nearMeCity : "Near Me"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            )}
+          </View>
+        }
+      >
         {loading ? (
           <View style={styles.loader}>
             <ActivityIndicator size="small" color={colors.textMuted} />
