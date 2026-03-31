@@ -9,6 +9,7 @@ import { colors } from "../src/theme/colors";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { useLanguage, Language } from "../src/i18n/LanguageContext";
+import { OnboardingRestartContext } from "../App";
 import { supabase, AppNotification } from "../lib/supabase";
 import { useNotificationContext } from "../src/contexts/NotificationContext";
 
@@ -29,6 +30,7 @@ const LANGUAGES: { code: Language; flag: string; label: string }[] = [
 export default function MyProfileScreen() {
   const { signOut } = useAuth();
   const { user } = useUser();
+  const { restart: restartOnboarding } = React.useContext(OnboardingRestartContext);
   const { language, setLanguage, t } = useLanguage();
   const { setUnreadCount } = useNotificationContext();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -111,13 +113,22 @@ export default function MyProfileScreen() {
         <NavbarTitle
           title={t.nav.profile}
           rightElement={
-            <TouchableOpacity
-              onPress={() => handleSignOut(signOut)}
-              style={styles.iconButton}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Ionicons name="log-out-outline" size={16} color={colors.card} />
-            </TouchableOpacity>
+            <View style={styles.headerButtons}>
+              <TouchableOpacity
+                onPress={restartOnboarding}
+                style={styles.iconButton}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Ionicons name="play-outline" size={16} color={colors.card} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleSignOut(signOut)}
+                style={styles.iconButton}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Ionicons name="log-out-outline" size={16} color={colors.card} />
+              </TouchableOpacity>
+            </View>
           }
         />
       }
@@ -313,6 +324,10 @@ const styles = StyleSheet.create({
   rowValue: {
     ...typography.body,
     color: colors.textMuted,
+  },
+  headerButtons: {
+    flexDirection: "row",
+    gap: 8,
   },
   iconButton: {
     width: 30,

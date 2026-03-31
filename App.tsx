@@ -9,10 +9,47 @@ import * as SplashScreen from "expo-splash-screen";
 import { LanguageProvider } from "./src/i18n/LanguageContext";
 import { NotificationProvider } from "./src/contexts/NotificationContext";
 import { supabase } from "./lib/supabase";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import OnboardingScreen from "./screens/OnboardingScreen";
 
 SplashScreen.preventAutoHideAsync();
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
+
+export const OnboardingRestartContext = React.createContext<{ restart: () => void }>({ restart: () => {} });
+
+// Shows OnboardingScreen for new users; renders children once complete
+function OnboardingGate({ children }: { children: React.ReactNode }) {
+  const { user, isSignedIn } = useUser();
+  const [ready, setReady] = React.useState(false);
+  const [needsOnboarding, setNeedsOnboarding] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isSignedIn || !user) {
+      setNeedsOnboarding(false);
+      setReady(true);
+      return;
+    }
+    AsyncStorage.getItem(`onboarding_v1_${user.id}`).then((val) => {
+      setNeedsOnboarding(val !== "1");
+      setReady(true);
+    });
+  }, [isSignedIn, user?.id]);
+
+  function restart() {
+    if (!user) return;
+    AsyncStorage.removeItem(`onboarding_v1_${user.id}`).then(() => setNeedsOnboarding(true));
+  }
+
+  if (!ready) return null;
+  return (
+    <OnboardingRestartContext.Provider value={{ restart }}>
+      {needsOnboarding
+        ? <OnboardingScreen onComplete={() => setNeedsOnboarding(false)} />
+        : children}
+    </OnboardingRestartContext.Provider>
+  );
+}
 
 // Upserts the signed-in user's name to user_profiles on every app open
 function ProfileSync() {
@@ -47,7 +84,9 @@ export default function App() {
           <SafeAreaProvider>
             <NotificationProvider>
               <ProfileSync />
-              <Navigation />
+              <OnboardingGate>
+                <Navigation />
+              </OnboardingGate>
               <StatusBar />
             </NotificationProvider>
           </SafeAreaProvider>
