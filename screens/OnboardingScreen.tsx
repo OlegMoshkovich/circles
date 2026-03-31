@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
   ImageBackground,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StatusBar,
@@ -342,7 +343,7 @@ function LocationStep({
         showsMyLocationButton={false}
       />
       <View style={locStyles.pin} pointerEvents="none">
-        <Ionicons name="location" size={44} color={colors.iconbBg} />
+        <Ionicons name="location" size={44} color="#FF4D00" />
         <View style={locStyles.pinDot} />
       </View>
       <View style={locStyles.topBar}>
@@ -389,7 +390,10 @@ function ProfileStep({
 }) {
   const canContinue = !!data.displayName.trim();
   return (
-    <View style={styles.formStep}>
+    <KeyboardAvoidingView
+      style={styles.formStep}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <View style={styles.panel}>
         <StepHeader title="Your profile" subtitle="Let the community know who you are." onBack={onBack} />
         <View style={{ paddingBottom: 8 }}>
@@ -421,7 +425,7 @@ function ProfileStep({
         </View>
         <GlassButton label="Continue" onPress={canContinue ? onNext : undefined} disabled={!canContinue} />
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -933,7 +937,7 @@ const locStyles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: colors.iconbBg,
+    backgroundColor: "#FF4D00",
     opacity: 0.5,
     marginTop: -2,
   },
