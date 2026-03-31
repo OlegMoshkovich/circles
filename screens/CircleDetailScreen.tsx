@@ -200,6 +200,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       organizer: data.organizer,
       date_label: data.date,
       time_label: data.time,
+      duration_minutes: data.duration ?? null,
       location: data.location,
       description: data.description,
       visibility: "circle",

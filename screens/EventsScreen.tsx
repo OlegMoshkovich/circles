@@ -145,6 +145,7 @@ export default function EventsScreen() {
       organizer: event.organizer,
       date_label: event.date,
       time_label: event.time,
+      duration_minutes: event.duration ?? null,
       location: event.location,
       description: event.description,
       visibility: event.visibility,

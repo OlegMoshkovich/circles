@@ -9,6 +9,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from "react-native";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,6 +24,7 @@ export type NewEventData = {
   organizer: string;
   date: string;
   time: string;
+  duration: number | null;
   location: string;
   description: string;
   visibility: "public" | "circle";
@@ -51,6 +54,22 @@ function fmtTime(d: Date) {
   return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 }
 
+const DURATION_ITEM_HEIGHT = 44;
+const DURATION_VISIBLE_ITEMS = 5;
+const DURATION_OPTIONS: (number | null)[] = [
+  null,
+  ...Array.from({ length: 32 }, (_, i) => (i + 1) * 15),
+];
+
+function fmtDuration(minutes: number | null): string {
+  if (minutes === null) return "None";
+  if (minutes < 60) return `${minutes} min`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (m === 0) return `${h} hr`;
+  return `${h} hr ${m} min`;
+}
+
 export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: Props) {
   const { user } = useUser();
 
@@ -66,6 +85,8 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
   const [organizer, setOrganizer] = useState(defaultOrganizer);
   const [selectedDate, setSelectedDate] = useState<Date>(defaultDate);
   const [pickerMode, setPickerMode] = useState<"date" | "time" | null>(null);
+  const [duration, setDuration] = useState<number | null>(null);
+  const [showDurationPicker, setShowDurationPicker] = useState(false);
   const [location, setLocation] = useState("");
   const [showMap, setShowMap] = useState(false);
   const [description, setDescription] = useState("");
@@ -105,6 +126,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
       organizer: organizer.trim(),
       date: fmtDate(selectedDate),
       time: fmtTime(selectedDate),
+      duration,
       location: location.trim(),
       description: description.trim(),
       visibility: eventVisibility,
@@ -123,6 +145,8 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
     setOrganizer(defaultOrganizer());
     setSelectedDate(defaultDate());
     setPickerMode(null);
+    setDuration(null);
+    setShowDurationPicker(false);
     setLocation("");
     setShowMap(false);
     setDescription("");
@@ -140,7 +164,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
       visible={visible}
       animationType="slide"
       transparent
-      onRequestClose={showMap ? () => setShowMap(false) : pickerMode ? () => setPickerMode(null) : handleClose}
+      onRequestClose={showMap ? () => setShowMap(false) : pickerMode ? () => setPickerMode(null) : showDurationPicker ? () => setShowDurationPicker(false) : handleClose}
     >
       <View style={styles.overlay}>
         {showMap ? (
@@ -199,6 +223,25 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                       >
                         <Ionicons name="time-outline" size={14} color={colors.textMuted} style={styles.pickerIcon} />
                         <Text style={styles.pickerButtonText}>{fmtTime(selectedDate)}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Duration row */}
+                <View style={[styles.row, { marginTop: -8 }]}>
+                  <View style={styles.halfField}>
+                    <View style={styles.fieldContainer}>
+                      <Text style={styles.fieldLabel}>Duration <Text style={styles.optionalLabel}>(optional)</Text></Text>
+                      <TouchableOpacity
+                        style={styles.pickerButton}
+                        onPress={() => setShowDurationPicker(true)}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="hourglass-outline" size={14} color={colors.textMuted} style={styles.pickerIcon} />
+                        <Text style={[styles.pickerButtonText, duration === null && styles.pickerButtonPlaceholder]}>
+                          {duration !== null ? fmtDuration(duration) : "—"}
+                        </Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -321,11 +364,67 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                   </View>
                 </View>
               )}
+
+              {/* Duration picker overlay */}
+              {showDurationPicker && (
+                <View style={styles.pickerOverlay}>
+                  <View style={styles.pickerCard}>
+                    <View style={styles.pickerOverlayHeader}>
+                      <Text style={styles.pickerOverlayTitle}>Duration</Text>
+                      <TouchableOpacity onPress={() => setShowDurationPicker(false)}>
+                        <Text style={styles.pickerOverlayDone}>Done</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <DurationWheelPicker value={duration} onChange={setDuration} />
+                  </View>
+                </View>
+              )}
             </View>
           </KeyboardAvoidingView>
         )}
       </View>
     </Modal>
+  );
+}
+
+function DurationWheelPicker({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
+  const scrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    const idx = DURATION_OPTIONS.indexOf(value);
+    const startIdx = idx >= 0 ? idx : 0;
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: startIdx * DURATION_ITEM_HEIGHT, animated: false });
+    }, 50);
+  }, []);
+
+  function handleScrollEnd(e: NativeSyntheticEvent<NativeScrollEvent>) {
+    const y = e.nativeEvent.contentOffset.y;
+    const newIdx = Math.max(0, Math.min(Math.round(y / DURATION_ITEM_HEIGHT), DURATION_OPTIONS.length - 1));
+    onChange(DURATION_OPTIONS[newIdx]);
+  }
+
+  return (
+    <View style={styles.durationWheel}>
+      <View style={styles.durationSelectionBar} pointerEvents="none" />
+      <ScrollView
+        ref={scrollRef}
+        snapToInterval={DURATION_ITEM_HEIGHT}
+        decelerationRate="fast"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingVertical: DURATION_ITEM_HEIGHT * Math.floor(DURATION_VISIBLE_ITEMS / 2) }}
+        onMomentumScrollEnd={handleScrollEnd}
+        onScrollEndDrag={handleScrollEnd}
+      >
+        {DURATION_OPTIONS.map((opt, i) => (
+          <View key={i} style={styles.durationItem}>
+            <Text style={[styles.durationItemText, opt === value && styles.durationItemTextSelected]}>
+              {fmtDuration(opt)}
+            </Text>
+          </View>
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -370,7 +469,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
     paddingTop: 12,
-    height: "92%",
+    height: "95%",
   },
   mapSheet: {
     flex: 1,
@@ -525,4 +624,35 @@ const styles = StyleSheet.create({
   circleNameActive: { color: colors.card },
   noCirclesHint: { fontSize: 13, color: colors.textMuted, fontStyle: "italic" },
   readOnlyValue: { fontSize: 16, color: colors.textMuted, height: 36, textAlignVertical: "center" },
+  pickerButtonPlaceholder: { color: colors.textMuted },
+  optionalLabel: { fontSize: 10, fontWeight: "400" as const, letterSpacing: 0, textTransform: "none" as const, color: colors.textMuted },
+  // Duration wheel picker
+  durationWheel: {
+    height: DURATION_ITEM_HEIGHT * DURATION_VISIBLE_ITEMS,
+    overflow: "hidden",
+  },
+  durationSelectionBar: {
+    position: "absolute",
+    top: DURATION_ITEM_HEIGHT * Math.floor(DURATION_VISIBLE_ITEMS / 2),
+    left: 0,
+    right: 0,
+    height: DURATION_ITEM_HEIGHT,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  durationItem: {
+    height: DURATION_ITEM_HEIGHT,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  durationItemText: {
+    fontSize: 18,
+    fontFamily: "Lora_400Regular",
+    color: colors.textMuted,
+  },
+  durationItemTextSelected: {
+    color: colors.text,
+    fontSize: 20,
+  },
 });
