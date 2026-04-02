@@ -15,6 +15,21 @@ export const lightColors = {
 } as const;
 
 /**
+ * Glassmorphism palette — semi-transparent cards over blurred image background
+ */
+export const glassColors = {
+  background: "transparent",
+  card: "rgba(255, 255, 255, 0.14)",
+  cardBorder: "rgba(255, 255, 255, 0.28)",
+  text: "#F0EBE0",
+  iconbBg: "rgba(255, 255, 255, 0.18)",
+  textOnIconBg: "#F0EBE0",
+  textMuted: "rgba(240, 235, 224, 0.65)",
+  badgeBg: "rgba(255, 255, 255, 0.14)",
+  divider: "rgba(255, 255, 255, 0.2)",
+} as const;
+
+/**
  * Forest green palette — cream text and lines on olive background
  */
 export const greenColors = {

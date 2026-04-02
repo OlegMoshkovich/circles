@@ -18,7 +18,8 @@ import { useUser } from "@clerk/clerk-expo";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
-import { colors } from "../src/theme/colors";
+import { Colors } from "../src/theme/colors";
+import { useColors } from "../src/contexts/BackgroundContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, CircleMember, CircleNote, Event, UserProfile } from "../lib/supabase";
@@ -46,6 +47,8 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const { user } = useUser();
   const nav = useNavigation<Nav>();
 
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors), [colors]);
   const isOwner = user?.id === owner_id;
 
   // Mutable display fields (can be updated via edit modal)
@@ -465,76 +468,68 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         )}
       </View>
 
-      {/* Fixed header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>{name}</Text>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.headerCard}>
+          <Text style={styles.title}>{name}</Text>
 
-        {description ? (
-          <Text style={styles.description}>{description}</Text>
-        ) : null}
-
-        <View style={styles.metaRow}>
-          <Ionicons name="people-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
-          <Text style={styles.metaText}>{memberCount} {memberCount === 1 ? "member" : "members"}</Text>
-          <Text style={styles.metaSep}>·</Text>
-          <Text style={styles.metaText}>{VISIBILITY_LABEL[visibility]}</Text>
-          {organizer ? (
-            <>
-              <Text style={styles.metaSep}>·</Text>
-              <Text style={styles.metaText}>{organizer}</Text>
-            </>
+          {description ? (
+            <Text style={styles.description}>{description}</Text>
           ) : null}
-        </View>
 
-        <View style={styles.divider} />
+          <View style={styles.metaRow}>
+            <Ionicons name="people-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
+            <Text style={styles.metaText}>{memberCount} {memberCount === 1 ? "member" : "members"}</Text>
+            <Text style={styles.metaSep}>·</Text>
+            <Text style={styles.metaText}>{VISIBILITY_LABEL[visibility]}</Text>
+          </View>
+          {organizer ? (
+            <Text style={styles.metaText}>{organizer}</Text>
+          ) : null}
 
-        {/* Tabs */}
-        <View style={styles.tabRow}>
-          <View style={styles.tabList}>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === "feed" && styles.tabActive]}
-              onPress={() => setActiveTab("feed")}
-            >
-              <Text style={[styles.tabText, activeTab === "feed" && styles.tabTextActive]}>Feed</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === "members" && styles.tabActive]}
-              onPress={() => setActiveTab("members")}
-            >
-              <Text style={[styles.tabText, activeTab === "members" && styles.tabTextActive]}>Members</Text>
-            </TouchableOpacity>
-            {isOwner && (
+          <View style={styles.divider} />
+
+          {/* Tabs */}
+          <View style={styles.tabRow}>
+            <View style={styles.tabList}>
               <TouchableOpacity
-                style={[styles.tab, activeTab === "requests" && styles.tabActive]}
-                onPress={() => setActiveTab("requests")}
+                style={[styles.tab, activeTab === "feed" && styles.tabActive]}
+                onPress={() => setActiveTab("feed")}
               >
-                <View style={styles.tabWithBadge}>
-                  <Text style={[styles.tabText, activeTab === "requests" && styles.tabTextActive]}>Requests</Text>
-                  {requestCount > 0 && (
-                    <View style={styles.tabBadge}>
-                      <Text style={styles.tabBadgeText}>{requestCount}</Text>
-                    </View>
-                  )}
-                </View>
+                <Text style={[styles.tabText, activeTab === "feed" && styles.tabTextActive]}>Feed</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === "members" && styles.tabActive]}
+                onPress={() => setActiveTab("members")}
+              >
+                <Text style={[styles.tabText, activeTab === "members" && styles.tabTextActive]}>Members</Text>
+              </TouchableOpacity>
+              {isOwner && (
+                <TouchableOpacity
+                  style={[styles.tab, activeTab === "requests" && styles.tabActive]}
+                  onPress={() => setActiveTab("requests")}
+                >
+                  <View style={styles.tabWithBadge}>
+                    <Text style={[styles.tabText, activeTab === "requests" && styles.tabTextActive]}>Requests</Text>
+                    {requestCount > 0 && (
+                      <View style={styles.tabBadge}>
+                        <Text style={styles.tabBadgeText}>{requestCount}</Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
+            {(isOwner || isMember) && activeTab === "feed" && (
+              <TouchableOpacity
+                onPress={() => setCreateEventVisible(true)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={styles.addEventButton}
+              >
+                <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
               </TouchableOpacity>
             )}
           </View>
-          {(isOwner || isMember) && activeTab === "feed" && (
-            <TouchableOpacity
-              onPress={() => setCreateEventVisible(true)}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              style={styles.addEventButton}
-            >
-              <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
-            </TouchableOpacity>
-          )}
         </View>
-
-        <View style={styles.divider} />
-      </View>
-
-      {/* Scrollable tab content only */}
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* Feed tab */}
         {activeTab === "feed" && (
@@ -806,6 +801,8 @@ function MemberRow({
   currentUserName?: string | null;
   profileMap: Record<string, string>;
 }) {
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors), [colors]);
   const name =
     (member.user_id === currentUserId && currentUserName)
       ? currentUserName
@@ -835,10 +832,23 @@ function MemberRow({
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) { return StyleSheet.create({
   wrapper: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  headerCard: {
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    padding: spacing.cardPadding,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    ...Platform.select({
+      ios: { shadowColor: "#2C2A26", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3 },
+      android: { elevation: 2 },
+      default: {},
+    }),
   },
   backRow: {
     paddingHorizontal: spacing.pageHorizontal,
@@ -1139,7 +1149,7 @@ const styles = StyleSheet.create({
   },
   noteCard: {
     backgroundColor: colors.card,
-    borderRadius: 14,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     padding: spacing.cardPadding,
@@ -1169,4 +1179,4 @@ const styles = StyleSheet.create({
     color: colors.text,
     lineHeight: 21,
   },
-});
+}); }

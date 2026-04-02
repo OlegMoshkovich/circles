@@ -102,7 +102,7 @@ function makeStyles(colors: Colors) {
   return StyleSheet.create({
     card: {
       backgroundColor: colors.card,
-      borderRadius: 14,
+      borderRadius: 20,
       padding: spacing.cardPadding,
       marginBottom: spacing.md,
       borderWidth: 1,

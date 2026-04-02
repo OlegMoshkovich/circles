@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -12,6 +12,7 @@ import { EventCard } from "../src/components/cards/EventCard";
 import { SwipeableCard } from "../src/components/layout/SwipeableCard";
 import { CreateEventModal, NewEventData } from "../src/components/modals/CreateEventModal";
 import { Colors } from "../src/theme/colors";
+import { spacing } from "../src/theme/spacing";
 import { useUser } from "@clerk/clerk-expo";
 import { useLanguage } from "../src/i18n/LanguageContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
@@ -176,13 +177,15 @@ export default function EventsScreen() {
   const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors), [colors]);
-  const screenBgColor = colors.background;
+  const screenBgColor = bgOption !== "green" ? colors.background : undefined;
 
   return (
     <>
       <ScreenLayout
         backgroundColor={screenBgColor}
-        header={
+        backgroundImage={bgOption === "green" ? require("../assets/Background.webp") : undefined}
+      >
+        <View style={styles.headerCard}>
           <NavbarTitle
             title={t.nav.events}
             rightElement={
@@ -195,99 +198,94 @@ export default function EventsScreen() {
               </TouchableOpacity>
             }
           />
-        }
-        stickyTop={
-          <View>
-            <TextBlock subtitle={t.events.subtitle} />
+          <TextBlock subtitle={t.events.subtitle} />
 
-            <View style={styles.filterRow}>
-              <View style={styles.toggle}>
-                <TouchableOpacity
-                  style={[styles.toggleOption, filter === "all" && styles.toggleOptionActive]}
-                  onPress={() => setFilter("all")}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.toggleLabel, filter === "all" && styles.toggleLabelActive]}>
-                    {t.events.filterAll}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.toggleOption, filter === "circles" && styles.toggleOptionActive]}
-                  onPress={() => setFilter("circles")}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.toggleLabel, filter === "circles" && styles.toggleLabelActive]}>
-                    {t.events.filterMyCircles}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
+          <View style={styles.filterRow}>
+            <View style={styles.toggle}>
               <TouchableOpacity
-                style={[styles.filterIconButton, filterActive && styles.filterIconButtonActive]}
-                onPress={() => setShowFilterPanel((v) => !v)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={[styles.toggleOption, filter === "all" && styles.toggleOptionActive]}
+                onPress={() => setFilter("all")}
                 activeOpacity={0.7}
               >
-                <Ionicons
-                  name="options-outline"
-                  size={17}
-                  color={filterActive ? colors.iconbBg : colors.textMuted}
-                />
+                <Text style={[styles.toggleLabel, filter === "all" && styles.toggleLabelActive]}>
+                  {t.events.filterAll}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.toggleOption, filter === "circles" && styles.toggleOptionActive]}
+                onPress={() => setFilter("circles")}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.toggleLabel, filter === "circles" && styles.toggleLabelActive]}>
+                  {t.events.filterMyCircles}
+                </Text>
               </TouchableOpacity>
             </View>
 
-            {showFilterPanel && (
-              <View style={styles.filterPanel}>
-                <View style={styles.filterSection}>
-                  <Text style={styles.filterSectionLabel}>Sort</Text>
-                  <View style={styles.filterChipRow}>
-                    {(["newest", "popular", "activity", "new_activity"] as SortBy[]).map((opt) => (
-                      <TouchableOpacity
-                        key={opt}
-                        style={[styles.filterChip, sortBy === opt && styles.filterChipActive]}
-                        onPress={() => setSortBy(opt)}
-                      >
-                        <Text style={[styles.filterChipText, sortBy === opt && styles.filterChipTextActive]}>
-                          {opt === "newest" ? "Newest" : opt === "popular" ? "Most Popular" : opt === "activity" ? "Most Active" : "New Activity"}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-                <View style={styles.filterSection}>
-                  <Text style={styles.filterSectionLabel}>RSVP</Text>
-                  <View style={styles.filterChipRow}>
-                    {(["all", "going", "maybe"] as RsvpFilter[]).map((opt) => (
-                      <TouchableOpacity
-                        key={opt}
-                        style={[styles.filterChip, rsvpFilter === opt && styles.filterChipActive]}
-                        onPress={() => setRsvpFilter(opt)}
-                      >
-                        <Text style={[styles.filterChipText, rsvpFilter === opt && styles.filterChipTextActive]}>
-                          {opt === "all" ? "All" : opt === "going" ? "Going" : "Maybe"}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-                <View style={styles.filterSection}>
-                  <Text style={styles.filterSectionLabel}>View</Text>
-                  <View style={styles.filterChipRow}>
+            <TouchableOpacity
+              style={[styles.filterIconButton, filterActive && styles.filterIconButtonActive]}
+              onPress={() => setShowFilterPanel((v) => !v)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name="options-outline"
+                size={17}
+                color={filterActive ? colors.iconbBg : colors.textMuted}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {showFilterPanel && (
+            <View style={styles.filterPanel}>
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionLabel}>Sort</Text>
+                <View style={styles.filterChipRow}>
+                  {(["newest", "popular", "activity", "new_activity"] as SortBy[]).map((opt) => (
                     <TouchableOpacity
-                      style={[styles.filterChip, showDismissed && styles.filterChipActive]}
-                      onPress={() => setShowDismissed((v) => !v)}
+                      key={opt}
+                      style={[styles.filterChip, sortBy === opt && styles.filterChipActive]}
+                      onPress={() => setSortBy(opt)}
                     >
-                      <Text style={[styles.filterChipText, showDismissed && styles.filterChipTextActive]}>
-                        Dismissed
+                      <Text style={[styles.filterChipText, sortBy === opt && styles.filterChipTextActive]}>
+                        {opt === "newest" ? "Newest" : opt === "popular" ? "Most Popular" : opt === "activity" ? "Most Active" : "New Activity"}
                       </Text>
                     </TouchableOpacity>
-                  </View>
+                  ))}
                 </View>
               </View>
-            )}
-          </View>
-        }
-      >
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionLabel}>RSVP</Text>
+                <View style={styles.filterChipRow}>
+                  {(["all", "going", "maybe"] as RsvpFilter[]).map((opt) => (
+                    <TouchableOpacity
+                      key={opt}
+                      style={[styles.filterChip, rsvpFilter === opt && styles.filterChipActive]}
+                      onPress={() => setRsvpFilter(opt)}
+                    >
+                      <Text style={[styles.filterChipText, rsvpFilter === opt && styles.filterChipTextActive]}>
+                        {opt === "all" ? "All" : opt === "going" ? "Going" : "Maybe"}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionLabel}>View</Text>
+                <View style={styles.filterChipRow}>
+                  <TouchableOpacity
+                    style={[styles.filterChip, showDismissed && styles.filterChipActive]}
+                    onPress={() => setShowDismissed((v) => !v)}
+                  >
+                    <Text style={[styles.filterChipText, showDismissed && styles.filterChipTextActive]}>
+                      Dismissed
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
+        </View>
         {loading ? (
           <View style={styles.loader}>
             <ActivityIndicator size="small" color={colors.textMuted} />
@@ -414,10 +412,24 @@ export default function EventsScreen() {
 
 function makeStyles(colors: Colors) {
   return StyleSheet.create({
+  headerCard: {
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    paddingHorizontal: spacing.cardPadding,
+    paddingBottom: spacing.cardPadding,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    ...Platform.select({
+      ios: { shadowColor: "#2C2A26", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3 },
+      android: { elevation: 2 },
+      default: {},
+    }),
+  },
   addButton: {
     width: 30,
     height: 30,
-    borderRadius: 30,
+    borderRadius: 20,
     backgroundColor: colors.iconbBg,
     alignItems: "center",
     justifyContent: "center",
@@ -448,7 +460,7 @@ function makeStyles(colors: Colors) {
   },
   filterPanel: {
     backgroundColor: colors.card,
-    borderRadius: 14,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     padding: 14,

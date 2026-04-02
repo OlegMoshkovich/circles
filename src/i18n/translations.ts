@@ -76,7 +76,7 @@ export const en = {
     language: "LANGUAGE",
   },
   circles: {
-    subtitle: "Communities that gather around shared interests \nand places",
+    subtitle: "Communities that gather around shared interests and places",
     filterAll: "All",
     filterMyCircles: "My Circles",
     createTitle: "New Circle",

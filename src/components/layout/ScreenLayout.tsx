@@ -6,7 +6,7 @@ import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 
 type ScreenLayoutProps = {
-  header: React.ReactNode;
+  header?: React.ReactNode;
   children: React.ReactNode;
   stickyTop?: React.ReactNode;
   contentStyle?: ViewStyle;
@@ -15,7 +15,7 @@ type ScreenLayoutProps = {
   backgroundColor?: string;
 };
 
-export function ScreenLayout({ header, children, stickyTop, contentStyle, backgroundImage, backgroundBlurIntensity = 40, backgroundColor }: ScreenLayoutProps) {
+export function ScreenLayout({ header, children, stickyTop, contentStyle, backgroundImage, backgroundBlurIntensity = 55, backgroundColor }: ScreenLayoutProps) {
   const insets = useSafeAreaInsets();
   const resolvedBg = backgroundColor ?? colors.background;
 
@@ -31,7 +31,7 @@ export function ScreenLayout({ header, children, stickyTop, contentStyle, backgr
         },
       ]}
     >
-      <View style={[styles.headerArea, !backgroundImage && { backgroundColor: resolvedBg }]}>{header}</View>
+      {header != null && <View style={[styles.headerArea, !backgroundImage && { backgroundColor: resolvedBg }]}>{header}</View>}
       {stickyTop != null && <View>{stickyTop}</View>}
       <ScrollView
         style={styles.scroll}

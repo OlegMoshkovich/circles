@@ -110,12 +110,14 @@ export default function MyProfileScreen() {
       })
     : "—";
 
-  const screenBgColor = colors.background;
+  const screenBgColor = bgOption !== "green" ? colors.background : undefined;
 
   return (
     <ScreenLayout
       backgroundColor={screenBgColor}
-      header={
+      backgroundImage={bgOption === "green" ? require("../assets/Background.webp") : undefined}
+    >
+      <View style={styles.headerCard}>
         <NavbarTitle
           title={t.nav.profile}
           rightElement={
@@ -131,19 +133,22 @@ export default function MyProfileScreen() {
               <TouchableOpacity
                 onPress={() => {
                   setBgOption((prev) => {
-                    if (prev === "light") return "green";
+                    if (prev === "light") return "solid";
+                    if (prev === "solid") return "light";
                     return "light";
                   });
                 }}
                 style={styles.iconButton}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
-                {/* show icon based on current bgOption */}
                 {bgOption === "light" && (
                   <Ionicons name="sunny-outline" size={16} color={colors.textOnIconBg} />
                 )}
                 {bgOption === "green" && (
                   <Ionicons name="leaf-outline" size={16} color={colors.textOnIconBg} />
+                )}
+                {bgOption === "solid" && (
+                  <Ionicons name="contrast-outline" size={16} color={colors.textOnIconBg} />
                 )}
               </TouchableOpacity>
               <TouchableOpacity
@@ -156,26 +161,19 @@ export default function MyProfileScreen() {
             </View>
           }
         />
-      }
-      stickyTop={
-        <>
-          <View style={styles.avatarSection}>
-            <View style={styles.avatar}>
-              {photoUrl ? (
-                <Image source={{ uri: photoUrl }} style={styles.avatarImage} />
-              ) : (
-                <Text style={styles.avatarInitials}>{initials}</Text>
-              )}
-            </View>
-            <Text style={styles.name}>{name}</Text>
-            {email.length > 0 && <Text style={styles.email}>{email}</Text>}
+        <View style={styles.avatarSection}>
+          <View style={styles.avatar}>
+            {photoUrl ? (
+              <Image source={{ uri: photoUrl }} style={styles.avatarImage} />
+            ) : (
+              <Text style={styles.avatarInitials}>{initials}</Text>
+            )}
           </View>
-          <View style={styles.divider} />
-        </>
-      }
-    >
-      {/* Notifications */}
-      <View style={styles.scrollTopPad} />
+          <Text style={styles.name}>{name}</Text>
+          {email.length > 0 && <Text style={styles.email}>{email}</Text>}
+        </View>
+ 
+      </View>
       {loadingNotifs ? (
         <ActivityIndicator size="small" color={colors.textMuted} style={{ marginBottom: spacing.lg }} />
       ) : notifications.length > 0 ? (
@@ -267,9 +265,28 @@ export default function MyProfileScreen() {
 
 function makeStyles(colors: Colors) {
   return StyleSheet.create({
+    headerCard: {
+      backgroundColor: colors.card,
+      borderRadius: 20,
+      paddingHorizontal: spacing.cardPadding,
+      paddingBottom: spacing.cardPadding,
+      marginBottom: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      ...Platform.select({
+        ios: { shadowColor: "#2C2A26", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3 },
+        android: { elevation: 2 },
+        default: {},
+      }),
+    },
+    cardDivider: {
+      height: 1,
+      backgroundColor: colors.divider,
+      marginTop: spacing.md,
+    },
     avatarSection: {
       alignItems: "center",
-      paddingVertical: spacing.sm,
+      paddingVertical: spacing.md,
     },
     avatar: {
       width: 72,
@@ -303,9 +320,6 @@ function makeStyles(colors: Colors) {
       ...typography.bodySmall,
       color: colors.textMuted,
     },
-    scrollTopPad: {
-      height: spacing.lg,
-    },
     divider: {
       height: 1,
       backgroundColor: colors.divider,
@@ -321,7 +335,7 @@ function makeStyles(colors: Colors) {
     },
     card: {
       backgroundColor: colors.card,
-      borderRadius: 12,
+      borderRadius: 20,
       borderWidth: 1,
       borderColor: colors.cardBorder,
       ...Platform.select({
@@ -362,7 +376,7 @@ function makeStyles(colors: Colors) {
     iconButton: {
       width: 30,
       height: 30,
-      borderRadius: 15,
+      borderRadius: 20,
       backgroundColor: colors.iconbBg,
       alignItems: "center",
       justifyContent: "center",
@@ -377,7 +391,7 @@ function makeStyles(colors: Colors) {
       gap: 6,
       paddingVertical: 7,
       paddingHorizontal: 12,
-      borderRadius: 10,
+      borderRadius: 20,
       borderWidth: 0.4,
       borderColor: colors.cardBorder,
       backgroundColor: colors.card,

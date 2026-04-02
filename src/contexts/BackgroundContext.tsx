@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Colors, lightColors, greenColors } from "../theme/colors";
+import { Colors, lightColors, greenColors, glassColors } from "../theme/colors";
 
-export type BgOption = "light" | "green";
+export type BgOption = "light" | "green" | "solid";
 const BG_STORAGE_KEY = "profile_bg_v1";
 
 type SetBgOption = React.Dispatch<React.SetStateAction<BgOption>>;
@@ -24,7 +24,7 @@ export function BackgroundProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     AsyncStorage.getItem(BG_STORAGE_KEY).then((val) => {
-      if (val === "light" || val === "green") setBgOptionState(val);
+      if (val === "light" || val === "green" || val === "solid") setBgOptionState(val);
     });
   }, []);
 
@@ -36,7 +36,7 @@ export function BackgroundProvider({ children }: { children: React.ReactNode }) 
     });
   }, []);
 
-  const colors = bgOption === "green" ? greenColors : lightColors;
+  const colors = bgOption === "light" ? lightColors : bgOption === "green" ? glassColors : greenColors;
 
   return (
     <BackgroundContext.Provider value={{ bgOption, setBgOption, colors }}>

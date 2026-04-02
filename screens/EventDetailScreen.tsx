@@ -16,7 +16,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useUser } from "@clerk/clerk-expo";
 import { RootStackParamList } from "../types";
-import { colors } from "../src/theme/colors";
+import { Colors } from "../src/theme/colors";
+import { useColors } from "../src/contexts/BackgroundContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, EventNote } from "../lib/supabase";
@@ -30,6 +31,8 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useUser();
 
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors), [colors]);
   const isCreator = !!user && !!created_by && user.id === created_by;
   const [inviteVisible, setInviteVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
@@ -232,6 +235,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.headerCard}>
         <Text style={styles.title}>{title}</Text>
         <View style={styles.organizerRow}>
           <Text style={styles.organizer}>Hosted by {organizer}</Text>
@@ -279,6 +283,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         </View>
 
         <View style={styles.divider} />
+        </View>
 
         {/* Notes */}
         {user && (
@@ -424,10 +429,23 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) { return StyleSheet.create({
   wrapper: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  headerCard: {
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    padding: spacing.cardPadding,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    ...Platform.select({
+      ios: { shadowColor: "#2C2A26", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3 },
+      android: { elevation: 2 },
+      default: {},
+    }),
   },
   backRow: {
     paddingHorizontal: spacing.pageHorizontal,
@@ -671,7 +689,7 @@ const styles = StyleSheet.create({
   },
   noteCard: {
     backgroundColor: colors.card,
-    borderRadius: 14,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     padding: spacing.cardPadding,
@@ -719,4 +737,4 @@ const styles = StyleSheet.create({
     color: colors.text,
     lineHeight: 21,
   },
-});
+}); }

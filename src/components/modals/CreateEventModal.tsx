@@ -15,7 +15,8 @@ import {
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@clerk/clerk-expo";
-import { colors } from "../../theme/colors";
+import { Colors } from "../../theme/colors";
+import { useColors } from "../../contexts/BackgroundContext";
 import { supabase, Circle } from "../../../lib/supabase";
 import { MapPickerView } from "./LocationPickerModal";
 
@@ -96,6 +97,8 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
   const [selectedCircleId, setSelectedCircleId] = useState<string | null>(defaultCircleId ?? null);
   const [myCircles, setMyCircles] = useState<Circle[]>([]);
   const scrollRef = useRef<ScrollView>(null);
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors), [colors]);
 
   useEffect(() => {
     if (!visible || !user) return;
@@ -388,6 +391,8 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
 }
 
 function DurationWheelPicker({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors), [colors]);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -437,6 +442,8 @@ type FieldProps = {
 };
 
 function Field({ label, value, onChangeText, placeholder, multiline }: FieldProps) {
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.fieldContainer}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -455,7 +462,7 @@ function Field({ label, value, onChangeText, placeholder, multiline }: FieldProp
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) { return StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.35)",
@@ -655,4 +662,4 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 20,
   },
-});
+}); }

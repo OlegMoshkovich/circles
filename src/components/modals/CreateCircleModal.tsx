@@ -12,7 +12,8 @@ import {
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../../theme/colors";
+import { Colors } from "../../theme/colors";
+import { useColors } from "../../contexts/BackgroundContext";
 import { MapPickerView } from "./LocationPickerModal";
 
 export type NewCircleData = {
@@ -59,6 +60,8 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
   const [showMap, setShowMap] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors), [colors]);
 
   useEffect(() => {
     if (visible) {
@@ -244,6 +247,8 @@ type FieldProps = {
 };
 
 function Field({ label, value, onChangeText, placeholder, multiline }: FieldProps) {
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.fieldContainer}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -262,7 +267,7 @@ function Field({ label, value, onChangeText, placeholder, multiline }: FieldProp
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) { return StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.35)",
@@ -431,4 +436,4 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   readOnlyValue: { fontSize: 16, color: colors.textMuted, height: 36, textAlignVertical: "center" },
-});
+}); }

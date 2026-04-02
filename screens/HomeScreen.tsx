@@ -29,11 +29,12 @@ export default function HomeScreen() {
   const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors), [colors]);
-  const screenBgColor = colors.background;
+  const screenBgColor = bgOption !== "green" ? colors.background : undefined;
 
   return (
     <ScreenLayout
       backgroundColor={screenBgColor}
+      backgroundImage={bgOption === "green" ? require("../assets/Background.webp") : undefined}
       header={
         <NavbarTitle
           title={t.nav.villageLiving}
