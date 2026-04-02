@@ -16,7 +16,7 @@ import { CreateCircleModal, NewCircleData } from "../src/components/modals/Creat
 import { Colors } from "../src/theme/colors";
 import { spacing } from "../src/theme/spacing";
 import { useLanguage } from "../src/i18n/LanguageContext";
-import { useBackground, useColors } from "../src/contexts/BackgroundContext";
+import { useColors } from "../src/contexts/BackgroundContext";
 import { supabase, Circle } from "../lib/supabase";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -229,16 +229,15 @@ export default function CirclesScreen() {
     fetchCircles();
   }
 
-  const { bgOption } = useBackground();
+
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors), [colors]);
-  const screenBgColor = bgOption !== "green" ? colors.background : undefined;
+  const screenBgColor = colors.background;
 
   return (
     <>
       <ScreenLayout
         backgroundColor={screenBgColor}
-        backgroundImage={bgOption === "green" ? require("../assets/Background.webp") : undefined}
       >
         <View style={styles.headerCard}>
           <NavbarTitle

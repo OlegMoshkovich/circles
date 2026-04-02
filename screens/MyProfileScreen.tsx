@@ -110,12 +110,11 @@ export default function MyProfileScreen() {
       })
     : "—";
 
-  const screenBgColor = bgOption !== "green" ? colors.background : undefined;
+  const screenBgColor = colors.background;
 
   return (
     <ScreenLayout
       backgroundColor={screenBgColor}
-      backgroundImage={bgOption === "green" ? require("../assets/Background.webp") : undefined}
     >
       <View style={styles.headerCard}>
         <NavbarTitle

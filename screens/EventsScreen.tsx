@@ -15,7 +15,7 @@ import { Colors } from "../src/theme/colors";
 import { spacing } from "../src/theme/spacing";
 import { useUser } from "@clerk/clerk-expo";
 import { useLanguage } from "../src/i18n/LanguageContext";
-import { useBackground, useColors } from "../src/contexts/BackgroundContext";
+import { useColors } from "../src/contexts/BackgroundContext";
 import { supabase, Event } from "../lib/supabase";
 
 type EventWithCircle = Event & { circles?: { name: string } | null };
@@ -174,16 +174,15 @@ export default function EventsScreen() {
     });
 
   const filterActive = sortBy !== "newest" || rsvpFilter !== "all";
-  const { bgOption } = useBackground();
+
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors), [colors]);
-  const screenBgColor = bgOption !== "green" ? colors.background : undefined;
+  const screenBgColor = colors.background;
 
   return (
     <>
       <ScreenLayout
         backgroundColor={screenBgColor}
-        backgroundImage={bgOption === "green" ? require("../assets/Background.webp") : undefined}
       >
         <View style={styles.headerCard}>
           <NavbarTitle
