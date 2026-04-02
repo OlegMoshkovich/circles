@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
   iconButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 16,
     backgroundColor: colors.card,
     alignItems: "center",
     justifyContent: "center",
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },

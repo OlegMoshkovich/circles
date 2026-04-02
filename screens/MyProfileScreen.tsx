@@ -134,7 +134,7 @@ export default function MyProfileScreen() {
                 onPress={() => {
                   setBgOption((prev) => {
                     if (prev === "light") return "solid";
-                    if (prev === "solid") return "light";
+                    if (prev === "solid") return "green";
                     return "light";
                   });
                 }}
@@ -267,7 +267,7 @@ function makeStyles(colors: Colors) {
   return StyleSheet.create({
     headerCard: {
       backgroundColor: colors.card,
-      borderRadius: 20,
+      borderRadius: 16,
       paddingHorizontal: spacing.cardPadding,
       paddingBottom: spacing.cardPadding,
       marginBottom: spacing.md,
@@ -335,7 +335,7 @@ function makeStyles(colors: Colors) {
     },
     card: {
       backgroundColor: colors.card,
-      borderRadius: 20,
+      borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.cardBorder,
       ...Platform.select({
@@ -376,7 +376,7 @@ function makeStyles(colors: Colors) {
     iconButton: {
       width: 30,
       height: 30,
-      borderRadius: 20,
+      borderRadius: 16,
       backgroundColor: colors.iconbBg,
       alignItems: "center",
       justifyContent: "center",
@@ -391,7 +391,7 @@ function makeStyles(colors: Colors) {
       gap: 6,
       paddingVertical: 7,
       paddingHorizontal: 12,
-      borderRadius: 20,
+      borderRadius: 16,
       borderWidth: 0.4,
       borderColor: colors.cardBorder,
       backgroundColor: colors.card,

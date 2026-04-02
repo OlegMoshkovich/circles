@@ -414,7 +414,7 @@ function makeStyles(colors: Colors) {
   return StyleSheet.create({
   headerCard: {
     backgroundColor: colors.card,
-    borderRadius: 20,
+    borderRadius: 16,
     paddingHorizontal: spacing.cardPadding,
     paddingBottom: spacing.cardPadding,
     marginBottom: spacing.md,
@@ -429,7 +429,7 @@ function makeStyles(colors: Colors) {
   addButton: {
     width: 30,
     height: 30,
-    borderRadius: 20,
+    borderRadius: 16,
     backgroundColor: colors.iconbBg,
     alignItems: "center",
     justifyContent: "center",
@@ -460,7 +460,7 @@ function makeStyles(colors: Colors) {
   },
   filterPanel: {
     backgroundColor: colors.card,
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     padding: 14,
@@ -504,7 +504,7 @@ function makeStyles(colors: Colors) {
   },
   toggle: {
     flexDirection: "row",
-    borderRadius: 20,
+    borderRadius: 16,
     backgroundColor: colors.cardBorder,
     padding: 3,
     alignSelf: "flex-start",

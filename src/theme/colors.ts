@@ -33,10 +33,10 @@ export const glassColors = {
  * Forest green palette — cream text and lines on olive background
  */
 export const greenColors = {
-  background: "#5C6D2A",
+  background: "#35412A",
   card: "#717C43",
   cardBorder: "rgba(240, 235, 224, 0.15)",
-  text: "#F0EBE0",
+  text: "white",
   iconbBg: "#4E5830",
   textOnIconBg: "#F0EBE0",
   textMuted: "#C4BDAA",

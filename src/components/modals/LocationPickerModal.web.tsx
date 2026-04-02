@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
   iconButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 16,
     backgroundColor: colors.card,
     alignItems: "center",
     justifyContent: "center",

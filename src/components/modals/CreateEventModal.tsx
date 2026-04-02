@@ -548,7 +548,7 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   pickerCard: {
     width: "92%",
     backgroundColor: colors.background,
-    borderRadius: 20,
+    borderRadius: 16,
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 12,

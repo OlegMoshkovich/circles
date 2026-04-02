@@ -136,7 +136,7 @@ function makeStyles(colors: Colors) {
     },
     card: {
       backgroundColor: colors.card,
-      borderRadius: 20,
+      borderRadius: 16,
       padding: spacing.cardPadding,
       marginBottom: spacing.md,
       borderWidth: 1,
