@@ -1,7 +1,8 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { colors } from "../../theme/colors";
+import { Colors } from "../../theme/colors";
+import { useColors } from "../../contexts/BackgroundContext";
 import { spacing } from "../../theme/spacing";
 
 type NavbarTitleProps = {
@@ -10,6 +11,9 @@ type NavbarTitleProps = {
 };
 
 export function NavbarTitle({ title, rightElement }: NavbarTitleProps) {
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <View style={styles.row}>
       <Svg width={14} height={27} viewBox="0 0 132 175" fill="none">
@@ -37,20 +41,22 @@ export function NavbarTitle({ title, rightElement }: NavbarTitleProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: spacing.lg,
-    marginBottom: spacing.sm,
-  },
-  title: {
-    fontSize: 24,
-    fontFamily: "CormorantGaramond_300Light",
-    color: colors.text,
-  },
-  spacer: {
-    flex: 1,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      paddingVertical: spacing.lg,
+      marginBottom: spacing.sm,
+    },
+    title: {
+      fontSize: 24,
+      fontFamily: "CormorantGaramond_300Light",
+      color: colors.text,
+    },
+    spacer: {
+      flex: 1,
+    },
+  });
+}

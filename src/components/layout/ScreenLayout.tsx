@@ -12,16 +12,18 @@ type ScreenLayoutProps = {
   contentStyle?: ViewStyle;
   backgroundImage?: ImageSourcePropType;
   backgroundBlurIntensity?: number;
+  backgroundColor?: string;
 };
 
-export function ScreenLayout({ header, children, stickyTop, contentStyle, backgroundImage, backgroundBlurIntensity = 40 }: ScreenLayoutProps) {
+export function ScreenLayout({ header, children, stickyTop, contentStyle, backgroundImage, backgroundBlurIntensity = 40, backgroundColor }: ScreenLayoutProps) {
   const insets = useSafeAreaInsets();
+  const resolvedBg = backgroundColor ?? colors.background;
 
   const inner = (
     <View
       style={[
         styles.wrapper,
-        !backgroundImage && { backgroundColor: colors.background },
+        !backgroundImage && { backgroundColor: resolvedBg },
         {
           paddingTop: insets.top,
           paddingLeft: insets.left + spacing.pageHorizontal,
@@ -29,7 +31,7 @@ export function ScreenLayout({ header, children, stickyTop, contentStyle, backgr
         },
       ]}
     >
-      <View style={[styles.headerArea, !backgroundImage && { backgroundColor: colors.background }]}>{header}</View>
+      <View style={[styles.headerArea, !backgroundImage && { backgroundColor: resolvedBg }]}>{header}</View>
       {stickyTop != null && <View>{stickyTop}</View>}
       <ScrollView
         style={styles.scroll}

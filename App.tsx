@@ -8,6 +8,7 @@ import { tokenCache } from "./cache";
 import * as SplashScreen from "expo-splash-screen";
 import { LanguageProvider } from "./src/i18n/LanguageContext";
 import { NotificationProvider } from "./src/contexts/NotificationContext";
+import { BackgroundProvider } from "./src/contexts/BackgroundContext";
 import { supabase } from "./lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import OnboardingScreen from "./screens/OnboardingScreen";
@@ -80,6 +81,7 @@ export default function App() {
   } else {
     return (
       <LanguageProvider>
+        <BackgroundProvider>
         <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
           <SafeAreaProvider>
             <NotificationProvider>
@@ -91,6 +93,7 @@ export default function App() {
             </NotificationProvider>
           </SafeAreaProvider>
         </ClerkProvider>
+        </BackgroundProvider>
       </LanguageProvider>
     );
   }

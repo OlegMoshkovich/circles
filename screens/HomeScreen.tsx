@@ -9,10 +9,11 @@ import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { TextBlock } from "../src/components/blocks/TextBlock";
 import { InfoCard } from "../src/components/cards/InfoCard";
 import { SuggestionCard } from "../src/components/cards/SuggestionCard";
-import { colors } from "../src/theme/colors";
+import { Colors } from "../src/theme/colors";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { useLanguage } from "../src/i18n/LanguageContext";
+import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -25,15 +26,20 @@ const STATIC_SUGGESTIONS = [
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
   const { t } = useLanguage();
+  const { bgOption } = useBackground();
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+  const screenBgColor = bgOption === "green" ? "#646F3D" : colors.background;
 
   return (
     <ScreenLayout
+      backgroundColor={screenBgColor}
       header={
         <NavbarTitle
           title={t.nav.villageLiving}
           rightElement={
             <TouchableOpacity style={styles.iconButton} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <Ionicons name="add" size={16} color={colors.card} />
+              <Ionicons name="add" size={16} color={colors.textOnIconBg} />
             </TouchableOpacity>
           }
         />
@@ -78,19 +84,21 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  iconButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.iconbBg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  sectionLabel: {
-    ...typography.sectionLabel,
-    color: colors.textMuted,
-    marginBottom: spacing.md,
-    textTransform: "uppercase",
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    iconButton: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: colors.iconbBg,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    sectionLabel: {
+      ...typography.sectionLabel,
+      color: colors.textMuted,
+      marginBottom: spacing.md,
+      textTransform: "uppercase",
+    },
+  });
+}

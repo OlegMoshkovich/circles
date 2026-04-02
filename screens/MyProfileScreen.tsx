@@ -5,13 +5,14 @@ import { useAuth, useUser } from "@clerk/clerk-expo";
 import { useFocusEffect } from "@react-navigation/native";
 import { ScreenLayout } from "../src/components/layout/ScreenLayout";
 import { NavbarTitle } from "../src/components/layout/NavbarTitle";
-import { colors } from "../src/theme/colors";
+import { Colors } from "../src/theme/colors";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { useLanguage, Language } from "../src/i18n/LanguageContext";
 import { OnboardingRestartContext } from "../App";
 import { supabase, AppNotification } from "../lib/supabase";
 import { useNotificationContext } from "../src/contexts/NotificationContext";
+import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 
 async function handleSignOut(signOut: () => Promise<void>) {
   try {
@@ -20,7 +21,6 @@ async function handleSignOut(signOut: () => Promise<void>) {
 }
 
 const LANGUAGES: { code: Language; flag: string; label: string }[] = [
-
   { code: "de", flag: "🇨🇭", label: "DE" },
   { code: "fr", flag: "🇫🇷", label: "FR" },
   { code: "it", flag: "🇮🇹", label: "IT" },
@@ -35,6 +35,9 @@ export default function MyProfileScreen() {
   const { setUnreadCount } = useNotificationContext();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loadingNotifs, setLoadingNotifs] = useState(false);
+  const { bgOption, setBgOption } = useBackground();
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors), [colors]);
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
@@ -107,8 +110,11 @@ export default function MyProfileScreen() {
       })
     : "—";
 
+  const screenBgColor = bgOption === "green" ? "#646F3D" : colors.background;
+
   return (
     <ScreenLayout
+      backgroundColor={screenBgColor}
       header={
         <NavbarTitle
           title={t.nav.profile}
@@ -119,14 +125,33 @@ export default function MyProfileScreen() {
                 style={styles.iconButton}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
-                <Ionicons name="play-outline" size={16} color={colors.card} />
+                <Ionicons name="play-outline" size={16} color={colors.textOnIconBg} />
+              </TouchableOpacity>
+              {/* Theme Toggle Button */}
+              <TouchableOpacity
+                onPress={() => {
+                  setBgOption((prev) => {
+                    if (prev === "light") return "green";
+                    return "light";
+                  });
+                }}
+                style={styles.iconButton}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                {/* show icon based on current bgOption */}
+                {bgOption === "light" && (
+                  <Ionicons name="sunny-outline" size={16} color={colors.textOnIconBg} />
+                )}
+                {bgOption === "green" && (
+                  <Ionicons name="leaf-outline" size={16} color={colors.textOnIconBg} />
+                )}
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => handleSignOut(signOut)}
                 style={styles.iconButton}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
-                <Ionicons name="log-out-outline" size={16} color={colors.card} />
+                <Ionicons name="log-out-outline" size={16} color={colors.textOnIconBg} />
               </TouchableOpacity>
             </View>
           }
@@ -232,194 +257,226 @@ export default function MyProfileScreen() {
         })}
       </View>
 
+      <View style={styles.divider} />
+
+     
+
     </ScreenLayout>
   );
 }
 
-const styles = StyleSheet.create({
-  avatarSection: {
-    alignItems: "center",
-    paddingVertical: spacing.sm,
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.badgeBg,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-  },
-  avatarImage: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-  },
-  avatarInitials: {
-    fontSize: 24,
-    fontFamily: "Lora_400Regular",
-    color: colors.text,
-  },
-  name: {
-    fontSize: 20,
-    fontWeight: "400" as const,
-    fontFamily: "Lora_400Regular",
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  email: {
-    ...typography.bodySmall,
-    color: colors.textMuted,
-  },
-  scrollTopPad: {
-    height: spacing.lg,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.divider,
-    marginVertical: spacing.lg,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: "600" as const,
-    letterSpacing: 0.8,
-    color: colors.textMuted,
-    textTransform: "uppercase" as const,
-    marginBottom: spacing.sm,
-  },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#2C2A26",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-      },
-      android: { elevation: 1 },
-      default: {},
-    }),
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: spacing.cardPadding,
-    paddingVertical: 14,
-  },
-  rowDivider: {
-    height: 1,
-    backgroundColor: colors.divider,
-    marginHorizontal: spacing.cardPadding,
-  },
-  rowLabel: {
-    ...typography.body,
-    color: colors.text,
-  },
-  rowValue: {
-    ...typography.body,
-    color: colors.textMuted,
-  },
-  headerButtons: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  iconButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.iconbBg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  flagRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  flagButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: .4,
-    borderColor: colors.cardBorder,
-    backgroundColor: colors.card,
-  },
-  flagButtonSelected: {
-    borderColor: colors.text,
-    // backgroundColor: colors.badgeBg,
-  },
-  flagEmoji: {
-    fontSize: 20,
-  },
-  flagLabel: {
-    fontSize: 13,
-    fontWeight: "500" as const,
-    color: colors.textMuted,
-  },
-  flagLabelSelected: {
-    color: colors.text,
-  },
-  notifCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    padding: 12,
-    marginBottom: spacing.sm,
-  },
-  notifIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.badgeBg,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
-  },
-  notifContent: {
-    flex: 1,
-    marginRight: 8,
-  },
-  notifTitle: {
-    fontSize: 13,
-    fontWeight: "500" as const,
-    color: colors.text,
-    marginBottom: 2,
-  },
-  notifBody: {
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  notifActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  acceptBtn: {
-    backgroundColor: colors.text,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  acceptBtnText: {
-    color: colors.card,
-    fontSize: 12,
-    fontWeight: "600" as const,
-  },
-  declineBtn: {
-    width: 30,
-    height: 30,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    avatarSection: {
+      alignItems: "center",
+      paddingVertical: spacing.sm,
+    },
+    avatar: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: colors.badgeBg,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: spacing.sm,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    avatarImage: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+    },
+    avatarInitials: {
+      fontSize: 24,
+      fontFamily: "Lora_400Regular",
+      color: colors.text,
+    },
+    name: {
+      fontSize: 20,
+      fontWeight: "400" as const,
+      fontFamily: "Lora_400Regular",
+      color: colors.text,
+      marginBottom: spacing.xs,
+    },
+    email: {
+      ...typography.bodySmall,
+      color: colors.textMuted,
+    },
+    scrollTopPad: {
+      height: spacing.lg,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: colors.divider,
+      marginVertical: spacing.lg,
+    },
+    sectionLabel: {
+      fontSize: 11,
+      fontWeight: "600" as const,
+      letterSpacing: 0.8,
+      color: colors.textMuted,
+      textTransform: "uppercase" as const,
+      marginBottom: spacing.sm,
+    },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      ...Platform.select({
+        ios: {
+          shadowColor: "#2C2A26",
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 2,
+        },
+        android: { elevation: 1 },
+        default: {},
+      }),
+    },
+    row: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: spacing.cardPadding,
+      paddingVertical: 14,
+    },
+    rowDivider: {
+      height: 1,
+      backgroundColor: colors.divider,
+      marginHorizontal: spacing.cardPadding,
+    },
+    rowLabel: {
+      ...typography.body,
+      color: colors.text,
+    },
+    rowValue: {
+      ...typography.body,
+      color: colors.textMuted,
+    },
+    headerButtons: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    iconButton: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: colors.iconbBg,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    flagRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+    },
+    flagButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingVertical: 7,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      borderWidth: 0.4,
+      borderColor: colors.cardBorder,
+      backgroundColor: colors.card,
+    },
+    flagButtonSelected: {
+      borderColor: colors.text,
+    },
+    flagEmoji: {
+      fontSize: 20,
+    },
+    flagLabel: {
+      fontSize: 13,
+      fontWeight: "500" as const,
+      color: colors.textMuted,
+    },
+    flagLabelSelected: {
+      color: colors.text,
+    },
+    notifCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      padding: 12,
+      marginBottom: spacing.sm,
+    },
+    notifIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: colors.badgeBg,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 10,
+    },
+    notifContent: {
+      flex: 1,
+      marginRight: 8,
+    },
+    notifTitle: {
+      fontSize: 13,
+      fontWeight: "500" as const,
+      color: colors.text,
+      marginBottom: 2,
+    },
+    notifBody: {
+      fontSize: 12,
+      color: colors.textMuted,
+    },
+    notifActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    acceptBtn: {
+      backgroundColor: colors.text,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 999,
+    },
+    acceptBtnText: {
+      color: colors.background,
+      fontSize: 12,
+      fontWeight: "600" as const,
+    },
+    declineBtn: {
+      width: 30,
+      height: 30,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    bgRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+    },
+    bgSwatch: {
+      width: 52,
+      height: 52,
+      borderRadius: 12,
+      borderWidth: 1.5,
+      borderColor: colors.cardBorder,
+    },
+    bgSwatchImage: {
+      width: 52,
+      height: 52,
+      borderRadius: 12,
+      overflow: "hidden",
+      borderWidth: 1.5,
+      borderColor: colors.cardBorder,
+    },
+    bgSwatchImageInner: {
+      width: "100%",
+      height: "100%",
+    },
+    bgSwatchSelected: {
+      borderColor: colors.text,
+      borderWidth: 2.5,
+    },
+  });
+}

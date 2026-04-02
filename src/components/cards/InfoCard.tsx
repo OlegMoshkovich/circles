@@ -1,7 +1,8 @@
 import React from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../../theme/colors";
+import { Colors } from "../../theme/colors";
+import { useColors } from "../../contexts/BackgroundContext";
 import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 
@@ -18,6 +19,9 @@ type InfoCardProps = {
 };
 
 export function InfoCard({ title, titleIcon, items, note }: InfoCardProps) {
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <View style={styles.card}>
       <View style={styles.titleRow}>
@@ -48,67 +52,69 @@ export function InfoCard({ title, titleIcon, items, note }: InfoCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: spacing.cardPadding,
-    marginBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#2C2A26",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.06,
-        shadowRadius: 3,
-      },
-      android: { elevation: 2 },
-      default: {},
-    }),
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  titleIcon: {
-    marginRight: 6,
-  },
-  title: {
-    ...typography.cardTitle,
-    color: colors.textMuted,
-    textTransform: "uppercase",
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: spacing.sm,
-  },
-  iconWrap: {
-    width: 26,
-    alignItems: "center",
-    marginRight: spacing.sm,
-  },
-  iconPlaceholder: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: colors.textMuted,
-    opacity: 0.35,
-  },
-  label: {
-    ...typography.body,
-    color: colors.text,
-    flex: 1,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.divider,
-    marginVertical: spacing.md,
-  },
-  note: {
-    ...typography.note,
-    color: colors.textMuted,
-  },
-});
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: spacing.cardPadding,
+      marginBottom: spacing.lg,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      ...Platform.select({
+        ios: {
+          shadowColor: "#2C2A26",
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.06,
+          shadowRadius: 3,
+        },
+        android: { elevation: 2 },
+        default: {},
+      }),
+    },
+    titleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: spacing.md,
+    },
+    titleIcon: {
+      marginRight: 6,
+    },
+    title: {
+      ...typography.cardTitle,
+      color: colors.textMuted,
+      textTransform: "uppercase",
+    },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: spacing.sm,
+    },
+    iconWrap: {
+      width: 26,
+      alignItems: "center",
+      marginRight: spacing.sm,
+    },
+    iconPlaceholder: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      backgroundColor: colors.textMuted,
+      opacity: 0.35,
+    },
+    label: {
+      ...typography.body,
+      color: colors.text,
+      flex: 1,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: colors.divider,
+      marginVertical: spacing.md,
+    },
+    note: {
+      ...typography.note,
+      color: colors.textMuted,
+    },
+  });
+}

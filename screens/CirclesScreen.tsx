@@ -13,8 +13,9 @@ import { TextBlock } from "../src/components/blocks/TextBlock";
 import { CircleCard } from "../src/components/cards/CircleCard";
 import { SwipeableCard } from "../src/components/layout/SwipeableCard";
 import { CreateCircleModal, NewCircleData } from "../src/components/modals/CreateCircleModal";
-import { colors } from "../src/theme/colors";
+import { Colors } from "../src/theme/colors";
 import { useLanguage } from "../src/i18n/LanguageContext";
+import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { supabase, Circle } from "../lib/supabase";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -227,9 +228,15 @@ export default function CirclesScreen() {
     fetchCircles();
   }
 
+  const { bgOption } = useBackground();
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+  const screenBgColor = bgOption === "green" ? "#646F3D" : colors.background;
+
   return (
     <>
       <ScreenLayout
+        backgroundColor={screenBgColor}
         header={
           <NavbarTitle
             title={t.nav.circles}
@@ -239,7 +246,7 @@ export default function CirclesScreen() {
                 style={styles.addButton}
                 onPress={() => setModalVisible(true)}
               >
-                <Ionicons name="add" size={16} color={colors.card} />
+                <Ionicons name="add" size={16} color={colors.textOnIconBg} />
               </TouchableOpacity>
             }
           />
@@ -502,7 +509,8 @@ export default function CirclesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
   addButton: {
     width: 30,
     height: 30,
@@ -606,4 +614,5 @@ const styles = StyleSheet.create({
   toggleLabelActive: {
     color: colors.text,
   },
-});
+  })
+}

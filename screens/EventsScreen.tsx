@@ -11,9 +11,10 @@ import { TextBlock } from "../src/components/blocks/TextBlock";
 import { EventCard } from "../src/components/cards/EventCard";
 import { SwipeableCard } from "../src/components/layout/SwipeableCard";
 import { CreateEventModal, NewEventData } from "../src/components/modals/CreateEventModal";
-import { colors } from "../src/theme/colors";
+import { Colors } from "../src/theme/colors";
 import { useUser } from "@clerk/clerk-expo";
 import { useLanguage } from "../src/i18n/LanguageContext";
+import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { supabase, Event } from "../lib/supabase";
 
 type EventWithCircle = Event & { circles?: { name: string } | null };
@@ -172,10 +173,15 @@ export default function EventsScreen() {
     });
 
   const filterActive = sortBy !== "newest" || rsvpFilter !== "all";
+  const { bgOption } = useBackground();
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+  const screenBgColor = bgOption === "green" ? "#646F3D" : colors.background;
 
   return (
     <>
       <ScreenLayout
+        backgroundColor={screenBgColor}
         header={
           <NavbarTitle
             title={t.nav.events}
@@ -185,7 +191,7 @@ export default function EventsScreen() {
                 style={styles.addButton}
                 onPress={() => setModalVisible(true)}
               >
-                <Ionicons name="add" size={16} color={colors.card} />
+                <Ionicons name="add" size={16} color={colors.textOnIconBg} />
               </TouchableOpacity>
             }
           />
@@ -406,7 +412,8 @@ export default function EventsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors) {
+  return StyleSheet.create({
   addButton: {
     width: 30,
     height: 30,
@@ -516,4 +523,5 @@ const styles = StyleSheet.create({
     fontFamily: "Lora_400Regular",
     color: colors.textMuted,
   },
-});
+  })
+}
