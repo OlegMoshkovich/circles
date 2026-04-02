@@ -110,7 +110,7 @@ export default function MyProfileScreen() {
       })
     : "—";
 
-  const screenBgColor = bgOption === "green" ? "#646F3D" : colors.background;
+  const screenBgColor = colors.background;
 
   return (
     <ScreenLayout

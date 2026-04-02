@@ -176,7 +176,7 @@ export default function EventsScreen() {
   const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors), [colors]);
-  const screenBgColor = bgOption === "green" ? "#646F3D" : colors.background;
+  const screenBgColor = colors.background;
 
   return (
     <>

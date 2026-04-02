@@ -18,7 +18,7 @@ export const lightColors = {
  * Forest green palette — cream text and lines on olive background
  */
 export const greenColors = {
-  background: "#646F3D",
+  background: "#5C6D2A",
   card: "#717C43",
   cardBorder: "rgba(240, 235, 224, 0.15)",
   text: "#F0EBE0",
