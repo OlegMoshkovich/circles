@@ -23,7 +23,7 @@ function makeStyles(colors: Colors) {
       paddingHorizontal: spacing.cardPadding,
       paddingBottom: spacing.cardPadding,
       marginTop: 20,
-      marginBottom: spacing.md,
+      marginBottom: spacing.xl,
       borderWidth: 1,
       borderColor: colors.cardBorder,
       ...Platform.select({
