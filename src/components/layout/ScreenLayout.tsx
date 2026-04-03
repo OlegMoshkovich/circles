@@ -41,7 +41,7 @@ export function ScreenLayout({ header, children, stickyTop, contentStyle, backgr
       >
         {children}
       </ScrollView>
-      <TabFocusOverlay />
+      {/* <TabFocusOverlay /> */}
     </View>
   );
 
