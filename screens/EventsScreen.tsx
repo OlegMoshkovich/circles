@@ -1,18 +1,19 @@
 import React, { useCallback, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
 import { ScreenLayout } from "../src/components/layout/ScreenLayout";
+import { ScreenHeaderCard } from "../src/components/layout/ScreenHeaderCard";
 import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { TextBlock } from "../src/components/blocks/TextBlock";
 import { EventCard } from "../src/components/cards/EventCard";
 import { SwipeableCard } from "../src/components/layout/SwipeableCard";
 import { CreateEventModal, NewEventData } from "../src/components/modals/CreateEventModal";
 import { Colors } from "../src/theme/colors";
-import { spacing } from "../src/theme/spacing";
+
 import { useUser } from "@clerk/clerk-expo";
 import { useLanguage } from "../src/i18n/LanguageContext";
 import { useColors } from "../src/contexts/BackgroundContext";
@@ -184,7 +185,7 @@ export default function EventsScreen() {
       <ScreenLayout
         backgroundColor={screenBgColor}
       >
-        <View style={styles.headerCard}>
+        <ScreenHeaderCard>
           <NavbarTitle
             title={t.nav.events}
             rightElement={
@@ -284,7 +285,7 @@ export default function EventsScreen() {
               </View>
             </View>
           )}
-        </View>
+        </ScreenHeaderCard>
         {loading ? (
           <View style={styles.loader}>
             <ActivityIndicator size="small" color={colors.textMuted} />
@@ -411,21 +412,6 @@ export default function EventsScreen() {
 
 function makeStyles(colors: Colors) {
   return StyleSheet.create({
-  headerCard: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    paddingHorizontal: spacing.cardPadding,
-    paddingBottom: spacing.cardPadding,
-    marginTop: 20,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    ...Platform.select({
-      ios: { shadowColor: "#2C2A26", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3 },
-      android: { elevation: 2 },
-      default: {},
-    }),
-  },
   addButton: {
     width: 30,
     height: 30,

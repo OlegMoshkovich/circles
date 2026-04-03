@@ -128,6 +128,7 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={styles.kav}
           >
+            <View style={styles.sheetBacking}>
             <View style={styles.sheet}>
               <View style={styles.handle} />
 
@@ -231,6 +232,7 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
                 <Text style={styles.saveButtonText}>{saving ? "Creating…" : "Create Circle"}</Text>
               </TouchableOpacity>
             </View>
+            </View>
           </KeyboardAvoidingView>
         )}
       </View>
@@ -276,6 +278,12 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   kav: {
     justifyContent: "flex-end",
   },
+  sheetBacking: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    height: "94%",
+  },
   sheet: {
     backgroundColor: colors.card,
     borderTopLeftRadius: 20,
@@ -283,7 +291,7 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
     paddingTop: 12,
-    height: "94%",
+    flex: 1,
   },
   mapSheet: {
     flex: 1,
@@ -390,7 +398,7 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
     color: colors.textMuted,
   },
   toggleTextActive: {
-    color: colors.card,
+    color: colors.background,
   },
   saveButton: {
     backgroundColor: colors.text,
@@ -405,7 +413,7 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
     opacity: 0.35,
   },
   saveButtonText: {
-    color: "#fff",
+    color: colors.background,
     fontSize: 16,
     fontWeight: "600",
   },

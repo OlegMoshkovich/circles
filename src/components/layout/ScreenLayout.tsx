@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
-import { TabFocusOverlay } from "./TabFocusOverlay";
+
 
 type ScreenLayoutProps = {
   header?: React.ReactNode;

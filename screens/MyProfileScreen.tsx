@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import { useFocusEffect } from "@react-navigation/native";
 import { ScreenLayout } from "../src/components/layout/ScreenLayout";
+import { ScreenHeaderCard } from "../src/components/layout/ScreenHeaderCard";
 import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { Colors } from "../src/theme/colors";
 import { spacing } from "../src/theme/spacing";
@@ -116,7 +117,7 @@ export default function MyProfileScreen() {
     <ScreenLayout
       backgroundColor={screenBgColor}
     >
-      <View style={styles.headerCard}>
+      <ScreenHeaderCard style={{ marginBottom: spacing.lg }}>
         <NavbarTitle
           title={t.nav.profile}
           rightElement={
@@ -171,8 +172,8 @@ export default function MyProfileScreen() {
           <Text style={styles.name}>{name}</Text>
           {email.length > 0 && <Text style={styles.email}>{email}</Text>}
         </View>
- 
-      </View>
+
+      </ScreenHeaderCard>
       {loadingNotifs ? (
         <ActivityIndicator size="small" color={colors.textMuted} style={{ marginBottom: spacing.lg }} />
       ) : notifications.length > 0 ? (
@@ -264,21 +265,6 @@ export default function MyProfileScreen() {
 
 function makeStyles(colors: Colors) {
   return StyleSheet.create({
-    headerCard: {
-      backgroundColor: colors.card,
-      borderRadius: 16,
-      paddingHorizontal: spacing.cardPadding,
-      paddingBottom: spacing.cardPadding,
-      marginTop: 20,
-      marginBottom: spacing.lg,
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
-      ...Platform.select({
-        ios: { shadowColor: "#2C2A26", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3 },
-        android: { elevation: 2 },
-        default: {},
-      }),
-    },
     cardDivider: {
       height: 1,
       backgroundColor: colors.divider,
