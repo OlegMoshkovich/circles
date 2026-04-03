@@ -513,6 +513,7 @@ function makeStyles(colors: Colors) {
     borderRadius: 16,
     paddingHorizontal: spacing.cardPadding,
     paddingBottom: spacing.cardPadding,
+    marginTop: 20,
     marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -599,7 +600,7 @@ function makeStyles(colors: Colors) {
     color: colors.textMuted,
   },
   filterChipTextActive: {
-    color: colors.card,
+    color: colors.background,
   },
   toggle: {
     flexDirection: "row",

@@ -20,7 +20,7 @@ const BackgroundContext = createContext<BackgroundContextType>({
 });
 
 export function BackgroundProvider({ children }: { children: React.ReactNode }) {
-  const [bgOption, setBgOptionState] = useState<BgOption>("light");
+  const [bgOption, setBgOptionState] = useState<BgOption>("green");
 
   useEffect(() => {
     AsyncStorage.getItem(BG_STORAGE_KEY).then((val) => {

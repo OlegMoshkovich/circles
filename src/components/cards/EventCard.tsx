@@ -125,7 +125,7 @@ function makeStyles(colors: Colors) {
       marginBottom: spacing.xs,
     },
     title: {
-      fontSize: 16,
+      fontSize: 18,
       fontWeight: "400" as const,
       color: colors.text,
       flex: 1,

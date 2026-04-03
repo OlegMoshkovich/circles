@@ -18,7 +18,7 @@ export const lightColors = {
  * Glassmorphism palette — semi-transparent cards over blurred image background
  */
 export const glassColors = {
-  background: "#5C6D2A",
+  background: "#35412A",
   card: "rgba(255, 255, 255, 0.14)",
   cardBorder: "rgba(255, 255, 255, 0.28)",
   text: "#F0EBE0",

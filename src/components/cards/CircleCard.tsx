@@ -160,7 +160,6 @@ function makeStyles(colors: Colors) {
     },
     name: {
       fontSize: 18,
-      fontFamily: "CormorantGaramond_300Light",
       color: colors.text,
       flex: 1,
       marginRight: spacing.sm,

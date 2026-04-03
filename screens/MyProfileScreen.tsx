@@ -132,8 +132,8 @@ export default function MyProfileScreen() {
               <TouchableOpacity
                 onPress={() => {
                   setBgOption((prev) => {
-                    if (prev === "light") return "solid";
-                    if (prev === "solid") return "green";
+                    if (prev === "light") return "green";
+                    if (prev === "green") return "light";
                     return "light";
                   });
                 }}
@@ -208,7 +208,7 @@ export default function MyProfileScreen() {
           <Text style={styles.rowLabel}>{t.profile.circle}</Text>
           <Text style={styles.rowValue}>{t.profile.circleValue}</Text>
         </View>
-        <View style={styles.rowDivider} />
+        {/* <View style={styles.rowDivider} /> */}
         <View style={styles.row}>
           <Text style={styles.rowLabel}>{t.profile.memberSince}</Text>
           <Text style={styles.rowValue}>{memberSince}</Text>
@@ -224,7 +224,7 @@ export default function MyProfileScreen() {
           <Text style={styles.rowLabel}>{t.profile.location}</Text>
           <Text style={styles.rowValue}>{t.profile.locationValue}</Text>
         </View>
-        <View style={styles.rowDivider} />
+        {/* <View style={styles.rowDivider} /> */}
         <View style={styles.row}>
           <Text style={styles.rowLabel}>{t.profile.neighbours}</Text>
           <Text style={styles.rowValue}>{t.profile.neighboursValue}</Text>
@@ -269,7 +269,8 @@ function makeStyles(colors: Colors) {
       borderRadius: 16,
       paddingHorizontal: spacing.cardPadding,
       paddingBottom: spacing.cardPadding,
-      marginBottom: spacing.md,
+      marginTop: 20,
+      marginBottom: spacing.lg,
       borderWidth: 1,
       borderColor: colors.cardBorder,
       ...Platform.select({
@@ -321,8 +322,8 @@ function makeStyles(colors: Colors) {
     },
     divider: {
       height: 1,
-      backgroundColor: colors.divider,
-      marginVertical: spacing.lg,
+      // backgroundColor: colors.divider,
+      marginVertical: spacing.md,
     },
     sectionLabel: {
       fontSize: 11,

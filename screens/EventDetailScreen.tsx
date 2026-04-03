@@ -436,7 +436,7 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   },
   headerCard: {
     backgroundColor: colors.card,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: spacing.cardPadding,
     marginBottom: spacing.md,
     borderWidth: 1,
@@ -689,7 +689,7 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   },
   noteCard: {
     backgroundColor: colors.card,
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     padding: spacing.cardPadding,
