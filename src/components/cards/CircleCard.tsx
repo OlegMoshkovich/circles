@@ -20,6 +20,8 @@ type CircleCardProps = {
   pendingRequests?: number;
   hasNewActivity?: boolean;
   onPress?: () => void;
+  onActionPress?: () => void;
+  actionIcon?: keyof typeof Ionicons.glyphMap;
 };
 
 const VISIBILITY_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -40,6 +42,8 @@ export function CircleCard({
   pendingRequests = 0,
   hasNewActivity = false,
   onPress,
+  onActionPress,
+  actionIcon,
 }: CircleCardProps) {
   const { bgOption } = useBackground();
   const colors = useColors();
@@ -49,16 +53,24 @@ export function CircleCard({
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
       <View style={styles.header}>
         <Text style={styles.name} numberOfLines={1}>{name}</Text>
-        {hasNewActivity && (
-          <View style={styles.activityBell}>
-            <Ionicons name="notifications-outline" size={11} color="#FFFFFF" />
-          </View>
-        )}
-        {category ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{category}</Text>
-          </View>
-        ) : null}
+        <View style={styles.headerRight}>
+          {hasNewActivity && (
+            <View style={styles.activityBell}>
+              <Ionicons name="notifications-outline" size={11} color="#FFFFFF" />
+            </View>
+          )}
+   
+          {category ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{category}</Text>
+            </View>
+          ) : null}
+                 {actionIcon && onActionPress ? (
+            <TouchableOpacity style={styles.headerAction} onPress={onActionPress} activeOpacity={0.8}>
+              <Ionicons name={actionIcon} size={12} color={colors.textMuted} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
 
       {description ? (
@@ -159,17 +171,37 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       justifyContent: "space-between",
       marginBottom: spacing.xs,
     },
+    headerRight: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      flexShrink: 0,
+    },
     name: {
       fontSize: 18,
       color: colors.text,
       flex: 1,
       marginRight: spacing.sm,
     },
+    headerAction: {
+      minWidth: 28,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 999,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      backgroundColor: colors.badgeBg,
+      marginLeft: spacing.sm,
+      
+    },
     badge: {
       backgroundColor: colors.badgeBg,
       paddingHorizontal: 10,
       paddingVertical: 3,
       borderRadius: 999,
+
       borderWidth: isOnboarding ? 1 : 0,
       borderColor: isOnboarding ? colors.cardBorder : "transparent",
     },

@@ -10,7 +10,6 @@ import { ScreenHeaderCard } from "../src/components/layout/ScreenHeaderCard";
 import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { TextBlock } from "../src/components/blocks/TextBlock";
 import { EventCard } from "../src/components/cards/EventCard";
-import { SwipeableCard } from "../src/components/layout/SwipeableCard";
 import { CreateEventModal, NewEventData } from "../src/components/modals/CreateEventModal";
 import { Colors } from "../src/theme/colors";
 
@@ -298,47 +297,45 @@ export default function EventsScreen() {
             </View>
           ) : (
             events.filter((e) => dismissedIds.has(e.id)).map((event) => (
-              <SwipeableCard
+              <EventCard
                 key={event.id}
-                onRestore={() => {
+                title={event.title}
+                organizer={event.organizer}
+                date={event.date_label}
+                time={event.time_label}
+                location={event.location}
+                going={event.going}
+                maybe={event.maybe}
+                rsvp={rsvpStatusMap[event.id]}
+                circleName={event.circles?.name ?? null}
+                noteCount={noteCountMap[event.id] ?? 0}
+                hasNewActivity={false}
+                actionIcon="refresh"
+                onActionPress={() => {
                   setDismissedIds((prev) => { const next = new Set(prev); next.delete(event.id); return next; });
                   if (user) {
                     supabase.from("dismissed_items").delete()
                       .eq("user_id", user.id).eq("item_type", "event").eq("item_id", event.id).then(() => {});
                   }
                 }}
-              >
-                <EventCard
-                  title={event.title}
-                  organizer={event.organizer}
-                  date={event.date_label}
-                  time={event.time_label}
-                  location={event.location}
-                  going={event.going}
-                  maybe={event.maybe}
-                  rsvp={rsvpStatusMap[event.id]}
-                  circleName={event.circles?.name ?? null}
-                  noteCount={noteCountMap[event.id] ?? 0}
-                  hasNewActivity={false}
-                  onPress={() => {
-                    navigation.navigate("EventDetail", {
-                      id: event.id,
-                      title: event.title,
-                      organizer: event.organizer,
-                      date: event.date_label,
-                      time: event.time_label,
-                      location: event.location,
-                      going: event.going,
-                      maybe: event.maybe,
-                      rsvp: rsvpStatusMap[event.id],
-                      description: event.description,
-                      created_by: event.created_by,
-                      circleName: event.circles?.name ?? null,
-                      circle_id: event.circle_id,
-                    });
-                  }}
-                />
-              </SwipeableCard>
+                onPress={() => {
+                  navigation.navigate("EventDetail", {
+                    id: event.id,
+                    title: event.title,
+                    organizer: event.organizer,
+                    date: event.date_label,
+                    time: event.time_label,
+                    location: event.location,
+                    going: event.going,
+                    maybe: event.maybe,
+                    rsvp: rsvpStatusMap[event.id],
+                    description: event.description,
+                    created_by: event.created_by,
+                    circleName: event.circles?.name ?? null,
+                    circle_id: event.circle_id,
+                  });
+                }}
+              />
             ))
           )
         ) : displayedEvents.filter((e) => !dismissedIds.has(e.id)).length === 0 ? (
@@ -351,21 +348,8 @@ export default function EventsScreen() {
           displayedEvents
             .filter((e) => !dismissedIds.has(e.id))
             .map((event) => (
-            <SwipeableCard
-              key={event.id}
-              disabled={!!user && event.created_by === user.id}
-              onDismiss={() => {
-                setDismissedIds((prev) => new Set(prev).add(event.id));
-                if (user) {
-                  supabase.from("dismissed_items").insert({
-                    user_id: user.id,
-                    item_type: "event",
-                    item_id: event.id,
-                  }).then(() => {});
-                }
-              }}
-            >
             <EventCard
+              key={event.id}
               title={event.title}
               organizer={event.organizer}
               date={event.date_label}
@@ -377,6 +361,21 @@ export default function EventsScreen() {
               circleName={event.circles?.name ?? null}
               noteCount={noteCountMap[event.id] ?? 0}
               hasNewActivity={(activityMap[event.id] ?? 0) > (lastViewedMap[event.id] ?? 0)}
+              actionIcon={!!user && event.created_by === user.id ? undefined : "close"}
+              onActionPress={
+                !!user && event.created_by === user.id
+                  ? undefined
+                  : () => {
+                      setDismissedIds((prev) => new Set(prev).add(event.id));
+                      if (user) {
+                        supabase.from("dismissed_items").insert({
+                          user_id: user.id,
+                          item_type: "event",
+                          item_id: event.id,
+                        }).then(() => {});
+                      }
+                    }
+              }
               onPress={() => {
                 AsyncStorage.setItem(`lastViewed_event_${event.id}`, Date.now().toString());
                 setLastViewedMap((prev) => ({ ...prev, [event.id]: Date.now() }));
@@ -397,7 +396,6 @@ export default function EventsScreen() {
                 });
               }}
             />
-            </SwipeableCard>
           ))
         )}
       </ScreenLayout>

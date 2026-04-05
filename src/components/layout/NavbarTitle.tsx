@@ -16,7 +16,7 @@ export function NavbarTitle({ title, rightElement }: NavbarTitleProps) {
 
   return (
     <View style={styles.row}>
-      <Svg width={20} height={22} viewBox="0 0 132 175" fill="none">
+      {/* <Svg width={20} height={22} viewBox="0 0 132 175" fill="none">
         <Path
           d="M128.5 3.0005L66.1263 112.457C65.7404 113.135 64.7625 113.13 64.3836 112.448L3.5 3.00048"
           stroke={colors.text}
@@ -29,7 +29,7 @@ export function NavbarTitle({ title, rightElement }: NavbarTitleProps) {
           strokeWidth={8}
           strokeLinecap="round"
         />
-      </Svg>
+      </Svg> */}
       <Text style={styles.title}>{title}</Text>
       {rightElement != null ? (
         <>

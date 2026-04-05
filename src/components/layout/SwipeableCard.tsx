@@ -1,5 +1,12 @@
-import React, { useRef, useState } from "react";
-import { Animated, PanResponder } from "react-native";
+import React, { useEffect, useRef } from "react";
+import {
+  Animated,
+  Dimensions,
+  LayoutAnimation,
+  PanResponder,
+  Platform,
+  UIManager,
+} from "react-native";
 
 type Props = {
   children: React.ReactNode;
@@ -8,72 +15,122 @@ type Props = {
   disabled?: boolean;
 };
 
+const DISMISS_DISTANCE = 84;
+const DISMISS_VELOCITY = 0.45;
+const SCREEN_WIDTH = Dimensions.get("window").width;
+
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 export function SwipeableCard({ children, onDismiss, onRestore, disabled }: Props) {
   const translateX = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(1)).current;
-  const height = useRef(new Animated.Value(0)).current;
-  const [measured, setMeasured] = useState(false);
   const disabledRef = useRef(disabled);
   disabledRef.current = disabled;
 
-  const collapseAndCall = (cb?: () => void) => {
-    Animated.timing(height, {
-      toValue: 0,
-      duration: 180,
-      useNativeDriver: false,
-    }).start(() => cb?.());
-  };
+  useEffect(() => {
+    translateX.setValue(0);
+    opacity.setValue(1);
+  }, [children, opacity, translateX]);
 
-  const collapse = () => collapseAndCall(onDismiss ?? onRestore);
+  function finishSwipe(direction: "left" | "right") {
+    const callback = direction === "left" ? onDismiss : onRestore;
+    if (!callback) return;
+
+    Animated.parallel([
+      Animated.timing(translateX, {
+        toValue: direction === "left" ? -SCREEN_WIDTH : SCREEN_WIDTH,
+        duration: 170,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 170,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      callback();
+      translateX.setValue(0);
+      opacity.setValue(1);
+    });
+  }
 
   const panResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_, g) =>
-        !disabledRef.current && Math.abs(g.dx) > 8 && Math.abs(g.dy) < 15,
-      onPanResponderMove: (_, g) => {
-        if (g.dx < 0 && onDismiss) {
-          translateX.setValue(g.dx);
-          opacity.setValue(Math.max(0, 1 + g.dx / 120));
-        } else if (g.dx > 0 && onRestore) {
-          translateX.setValue(g.dx);
-          opacity.setValue(Math.max(0, 1 - g.dx / 120));
-        }
+      onMoveShouldSetPanResponder: (_, g) => {
+        if (disabledRef.current) return false;
+        if (Math.abs(g.dx) < 14) return false;
+        if (Math.abs(g.dx) < Math.abs(g.dy) * 1.35) return false;
+        if (g.dx < 0 && !onDismiss) return false;
+        if (g.dx > 0 && !onRestore) return false;
+        return true;
       },
+      onPanResponderMove: (_, g) => {
+        const nextX =
+          g.dx < 0 && onDismiss
+            ? Math.max(g.dx, -SCREEN_WIDTH)
+            : g.dx > 0 && onRestore
+              ? Math.min(g.dx, SCREEN_WIDTH)
+              : 0;
+
+        translateX.setValue(nextX);
+        opacity.setValue(Math.max(0.2, 1 - Math.abs(nextX) / 220));
+      },
+      onPanResponderTerminationRequest: () => true,
       onPanResponderRelease: (_, g) => {
-        if (g.dx < -80 && onDismiss) {
-          Animated.parallel([
-            Animated.timing(translateX, { toValue: -500, duration: 180, useNativeDriver: true }),
-            Animated.timing(opacity, { toValue: 0, duration: 180, useNativeDriver: true }),
-          ]).start(() => collapse());
-        } else if (g.dx > 80 && onRestore) {
-          Animated.parallel([
-            Animated.timing(translateX, { toValue: 500, duration: 180, useNativeDriver: true }),
-            Animated.timing(opacity, { toValue: 0, duration: 180, useNativeDriver: true }),
-          ]).start(() => collapse());
-        } else {
-          Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
-          Animated.spring(opacity, { toValue: 1, useNativeDriver: true }).start();
+        const shouldDismissLeft =
+          g.dx < -DISMISS_DISTANCE || (g.dx < -30 && g.vx <= -DISMISS_VELOCITY);
+        const shouldDismissRight =
+          g.dx > DISMISS_DISTANCE || (g.dx > 30 && g.vx >= DISMISS_VELOCITY);
+
+        if (shouldDismissLeft && onDismiss) {
+          finishSwipe("left");
+          return;
         }
+
+        if (shouldDismissRight && onRestore) {
+          finishSwipe("right");
+          return;
+        }
+
+        Animated.parallel([
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 0,
+          }),
+          Animated.spring(opacity, {
+            toValue: 1,
+            useNativeDriver: true,
+            bounciness: 0,
+          }),
+        ]).start();
+      },
+      onPanResponderTerminate: () => {
+        Animated.parallel([
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+            bounciness: 0,
+          }),
+          Animated.spring(opacity, {
+            toValue: 1,
+            useNativeDriver: true,
+            bounciness: 0,
+          }),
+        ]).start();
       },
     })
   ).current;
 
   return (
     <Animated.View
-      style={{ height: measured ? height : undefined, overflow: "hidden" }}
-      onLayout={(e) => {
-        if (!measured) {
-          height.setValue(e.nativeEvent.layout.height);
-          setMeasured(true);
-        }
-      }}
+      style={{ transform: [{ translateX }], opacity }}
+      {...panResponder.panHandlers}
     >
-      <Animated.View
-        style={{ transform: [{ translateX }], opacity }}
-        {...panResponder.panHandlers}
-      >
-        {children}
-      </Animated.View>
+      {children}
     </Animated.View>
   );
 }

@@ -20,6 +20,8 @@ type EventCardProps = {
   noteCount?: number;
   hasNewActivity?: boolean;
   onPress?: () => void;
+  onActionPress?: () => void;
+  actionIcon?: keyof typeof Ionicons.glyphMap;
 };
 
 export function EventCard({
@@ -35,6 +37,8 @@ export function EventCard({
   noteCount = 0,
   hasNewActivity = false,
   onPress,
+  onActionPress,
+  actionIcon,
 }: EventCardProps) {
   const { t } = useLanguage();
   const { bgOption } = useBackground();
@@ -45,18 +49,25 @@ export function EventCard({
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
       <View style={styles.header}>
         <Text style={styles.title}>{title}</Text>
-        {hasNewActivity && (
-          <View style={styles.activityBell}>
-            <Ionicons name="notifications-outline" size={11} color="#FFFFFF" />
-          </View>
-        )}
-        {rsvp != null && (
-          <View style={[styles.badge, rsvp === "going" ? styles.badgeGoing : styles.badgeMaybe]}>
-            <Text style={[styles.badgeText, rsvp === "going" ? styles.badgeTextGoing : styles.badgeTextMaybe]}>
-              {rsvp === "going" ? t.events.badgeGoing : t.events.badgeMaybe}
-            </Text>
-          </View>
-        )}
+        <View style={styles.headerRight}>
+          {hasNewActivity && (
+            <View style={styles.activityBell}>
+              <Ionicons name="notifications-outline" size={11} color="#FFFFFF" />
+            </View>
+          )}
+          {actionIcon && onActionPress ? (
+            <TouchableOpacity style={styles.headerAction} onPress={onActionPress} activeOpacity={0.8}>
+              <Ionicons name={actionIcon} size={12} color={colors.textMuted} />
+            </TouchableOpacity>
+          ) : null}
+          {rsvp != null && (
+            <View style={[styles.badge, rsvp === "going" ? styles.badgeGoing : styles.badgeMaybe]}>
+              <Text style={[styles.badgeText, rsvp === "going" ? styles.badgeTextGoing : styles.badgeTextMaybe]}>
+                {rsvp === "going" ? t.events.badgeGoing : t.events.badgeMaybe}
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
 
       <Text style={styles.organizer}>{t.events.by} {organizer}</Text>
@@ -124,6 +135,12 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       alignItems: "center",
       justifyContent: "space-between",
       marginBottom: spacing.xs,
+    },
+    headerRight: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      flexShrink: 0,
     },
     title: {
       fontSize: 18,
@@ -205,6 +222,18 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       marginRight: spacing.sm,
       alignItems: "center",
       justifyContent: "center",
+    },
+    headerAction: {
+      minWidth: 28,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 999,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      backgroundColor: colors.badgeBg,
+      marginRight: spacing.sm,
     },
     noteCountRow: {
       flexDirection: "row",

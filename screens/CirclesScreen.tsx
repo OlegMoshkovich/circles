@@ -12,7 +12,6 @@ import { ScreenHeaderCard } from "../src/components/layout/ScreenHeaderCard";
 import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { TextBlock } from "../src/components/blocks/TextBlock";
 import { CircleCard } from "../src/components/cards/CircleCard";
-import { SwipeableCard } from "../src/components/layout/SwipeableCard";
 import { CreateCircleModal, NewCircleData } from "../src/components/modals/CreateCircleModal";
 import { Colors } from "../src/theme/colors";
 
@@ -393,40 +392,38 @@ export default function CirclesScreen() {
             </View>
           ) : (
             circles.filter((c) => dismissedIds.has(c.id)).map((circle) => (
-              <SwipeableCard
+              <CircleCard
                 key={circle.id}
-                onRestore={() => {
+                name={circle.name}
+                description={circle.description}
+                category={circle.category}
+                visibility={circle.visibility}
+                memberCount={circle.member_count}
+                memberStatus={memberStatusMap[circle.id] ?? null}
+                location={circle.location}
+                organizer={circle.organizer}
+                pendingRequests={0}
+                hasNewActivity={false}
+                actionIcon="refresh"
+                onActionPress={() => {
                   setDismissedIds((prev) => { const next = new Set(prev); next.delete(circle.id); return next; });
                   if (user) {
                     supabase.from("dismissed_items").delete()
                       .eq("user_id", user.id).eq("item_type", "circle").eq("item_id", circle.id).then(() => {});
                   }
                 }}
-              >
-                <CircleCard
-                  name={circle.name}
-                  description={circle.description}
-                  category={circle.category}
-                  visibility={circle.visibility}
-                  memberCount={circle.member_count}
-                  memberStatus={memberStatusMap[circle.id] ?? null}
-                  location={circle.location}
-                  organizer={circle.organizer}
-                  pendingRequests={0}
-                  hasNewActivity={false}
-                  onPress={() => {
-                    navigation.navigate("CircleDetail", {
-                      id: circle.id,
-                      name: circle.name,
-                      description: circle.description,
-                      visibility: circle.visibility,
-                      owner_id: circle.owner_id,
-                      member_count: circle.member_count,
-                      organizer: circle.organizer,
-                    });
-                  }}
-                />
-              </SwipeableCard>
+                onPress={() => {
+                  navigation.navigate("CircleDetail", {
+                    id: circle.id,
+                    name: circle.name,
+                    description: circle.description,
+                    visibility: circle.visibility,
+                    owner_id: circle.owner_id,
+                    member_count: circle.member_count,
+                    organizer: circle.organizer,
+                  });
+                }}
+              />
             ))
           )
         ) : (
@@ -453,21 +450,8 @@ export default function CirclesScreen() {
                 : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
             })
             .map((circle) => (
-            <SwipeableCard
-              key={circle.id}
-              disabled={memberStatusMap[circle.id] === "owner"}
-              onDismiss={() => {
-                setDismissedIds((prev) => new Set(prev).add(circle.id));
-                if (user) {
-                  supabase.from("dismissed_items").insert({
-                    user_id: user.id,
-                    item_type: "circle",
-                    item_id: circle.id,
-                  }).then(() => {});
-                }
-              }}
-            >
             <CircleCard
+              key={circle.id}
               name={circle.name}
               description={circle.description}
               category={circle.category}
@@ -479,6 +463,21 @@ export default function CirclesScreen() {
               pendingRequests={pendingRequestsMap[circle.id] ?? 0}
               hasNewActivity={
                 (activityMap[circle.id] ?? 0) > (lastViewedMap[circle.id] ?? 0)
+              }
+              actionIcon={memberStatusMap[circle.id] === "owner" ? undefined : "close"}
+              onActionPress={
+                memberStatusMap[circle.id] === "owner"
+                  ? undefined
+                  : () => {
+                      setDismissedIds((prev) => new Set(prev).add(circle.id));
+                      if (user) {
+                        supabase.from("dismissed_items").insert({
+                          user_id: user.id,
+                          item_type: "circle",
+                          item_id: circle.id,
+                        }).then(() => {});
+                      }
+                    }
               }
               onPress={() => {
                 AsyncStorage.setItem(`lastViewed_circle_${circle.id}`, Date.now().toString());
@@ -494,9 +493,8 @@ export default function CirclesScreen() {
                 });
               }}
             />
-            </SwipeableCard>
           ))
-          )}
+        )}
       </ScreenLayout>
 
       <CreateCircleModal
