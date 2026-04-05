@@ -253,7 +253,7 @@ export default function CirclesScreen() {
               </TouchableOpacity>
             }
           />
-          <TextBlock subtitle={t.circles.subtitle} />
+          {/* <TextBlock subtitle={t.circles.subtitle} /> */}
 
           <View style={styles.filterRow}>
             <View style={styles.toggle}>

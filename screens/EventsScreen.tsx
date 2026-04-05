@@ -198,7 +198,7 @@ export default function EventsScreen() {
               </TouchableOpacity>
             }
           />
-          <TextBlock subtitle={t.events.subtitle} />
+          {/* <TextBlock subtitle={t.events.subtitle} /> */}
 
           <View style={styles.filterRow}>
             <View style={styles.toggle}>

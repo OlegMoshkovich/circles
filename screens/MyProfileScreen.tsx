@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Image, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import { useFocusEffect } from "@react-navigation/native";
@@ -200,9 +200,7 @@ export default function MyProfileScreen() {
         </View>
 
       </ScreenHeaderCard>
-      {loadingNotifs ? (
-        <ActivityIndicator size="small" color={colors.textMuted} style={{ marginBottom: spacing.lg }} />
-      ) : notifications.length > 0 ? (
+      {notifications.length > 0 ? (
         <>
           <Text style={styles.sectionLabel}>Notifications</Text>
           {notifications.map((notif) => (
@@ -249,7 +247,7 @@ export default function MyProfileScreen() {
         </View>
       </View>
 
-      <View style={styles.divider} />
+      <View style={styles.sectionGap} />
 
       {/* Language selector */}
       {/* <Text style={styles.sectionLabel}>{t.profile.language}</Text> */}
@@ -272,7 +270,7 @@ export default function MyProfileScreen() {
         })}
       </View>
 
-      <View style={styles.divider} />
+      <View style={styles.sectionGap} />
 
      
 
@@ -335,6 +333,9 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       color: colors.textMuted,
       textTransform: "uppercase" as const,
       marginBottom: spacing.sm,
+    },
+    sectionGap: {
+      height: spacing.lg,
     },
     card: {
       backgroundColor: colors.card,

@@ -55,11 +55,7 @@ export function EventCard({
               <Ionicons name="notifications-outline" size={11} color="#FFFFFF" />
             </View>
           )}
-          {actionIcon && onActionPress ? (
-            <TouchableOpacity style={styles.headerAction} onPress={onActionPress} activeOpacity={0.8}>
-              <Ionicons name={actionIcon} size={12} color={colors.textMuted} />
-            </TouchableOpacity>
-          ) : null}
+
           {rsvp != null && (
             <View style={[styles.badge, rsvp === "going" ? styles.badgeGoing : styles.badgeMaybe]}>
               <Text style={[styles.badgeText, rsvp === "going" ? styles.badgeTextGoing : styles.badgeTextMaybe]}>
@@ -67,6 +63,11 @@ export function EventCard({
               </Text>
             </View>
           )}
+          {actionIcon && onActionPress ? (
+            <TouchableOpacity style={styles.headerAction} onPress={onActionPress} activeOpacity={0.8}>
+              <Ionicons name={actionIcon} size={12} color={colors.textMuted} />
+            </TouchableOpacity>
+          ) : null}
         </View>
       </View>
 
@@ -233,7 +234,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       borderWidth: 1,
       borderColor: colors.cardBorder,
       backgroundColor: colors.badgeBg,
-      marginRight: spacing.sm,
+      marginLeft: spacing.sm,
     },
     noteCountRow: {
       flexDirection: "row",
