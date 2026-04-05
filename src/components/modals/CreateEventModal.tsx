@@ -121,7 +121,6 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
   const canSave =
     !!title.trim() &&
     !!organizer.trim() &&
-    !!location.trim() &&
     (eventVisibility === "public" || selectedCircleId !== null || !!defaultCircleId);
 
   async function handleSave() {

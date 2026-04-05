@@ -31,7 +31,7 @@ import { ThemedBackground } from "../src/components/layout/ThemedBackground";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CircleDetail">;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-type Tab = "feed" | "members" | "requests";
+type Tab = "events" | "feed" | "members" | "description";
 type FeedItem =
   | { kind: "event"; data: Event }
   | { kind: "note"; data: CircleNote };
@@ -59,7 +59,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [visibility, setVisibility] = useState(route.params.visibility);
   const [organizer] = useState(route.params.organizer ?? null);
 
-  const [activeTab, setActiveTab] = useState<Tab>("feed");
+  const [activeTab, setActiveTab] = useState<Tab>("events");
   const [memberCount, setMemberCount] = useState(route.params.member_count);
   const [membership, setMembership] = useState<CircleMember | null>(null);
   const [members, setMembers] = useState<CircleMember[]>([]);
@@ -70,7 +70,6 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [notes, setNotes] = useState<CircleNote[]>([]);
   const [noteText, setNoteText] = useState("");
   const [postingNote, setPostingNote] = useState(false);
-  const [messagesExpanded, setMessagesExpanded] = useState(false);
   const [requests, setRequests] = useState<CircleMember[]>([]);
   const [requestCount, setRequestCount] = useState(0);
   const [loadingFeed, setLoadingFeed] = useState(false);
@@ -116,9 +115,9 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       .then(({ count }) => setRequestCount(count ?? 0));
   }, [id, isOwner]);
 
-  // Load requests list when on requests tab
+  // Load requests list for the owner's description tab
   useEffect(() => {
-    if (activeTab !== "requests" || !isOwner) return;
+    if (activeTab !== "description" || !isOwner) return;
     setLoadingRequests(true);
     supabase
       .from("circle_members")
@@ -170,9 +169,9 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     }
   }
 
-  // Load feed
+  // Load circle events + feed items
   useEffect(() => {
-    if (activeTab !== "feed") return;
+    if (activeTab !== "events" && activeTab !== "feed") return;
     setLoadingFeed(true);
     Promise.all([
       supabase.from("events").select("*").eq("circle_id", id).order("created_at", { ascending: false }),
@@ -201,7 +200,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   }, [id, activeTab]);
 
   async function handleSaveEvent(data: NewEventData) {
-    const { error } = await supabase.from("events").insert({
+    const { data: createdEvent, error } = await supabase.from("events").insert({
       title: data.title,
       organizer: data.organizer,
       date_label: data.date,
@@ -212,11 +211,22 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       visibility: "circle",
       circle_id: id,
       created_by: user?.id ?? null,
-    });
+    }).select("id").single();
     if (!error) {
+      if (user?.id) {
+        const { error: rsvpError } = await supabase
+          .from("event_rsvps")
+          .upsert(
+            { event_id: createdEvent.id, user_id: user.id, status: "going" },
+            { onConflict: "event_id,user_id" }
+          );
+        if (rsvpError) {
+          console.error("Failed to auto-join event creator", rsvpError);
+        }
+      }
       setCreateEventVisible(false);
-      // Reload feed
-      setActiveTab("feed");
+      // Reload circle events
+      setActiveTab("events");
       supabase.from("events").select("*").eq("circle_id", id).order("created_at", { ascending: false })
         .then(({ data: rows }) => { if (rows) setEvents(rows); });
       return true;
@@ -480,25 +490,17 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         <View style={styles.headerCard}>
           <Text style={styles.title}>{name}</Text>
 
-          {description ? (
-            <Text style={styles.description}>{description}</Text>
-          ) : null}
-
-          <View style={styles.metaRow}>
-            <Ionicons name="people-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
-            <Text style={styles.metaText}>{memberCount} {memberCount === 1 ? "member" : "members"}</Text>
-            <Text style={styles.metaSep}>·</Text>
-            <Text style={styles.metaText}>{VISIBILITY_LABEL[visibility]}</Text>
-          </View>
-          {organizer ? (
-            <Text style={styles.metaText}>{organizer}</Text>
-          ) : null}
-
           <View style={styles.divider} />
 
           {/* Tabs */}
           <View style={styles.tabRow}>
             <View style={styles.tabList}>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === "events" && styles.tabActive]}
+                onPress={() => setActiveTab("events")}
+              >
+                <Text style={[styles.tabText, activeTab === "events" && styles.tabTextActive]}>Events</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.tab, activeTab === "feed" && styles.tabActive]}
                 onPress={() => setActiveTab("feed")}
@@ -511,23 +513,21 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
               >
                 <Text style={[styles.tabText, activeTab === "members" && styles.tabTextActive]}>Members</Text>
               </TouchableOpacity>
-              {isOwner && (
-                <TouchableOpacity
-                  style={[styles.tab, activeTab === "requests" && styles.tabActive]}
-                  onPress={() => setActiveTab("requests")}
-                >
-                  <View style={styles.tabWithBadge}>
-                    <Text style={[styles.tabText, activeTab === "requests" && styles.tabTextActive]}>Requests</Text>
-                    {requestCount > 0 && (
-                      <View style={styles.tabBadge}>
-                        <Text style={styles.tabBadgeText}>{requestCount}</Text>
-                      </View>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                style={[styles.tab, activeTab === "description" && styles.tabActive]}
+                onPress={() => setActiveTab("description")}
+              >
+                <View style={styles.tabWithBadge}>
+                  <Text style={[styles.tabText, activeTab === "description" && styles.tabTextActive]}>Description</Text>
+                  {isOwner && requestCount > 0 && (
+                    <View style={styles.tabBadge}>
+                      <Text style={styles.tabBadgeText}>{requestCount}</Text>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
             </View>
-            {(isOwner || isMember) && activeTab === "feed" && (
+            {(isOwner || isMember) && activeTab === "events" && (
               <TouchableOpacity
                 onPress={() => setCreateEventVisible(true)}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -539,8 +539,8 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           </View>
         </View>
 
-        {/* Feed tab */}
-        {activeTab === "feed" && (
+        {/* Circle Events tab */}
+        {activeTab === "events" && (
           <>
             {loadingFeed ? (
               <View style={styles.loader}>
@@ -550,124 +550,12 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
               const sortedEvents = [...events].sort(
                 (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
               );
-              const sortedNotes = [...notes].sort(
-                (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-              );
 
               return (
                 <>
-                  {sortedEvents.length === 0 && sortedNotes.length === 0 ? (
-                    <Text style={styles.emptyText}>No posts yet</Text>
+                  {sortedEvents.length === 0 ? (
+                    <Text style={styles.emptyText}>No circle events yet</Text>
                   ) : null}
-
-                  <View style={styles.messagesAccordion}>
-                    <TouchableOpacity
-                      style={styles.messagesAccordionHeader}
-                      onPress={() => setMessagesExpanded((prev) => !prev)}
-                      activeOpacity={0.8}
-                    >
-                      <View style={styles.messagesAccordionTitleRow}>
-                        <Ionicons name="chatbubbles-outline" size={18} color={colors.text} />
-                        <Text style={styles.messagesAccordionTitle}>Messages</Text>
-                      </View>
-                      <View style={styles.messagesAccordionMeta}>
-                        <Text style={styles.messagesAccordionCount}>
-                          {sortedNotes.length}
-                        </Text>
-                        <Ionicons
-                          name={messagesExpanded ? "chevron-up" : "chevron-down"}
-                          size={18}
-                          color={colors.textMuted}
-                        />
-                      </View>
-                    </TouchableOpacity>
-
-                    {messagesExpanded ? (
-                      <View style={styles.messagesAccordionBody}>
-                        {(isOwner || isMember) && (
-                          <View style={styles.composeBox}>
-                            <View style={styles.composeRow}>
-                              <Ionicons name="chatbubble-outline" size={18} color={colors.text} style={styles.composeIcon} />
-                              <TextInput
-                                style={styles.composeInput}
-                                placeholder="Share a note with the circle…"
-                                placeholderTextColor={colors.textMuted}
-                                value={noteText}
-                                onChangeText={setNoteText}
-                                multiline
-                                maxLength={500}
-                              />
-                            </View>
-                            {noteText.trim().length > 0 && (
-                              <TouchableOpacity
-                                style={styles.postButton}
-                                onPress={handlePostNote}
-                                disabled={postingNote}
-                              >
-                                {postingNote ? (
-                                  <ActivityIndicator size="small" color={colors.card} />
-                                ) : (
-                                  <Text style={styles.postButtonText}>Post</Text>
-                                )}
-                              </TouchableOpacity>
-                            )}
-                          </View>
-                        )}
-
-                        {sortedNotes.length === 0 ? (
-                          <Text style={styles.emptyText}>No messages yet</Text>
-                        ) : (
-                          sortedNotes.map((note) => {
-                            const initials = (() => {
-                              const n = note.display_name ?? "?";
-                              const parts = n.trim().split(" ");
-                              return parts.length >= 2
-                                ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-                                : n.slice(0, 2).toUpperCase();
-                            })();
-                            const timeAgo = (() => {
-                              const diff = Date.now() - new Date(note.created_at).getTime();
-                              const mins = Math.floor(diff / 60000);
-                              if (mins < 1) return "just now";
-                              if (mins < 60) return `${mins}m ago`;
-                              const hrs = Math.floor(mins / 60);
-                              if (hrs < 24) return `${hrs}h ago`;
-                              return `${Math.floor(hrs / 24)}d ago`;
-                            })();
-                            return (
-                              <View key={`note-${note.id}`} style={styles.noteCard}>
-                                <View style={styles.noteHeader}>
-                                  <View style={styles.avatar}>
-                                    {note.avatar_url ? (
-                                      <Image source={{ uri: note.avatar_url }} style={styles.avatarImage} />
-                                    ) : (
-                                      <Text style={styles.avatarText}>{initials}</Text>
-                                    )}
-                                  </View>
-                                  <View style={styles.noteHeaderText}>
-                                    <Text style={styles.noteName}>{note.display_name ?? "Member"}</Text>
-                                    <Text style={styles.noteTime}>{timeAgo}</Text>
-                                  </View>
-                                  {note.user_id === user?.id && (
-                                    <TouchableOpacity
-                                      onPress={async () => {
-                                        await supabase.from("circle_notes").delete().eq("id", note.id);
-                                        setNotes((prev) => prev.filter((n) => n.id !== note.id));
-                                      }}
-                                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                    >
-                                      <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
-                                    </TouchableOpacity>
-                                  )}
-                                </View>
-                                <Text style={styles.noteContent}>{note.content}</Text>
-                              </View>
-                            );
-                          })
-                        )}
-                      </View>
-                    ) : null}
-                  </View>
 
                   {sortedEvents.map((event) => (
                     <EventCard
@@ -699,6 +587,107 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                     />
                   ))}
                 </>
+              );
+            })()}
+          </>
+        )}
+
+        {/* Feed tab */}
+        {activeTab === "feed" && (
+          <>
+            {loadingFeed ? (
+              <View style={styles.loader}>
+                <ActivityIndicator size="small" color={colors.textMuted} />
+              </View>
+            ) : (() => {
+              const sortedNotes = [...notes].sort(
+                (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+              );
+
+              return (
+                <View style={styles.messagesPanel}>
+                  {(isOwner || isMember) && (
+                    <View style={styles.composeBox}>
+                      <View style={styles.composeRow}>
+                        <Ionicons name="chatbubble-outline" size={18} color={colors.text} style={styles.composeIcon} />
+                        <TextInput
+                          style={styles.composeInput}
+                          placeholder="Share a note with the circle…"
+                          placeholderTextColor={colors.textMuted}
+                          value={noteText}
+                          onChangeText={setNoteText}
+                          multiline
+                          maxLength={500}
+                        />
+                      </View>
+                      {noteText.trim().length > 0 && (
+                        <TouchableOpacity
+                          style={styles.postButton}
+                          onPress={handlePostNote}
+                          disabled={postingNote}
+                        >
+                          {postingNote ? (
+                            <ActivityIndicator size="small" color={colors.card} />
+                          ) : (
+                            <Text style={styles.postButtonText}>Post</Text>
+                          )}
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
+
+                  {sortedNotes.length === 0 ? (
+                    <Text style={styles.emptyText}>No messages yet</Text>
+                  ) : (
+                    sortedNotes.map((note) => {
+                      const initials = (() => {
+                        const n = note.display_name ?? "?";
+                        const parts = n.trim().split(" ");
+                        return parts.length >= 2
+                          ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+                          : n.slice(0, 2).toUpperCase();
+                      })();
+                      const timeAgo = (() => {
+                        const diff = Date.now() - new Date(note.created_at).getTime();
+                        const mins = Math.floor(diff / 60000);
+                        if (mins < 1) return "just now";
+                        if (mins < 60) return `${mins}m ago`;
+                        const hrs = Math.floor(mins / 60);
+                        if (hrs < 24) return `${hrs}h ago`;
+                        return `${Math.floor(hrs / 24)}d ago`;
+                      })();
+                      return (
+                        <View key={`note-${note.id}`} style={styles.noteCard}>
+                          <View style={styles.noteHeader}>
+                            <View style={styles.avatar}>
+                              {note.avatar_url ? (
+                                <Image source={{ uri: note.avatar_url }} style={styles.avatarImage} />
+                              ) : (
+                                <Text style={styles.avatarText}>{initials}</Text>
+                              )}
+                            </View>
+                            <View style={styles.noteHeaderText}>
+                              <Text style={styles.noteName}>{note.display_name ?? "Member"}</Text>
+                              <Text style={styles.noteTime}>{timeAgo}</Text>
+                            </View>
+                            {note.user_id === user?.id && (
+                              <TouchableOpacity
+                                onPress={async () => {
+                                  await supabase.from("circle_notes").delete().eq("id", note.id);
+                                  setNotes((prev) => prev.filter((n) => n.id !== note.id));
+                                }}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                              >
+                                <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                          <Text style={styles.noteContent}>{note.content}</Text>
+                        </View>
+                      );
+                    })
+                  )}
+                </View>
               );
             })()}
           </>
@@ -745,45 +734,84 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           )
         )}
 
-        {/* Requests tab (owner only) */}
-        {activeTab === "requests" && (
+        {/* Description tab */}
+        {activeTab === "description" && (
           loadingRequests ? (
             <View style={styles.loader}>
               <ActivityIndicator size="small" color={colors.textMuted} />
             </View>
-          ) : requests.length === 0 ? (
-            <Text style={styles.emptyText}>No pending requests</Text>
           ) : (
-            requests.map((req) => {
-              const name =
-                (req.user_id === user?.id && (user?.fullName ?? user?.firstName))
-                  ? (user.fullName ?? user.firstName ?? req.user_id)
-                  : (profileMap[req.user_id] ?? req.display_name ?? req.user_id);
-              const parts = name.trim().split(" ");
-              const initials = parts.length >= 2
-                ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-                : name.slice(0, 2).toUpperCase();
-              return (
-                <View key={req.id} style={styles.requestRow}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{initials}</Text>
-                  </View>
-                  <Text style={styles.memberUserId} numberOfLines={1}>{name}</Text>
-                  <TouchableOpacity
-                    style={styles.acceptButton}
-                    onPress={() => handleAccept(req)}
-                  >
-                    <Text style={styles.acceptButtonText}>Accept</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.declineButton}
-                    onPress={() => handleDecline(req)}
-                  >
-                    <Ionicons name="close" size={16} color={colors.textMuted} />
-                  </TouchableOpacity>
+            <View style={styles.descriptionPanel}>
+              <Text style={styles.sectionTitle}>About this circle</Text>
+              <Text style={styles.descriptionBody}>
+                {description?.trim() ? description : "No description yet."}
+              </Text>
+
+              <View style={styles.descriptionMetaList}>
+                <View style={styles.descriptionMetaRow}>
+                  <Text style={styles.descriptionMetaLabel}>Visibility</Text>
+                  <Text style={styles.descriptionMetaValue}>{VISIBILITY_LABEL[visibility]}</Text>
                 </View>
-              );
-            })
+                {organizer ? (
+                  <View style={styles.descriptionMetaRow}>
+                    <Text style={styles.descriptionMetaLabel}>Organizer</Text>
+                    <Text style={styles.descriptionMetaValue}>{organizer}</Text>
+                  </View>
+                ) : null}
+                <View style={styles.descriptionMetaRow}>
+                  <Text style={styles.descriptionMetaLabel}>Members</Text>
+                  <Text style={styles.descriptionMetaValue}>{memberCount}</Text>
+                </View>
+              </View>
+
+              {isOwner && (
+                <>
+                  <View style={styles.sectionDivider} />
+                  <View style={styles.ownerSectionHeader}>
+                    <Text style={styles.sectionTitle}>Pending requests</Text>
+                    {requestCount > 0 && (
+                      <View style={styles.tabBadge}>
+                        <Text style={styles.tabBadgeText}>{requestCount}</Text>
+                      </View>
+                    )}
+                  </View>
+                  {requests.length === 0 ? (
+                    <Text style={styles.emptyText}>No pending requests</Text>
+                  ) : (
+                    requests.map((req) => {
+                      const name =
+                        (req.user_id === user?.id && (user?.fullName ?? user?.firstName))
+                          ? (user.fullName ?? user.firstName ?? req.user_id)
+                          : (profileMap[req.user_id] ?? req.display_name ?? req.user_id);
+                      const parts = name.trim().split(" ");
+                      const initials = parts.length >= 2
+                        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+                        : name.slice(0, 2).toUpperCase();
+                      return (
+                        <View key={req.id} style={styles.requestRow}>
+                          <View style={styles.avatar}>
+                            <Text style={styles.avatarText}>{initials}</Text>
+                          </View>
+                          <Text style={styles.memberUserId} numberOfLines={1}>{name}</Text>
+                          <TouchableOpacity
+                            style={styles.acceptButton}
+                            onPress={() => handleAccept(req)}
+                          >
+                            <Text style={styles.acceptButtonText}>Accept</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.declineButton}
+                            onPress={() => handleDecline(req)}
+                          >
+                            <Ionicons name="close" size={16} color={colors.textMuted} />
+                          </TouchableOpacity>
+                        </View>
+                      );
+                    })
+                  )}
+                </>
+              )}
+            </View>
           )
         )}
       </ScrollView>
@@ -1002,6 +1030,55 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     color: colors.textMuted,
     paddingVertical: spacing.md,
   },
+  descriptionPanel: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: spacing.cardPadding,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  sectionTitle: {
+    ...typography.body,
+    color: colors.text,
+    fontWeight: "600" as const,
+    marginBottom: spacing.sm,
+  },
+  descriptionBody: {
+    ...typography.body,
+    color: colors.textMuted,
+    lineHeight: 22,
+  },
+  descriptionMetaList: {
+    marginTop: spacing.lg,
+    gap: spacing.sm,
+  },
+  descriptionMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+  },
+  descriptionMetaLabel: {
+    ...typography.bodySmall,
+    color: colors.textMuted,
+  },
+  descriptionMetaValue: {
+    ...typography.bodySmall,
+    color: colors.text,
+    flexShrink: 1,
+    textAlign: "right",
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: colors.divider,
+    marginVertical: spacing.lg,
+  },
+  ownerSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.sm,
+  },
   memberRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1160,43 +1237,14 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     alignItems: "center",
     gap: 16,
   },
-  messagesAccordion: {
+  messagesPanel: {
     backgroundColor: colors.card,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     marginBottom: spacing.md,
-    overflow: "hidden",
-  },
-  messagesAccordionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: spacing.cardPadding,
-    paddingVertical: 14,
-  },
-  messagesAccordionTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  messagesAccordionTitle: {
-    ...typography.body,
-    color: colors.text,
-    fontWeight: "500" as const,
-  },
-  messagesAccordionMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  messagesAccordionCount: {
-    ...typography.bodySmall,
-    color: colors.textMuted,
-  },
-  messagesAccordionBody: {
-    paddingHorizontal: spacing.cardPadding,
-    paddingBottom: spacing.cardPadding,
+    paddingVertical: spacing.cardPadding,
   },
   composeBox: {
     backgroundColor: colors.card,
