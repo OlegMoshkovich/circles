@@ -229,7 +229,7 @@ export default function MyProfileScreen() {
       ) : null}
 
       {/* Neighbourhood card */}
-      <Text style={styles.sectionLabel}>{t.profile.neighbourhood}</Text>
+      {/* <Text style={styles.sectionLabel}>{t.profile.neighbourhood}</Text> */}
       <View style={styles.card}>
         <View style={styles.row}>
           <Text style={styles.rowLabel}>{t.profile.location}</Text>
@@ -252,7 +252,7 @@ export default function MyProfileScreen() {
       <View style={styles.divider} />
 
       {/* Language selector */}
-      <Text style={styles.sectionLabel}>{t.profile.language}</Text>
+      {/* <Text style={styles.sectionLabel}>{t.profile.language}</Text> */}
       <View style={styles.flagRow}>
         {LANGUAGES.map(({ code, flag, label }) => {
           const selected = language === code;

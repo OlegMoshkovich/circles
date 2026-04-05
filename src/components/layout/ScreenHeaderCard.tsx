@@ -25,7 +25,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       paddingTop: 0,
       paddingBottom: spacing.cardPadding,
       marginTop: 20,
-      marginBottom: spacing.xl,
+      marginBottom: spacing.md,
       borderWidth: 1,
       borderColor: colors.cardBorder,
       ...Platform.select({
