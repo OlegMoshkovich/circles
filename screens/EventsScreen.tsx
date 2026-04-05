@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -156,8 +156,12 @@ export default function EventsScreen() {
     });
     if (!error) {
       setModalVisible(false);
-      fetchEvents();
+      await fetchEvents();
+      return true;
     }
+    console.error("Failed to create event", error);
+    Alert.alert("Could not create event", error.message);
+    return false;
   }
 
   const displayedEvents = events

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Modal,
   View,
   Text,
@@ -35,7 +36,7 @@ export type NewEventData = {
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onSave: (event: NewEventData) => void;
+  onSave: (event: NewEventData) => Promise<boolean | void>;
   /** When provided the modal defaults visibility to "circle" and hides the visibility picker */
   defaultCircleId?: string | null;
 };
@@ -123,9 +124,10 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
     !!location.trim() &&
     (eventVisibility === "public" || selectedCircleId !== null || !!defaultCircleId);
 
-  function handleSave() {
+  async function handleSave() {
     if (!canSave) return;
-    onSave({
+    try {
+      const didSave = await onSave({
       title: title.trim(),
       organizer: organizer.trim(),
       date: fmtDate(selectedDate),
@@ -135,8 +137,14 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
       description: description.trim(),
       visibility: eventVisibility,
       circle_id: eventVisibility === "circle" ? selectedCircleId : null,
-    });
-    resetForm();
+      });
+      if (didSave !== false) {
+        resetForm();
+      }
+    } catch (error) {
+      console.error("Failed to create event", error);
+      Alert.alert("Could not create event", "Please try again.");
+    }
   }
 
   function handleClose() {

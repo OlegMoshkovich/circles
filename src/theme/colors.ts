@@ -1,10 +1,7 @@
 export const GLASS_BACKGROUND_OPTIONS = [
-  "#768445",
   "#35412A",
-  "#6B8426",
-  "#B3C8C0",
-  "#1F3A2A",
-  "#9AAA73",
+  "#213127",
+  "#2B30AF",
 ] as const;
 
 export type GlassBackgroundColor = (typeof GLASS_BACKGROUND_OPTIONS)[number];

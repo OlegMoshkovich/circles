@@ -219,7 +219,11 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       setActiveTab("feed");
       supabase.from("events").select("*").eq("circle_id", id).order("created_at", { ascending: false })
         .then(({ data: rows }) => { if (rows) setEvents(rows); });
+      return true;
     }
+    console.error("Failed to create circle event", error);
+    Alert.alert("Could not create event", error.message);
+    return false;
   }
 
   async function handlePostNote() {
