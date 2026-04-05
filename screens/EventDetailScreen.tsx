@@ -226,13 +226,13 @@ export default function EventDetailScreen({ route, navigation }: Props) {
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               style={styles.headerAction}
             >
-              <Ionicons name="create-outline" size={18} color={colors.textMuted} />
+              <Ionicons name="create-outline" size={18} color={colors.text} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleDelete}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
+              <Ionicons name="trash-outline" size={18} color={colors.text} />
             </TouchableOpacity>
           </View>
         )}
@@ -379,7 +379,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
             style={styles.inviteButton}
             onPress={() => setInviteVisible(true)}
           >
-            <Ionicons name="person-add-outline" size={16} color={colors.card} style={styles.rsvpIcon} />
+            <Ionicons name="person-add-outline" size={16} color={styles.inviteButtonText.color} style={styles.rsvpIcon} />
             <Text style={styles.inviteButtonText}>Invite Members</Text>
           </TouchableOpacity>
         ) : (
@@ -620,7 +620,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
   },
   inviteButtonText: {
-    color: isOnboarding ? colors.text : colors.card,
+    color: isOnboarding ? colors.text : colors.background,
     fontSize: 16,
     fontWeight: "500" as const,
   },
@@ -638,9 +638,9 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     borderColor: colors.cardBorder,
   },
   rsvpButtonActive: {
-    backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : "#9E9088",
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : "transparent",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 0,
+    borderColor: "transparent",
   },
   rsvpIcon: {
     marginRight: 4,
@@ -653,12 +653,18 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     color: colors.text,
   },
   rsvpButtonTextActive: {
-    color: isOnboarding ? colors.text : colors.card,
+    color: colors.background,
   },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: 12,
+    backgroundColor: isOnboarding ? "rgba(15,13,10,0.68)" : "transparent",
+    borderRadius: 999,
+    paddingHorizontal: isOnboarding ? 12 : 0,
+    paddingVertical: isOnboarding ? 8 : 0,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   headerAction: {},
   composeBox: {

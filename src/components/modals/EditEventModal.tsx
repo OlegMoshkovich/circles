@@ -12,7 +12,8 @@ import {
 } from "react-native";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../../theme/colors";
+import { Colors } from "../../theme/colors";
+import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { MapPickerView } from "./LocationPickerModal";
 import { supabase } from "../../../lib/supabase";
 
@@ -42,7 +43,6 @@ function fmtTime(d: Date) {
 }
 
 function parseDateTimeStrings(dateStr: string, timeStr: string): Date {
-  // Try to parse e.g. "Sat, Mar 29" + "10:00 AM"
   try {
     const year = new Date().getFullYear();
     const d = new Date(`${dateStr} ${year} ${timeStr}`);
@@ -54,6 +54,10 @@ function parseDateTimeStrings(dateStr: string, timeStr: string): Date {
 }
 
 export function EditEventModal({ visible, onClose, onSaved, eventId, initialValues }: Props) {
+  const { bgOption } = useBackground();
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
+
   const [title, setTitle] = useState(initialValues.title);
   const [organizer, setOrganizer] = useState(initialValues.organizer);
   const [selectedDate, setSelectedDate] = useState<Date>(() =>
@@ -79,11 +83,7 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
     }
   }, [visible]);
 
-  const canSave =
-    !saving &&
-    !!title.trim() &&
-    !!organizer.trim() &&
-    !!location.trim();
+  const canSave = !saving && !!title.trim() && !!organizer.trim();
 
   async function handleSave() {
     if (!canSave) return;
@@ -127,7 +127,7 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
     <Modal
       visible={visible}
       animationType="slide"
-      transparent
+      transparent={false}
       onRequestClose={showMap ? () => setShowMap(false) : pickerMode ? () => setPickerMode(null) : onClose}
     >
       <View style={styles.overlay}>
@@ -143,6 +143,7 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={styles.kav}
           >
+            <View style={styles.sheetBacking}>
             <View style={styles.sheet}>
               <View style={styles.handle} />
 
@@ -252,6 +253,7 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
                 </View>
               )}
             </View>
+            </View>
           </KeyboardAvoidingView>
         )}
       </View>
@@ -268,6 +270,9 @@ type FieldProps = {
 };
 
 function Field({ label, value, onChangeText, placeholder, multiline }: FieldProps) {
+  const { bgOption } = useBackground();
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   return (
     <View style={styles.fieldContainer}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -286,13 +291,19 @@ function Field({ label, value, onChangeText, placeholder, multiline }: FieldProp
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: colors.background,
     justifyContent: "flex-end",
   },
   kav: { justifyContent: "flex-end" },
+  sheetBacking: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    height: "95%",
+  },
   sheet: {
     backgroundColor: colors.card,
     borderTopLeftRadius: 20,
@@ -300,7 +311,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
     paddingTop: 12,
-    height: "88%",
+    flex: 1,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   mapSheet: {
     flex: 1,
@@ -339,20 +352,25 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   inputRow: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-    paddingBottom: 8,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
-  inputRowMultiline: { paddingBottom: 4 },
-  input: { color: colors.text, fontSize: 16, height: 36 },
-  inputMultiline: { height: 72, textAlignVertical: "top", paddingTop: 4 },
+  inputRowMultiline: { paddingBottom: 10 },
+  input: { color: colors.text, fontSize: 16, height: 24, fontFamily: "Lora_400Regular" },
+  inputMultiline: { height: 72, textAlignVertical: "top", paddingTop: 0 },
   pickerButton: {
     flexDirection: "row",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-    paddingBottom: 10,
-    paddingTop: 2,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   pickerIcon: { marginRight: 6 },
   pickerButtonText: {
@@ -369,11 +387,13 @@ const styles = StyleSheet.create({
   },
   pickerCard: {
     width: "92%",
-    backgroundColor: colors.background,
+    backgroundColor: isOnboarding ? colors.card : colors.background,
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 12,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   pickerOverlayHeader: {
     flexDirection: "row",
@@ -395,10 +415,12 @@ const styles = StyleSheet.create({
   locationButton: {
     flexDirection: "row",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-    paddingBottom: 10,
-    paddingTop: 2,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   locationIcon: { marginRight: 8 },
   locationButtonText: {
@@ -409,15 +431,17 @@ const styles = StyleSheet.create({
   },
   locationButtonPlaceholder: { color: colors.textMuted },
   saveButton: {
-    backgroundColor: colors.text,
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.14)" : colors.text,
     borderRadius: 50,
     height: 54,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 20,
     marginBottom: 8,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
   },
   saveButtonDisabled: { opacity: 0.35 },
-  saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  saveButtonText: { color: isOnboarding ? colors.text : colors.background, fontSize: 16, fontWeight: "600" },
   errorText: { fontSize: 13, color: "#C0392B", marginBottom: 8, textAlign: "center" },
-});
+}); }

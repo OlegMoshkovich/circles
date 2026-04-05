@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,7 +12,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@clerk/clerk-expo";
-import { colors } from "../../theme/colors";
+import { Colors } from "../../theme/colors";
+import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { supabase, UserProfile } from "../../../lib/supabase";
 
 type Props = {
@@ -24,10 +27,13 @@ type Props = {
 
 export function InviteModal({ visible, onClose, eventId, eventTitle, circleId, circleName }: Props) {
   const { user } = useUser();
+  const { bgOption } = useBackground();
+  const colors = useColors();
   const [members, setMembers] = useState<{ user_id: string; name: string }[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
 
   useEffect(() => {
     if (!visible || !user) return;
@@ -118,167 +124,196 @@ export function InviteModal({ visible, onClose, eventId, eventTitle, circleId, c
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <View style={styles.sheet}>
-          <View style={styles.handle} />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.kav}
+        >
+          <View style={styles.sheetBacking}>
+            <View style={styles.sheet}>
+              <View style={styles.handle} />
 
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Invite Members</Text>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <Ionicons name="close" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
-          </View>
+              <View style={styles.header}>
+                <Text style={styles.headerTitle}>Invite Members</Text>
+                <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                  <Ionicons name="close" size={20} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
 
-          {loading ? (
-            <View style={styles.loader}>
-              <ActivityIndicator size="small" color={colors.textMuted} />
+              {loading ? (
+                <View style={styles.loader}>
+                  <ActivityIndicator size="small" color={colors.textMuted} />
+                </View>
+              ) : members.length === 0 ? (
+                <Text style={styles.emptyText}>
+                  All circle members have already been invited or are attending.
+                </Text>
+              ) : (
+                <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                  {members.map((m) => {
+                    const isSelected = selected.has(m.user_id);
+                    return (
+                      <TouchableOpacity
+                        key={m.user_id}
+                        style={[styles.memberRow, isSelected && styles.memberRowSelected]}
+                        onPress={() => toggle(m.user_id)}
+                        activeOpacity={0.75}
+                      >
+                        <View style={styles.avatar}>
+                          <Text style={styles.avatarText}>{initials(m.name)}</Text>
+                        </View>
+                        <Text style={[styles.memberName, isSelected && styles.memberNameSelected]}>
+                          {m.name}
+                        </Text>
+                        {isSelected && (
+                          <Ionicons name="checkmark" size={16} color={colors.background} />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              )}
+
+              <TouchableOpacity
+                style={[styles.sendButton, (selected.size === 0 || sending) && styles.sendButtonDisabled]}
+                onPress={handleSend}
+                disabled={selected.size === 0 || sending}
+              >
+                <Text style={[styles.sendButtonText, (selected.size === 0 || sending) && styles.sendButtonTextDisabled]}>
+                  {sending
+                    ? "Sending…"
+                    : selected.size > 0
+                    ? `Invite ${selected.size} ${selected.size === 1 ? "person" : "people"}`
+                    : "Select people to invite"}
+                </Text>
+              </TouchableOpacity>
             </View>
-          ) : members.length === 0 ? (
-            <Text style={styles.emptyText}>
-              All circle members have already been invited or are attending.
-            </Text>
-          ) : (
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              {members.map((m) => {
-                const isSelected = selected.has(m.user_id);
-                return (
-                  <TouchableOpacity
-                    key={m.user_id}
-                    style={[styles.memberRow, isSelected && styles.memberRowSelected]}
-                    onPress={() => toggle(m.user_id)}
-                    activeOpacity={0.75}
-                  >
-                    <View style={styles.avatar}>
-                      <Text style={styles.avatarText}>{initials(m.name)}</Text>
-                    </View>
-                    <Text style={[styles.memberName, isSelected && styles.memberNameSelected]}>
-                      {m.name}
-                    </Text>
-                    {isSelected && (
-                      <Ionicons name="checkmark" size={16} color={colors.card} />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          )}
-
-          <TouchableOpacity
-            style={[styles.sendButton, (selected.size === 0 || sending) && styles.sendButtonDisabled]}
-            onPress={handleSend}
-            disabled={selected.size === 0 || sending}
-          >
-            <Text style={styles.sendButtonText}>
-              {sending
-                ? "Sending…"
-                : selected.size > 0
-                ? `Invite ${selected.size} ${selected.size === 1 ? "person" : "people"}`
-                : "Select people to invite"}
-            </Text>
-          </TouchableOpacity>
-        </View>
+          </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: colors.card,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    paddingTop: 12,
-    maxHeight: "70%",
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.cardBorder,
-    alignSelf: "center",
-    marginBottom: 20,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 20,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontFamily: "CormorantGaramond_300Light",
-    color: colors.text,
-  },
-  loader: {
-    paddingVertical: 24,
-    alignItems: "center",
-  },
-  emptyText: {
-    fontSize: 13,
-    color: colors.textMuted,
-    fontStyle: "italic",
-    paddingVertical: 24,
-    textAlign: "center",
-  },
-  memberRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    marginBottom: 8,
-    backgroundColor: colors.card,
-  },
-  memberRowSelected: {
-    backgroundColor: colors.text,
-    borderColor: colors.text,
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.badgeBg,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
-  },
-  avatarText: {
-    fontSize: 12,
-    fontWeight: "600" as const,
-    color: colors.textMuted,
-  },
-  memberName: {
-    flex: 1,
-    fontSize: 15,
-    color: colors.text,
-  },
-  memberNameSelected: {
-    color: colors.card,
-  },
-  sendButton: {
-    backgroundColor: colors.text,
-    borderRadius: 50,
-    height: 54,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 16,
-  },
-  sendButtonDisabled: {
-    opacity: 0.35,
-  },
-  sendButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600" as const,
-  },
-});
+function makeStyles(colors: Colors, isOnboarding: boolean) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: colors.background,
+      justifyContent: "flex-end",
+    },
+    kav: {
+      justifyContent: "flex-end",
+    },
+    sheetBacking: {
+      backgroundColor: colors.background,
+      borderTopLeftRadius: 28,
+      borderTopRightRadius: 28,
+      height: "78%",
+    },
+    sheet: {
+      backgroundColor: isOnboarding ? "#3F4837" : colors.card,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingHorizontal: 24,
+      paddingBottom: 40,
+      paddingTop: 12,
+      flex: 1,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
+    scroll: {
+      flex: 1,
+    },
+    handle: {
+      width: 44,
+      height: 5,
+      borderRadius: 999,
+      backgroundColor: colors.divider,
+      alignSelf: "center",
+      marginBottom: 20,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 20,
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontFamily: "CormorantGaramond_300Light",
+      color: colors.text,
+    },
+    loader: {
+      paddingVertical: 24,
+      alignItems: "center",
+    },
+    emptyText: {
+      fontSize: 13,
+      color: colors.textMuted,
+      fontStyle: "italic",
+      paddingVertical: 24,
+      textAlign: "center",
+    },
+    memberRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      marginBottom: 10,
+      backgroundColor: isOnboarding ? "#F0EBE0" : colors.card,
+    },
+    memberRowSelected: {
+      backgroundColor: colors.text,
+      borderColor: colors.text,
+    },
+    avatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: isOnboarding ? "rgba(255,255,255,0.9)" : colors.badgeBg,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 12,
+    },
+    avatarText: {
+      fontSize: 12,
+      fontWeight: "600" as const,
+      color: isOnboarding ? colors.background : colors.textMuted,
+    },
+    memberName: {
+      flex: 1,
+      fontSize: 15,
+      color: colors.text,
+    },
+    memberNameSelected: {
+      color: colors.background,
+    },
+    sendButton: {
+      backgroundColor: isOnboarding ? "#F0EBE0" : colors.text,
+      borderRadius: 999,
+      height: 54,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 16,
+      borderWidth: isOnboarding ? 1 : 0,
+      borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
+    },
+    sendButtonDisabled: {
+      backgroundColor: isOnboarding ? "#C7C2B8" : colors.badgeBg,
+      borderColor: isOnboarding ? "#C7C2B8" : "transparent",
+    },
+    sendButtonText: {
+      color: isOnboarding ? colors.background : colors.background,
+      fontSize: 16,
+      fontWeight: "600" as const,
+    },
+    sendButtonTextDisabled: {
+      color: isOnboarding ? "rgba(27,36,23,0.55)" : colors.textMuted,
+    },
+  });
+}

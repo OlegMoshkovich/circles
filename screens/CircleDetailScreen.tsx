@@ -474,13 +474,13 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
               onPress={() => setEditVisible(true)}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <Ionicons name="create-outline" size={18} color={colors.textMuted} />
+              <Ionicons name="create-outline" size={18} color={colors.text} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleDelete}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
+              <Ionicons name="trash-outline" size={18} color={colors.text} />
             </TouchableOpacity>
           </View>
         )}
@@ -702,7 +702,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           ) : members.length === 0 && invitedUsers.length === 0 ? (
             <Text style={styles.emptyText}>No members yet</Text>
           ) : (
-            <>
+            <View style={styles.membersPanel}>
               {members.map((member) => (
                 <MemberRow
                   key={member.id}
@@ -730,7 +730,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                   </View>
                 );
               })}
-            </>
+            </View>
           )
         )}
 
@@ -995,20 +995,25 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   tabRow: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: spacing.sm,
   },
   tabList: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.md,
+    flex: 1,
   },
   addEventButton: {
     padding: 4,
+    marginTop: 2,
   },
   tab: {
     paddingBottom: 8,
     borderBottomWidth: 1.5,
     borderBottomColor: "transparent",
+    minWidth: 0,
+    flexShrink: 1,
   },
   tabActive: {
     borderBottomColor: colors.text,
@@ -1017,6 +1022,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     fontSize: 14,
     fontWeight: "500" as const,
     color: colors.textMuted,
+    flexShrink: 1,
   },
   tabTextActive: {
     color: colors.text,
@@ -1029,6 +1035,14 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     ...typography.bodySmall,
     color: colors.textMuted,
     paddingVertical: spacing.md,
+  },
+  membersPanel: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    paddingHorizontal: spacing.cardPadding,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    marginBottom: spacing.md,
   },
   descriptionPanel: {
     backgroundColor: colors.card,
@@ -1164,12 +1178,12 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   actionButtonText: {
     color: isOnboarding ? colors.text : colors.card,
     fontSize: 16,
-    fontWeight: "500" as const,
+    fontFamily: "Lora_400Regular",
   },
   actionButtonTextOutline: {
     color: colors.text,
     fontSize: 16,
-    fontWeight: "500" as const,
+    fontFamily: "Lora_400Regular",
   },
   requestRow: {
     flexDirection: "row",
@@ -1235,7 +1249,13 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: 12,
+    backgroundColor: isOnboarding ? "rgba(15,13,10,0.68)" : "transparent",
+    borderRadius: 999,
+    paddingHorizontal: isOnboarding ? 12 : 0,
+    paddingVertical: isOnboarding ? 8 : 0,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   messagesPanel: {
     backgroundColor: colors.card,
