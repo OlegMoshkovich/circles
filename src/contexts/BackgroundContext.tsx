@@ -49,8 +49,10 @@ export function BackgroundProvider({ children }: { children: React.ReactNode }) 
       }
     });
     AsyncStorage.getItem(GLASS_BG_STORAGE_KEY).then((val) => {
-      if (val && GLASS_BACKGROUND_OPTIONS.includes(val as GlassBackgroundColor)) {
-        setGlassBackgroundState(val as GlassBackgroundColor);
+      if (val && /^#[0-9A-Fa-f]{3,8}$/.test(val)) {
+        setGlassBackgroundState(val);
+      } else if (val && GLASS_BACKGROUND_OPTIONS.includes(val as any)) {
+        setGlassBackgroundState(val);
       }
     });
   }, []);

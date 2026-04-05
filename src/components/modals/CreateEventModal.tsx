@@ -29,6 +29,10 @@ export type NewEventData = {
   duration: number | null;
   location: string;
   description: string;
+  image_url: string;
+  max_participants: number | null;
+  contact_info: string;
+  price_info: string;
   visibility: "public" | "circle";
   circle_id: string | null;
 };
@@ -93,6 +97,10 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
   const [location, setLocation] = useState("");
   const [showMap, setShowMap] = useState(false);
   const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [maxParticipants, setMaxParticipants] = useState("");
+  const [contactInfo, setContactInfo] = useState("");
+  const [priceInfo, setPriceInfo] = useState("");
   const [eventVisibility, setEventVisibility] = useState<"public" | "circle">(
     defaultCircleId ? "circle" : "public"
   );
@@ -134,6 +142,10 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
       duration,
       location: location.trim(),
       description: description.trim(),
+      image_url: imageUrl.trim(),
+      max_participants: maxParticipants.trim() ? Number(maxParticipants.trim()) : null,
+      contact_info: contactInfo.trim(),
+      price_info: priceInfo.trim(),
       visibility: eventVisibility,
       circle_id: eventVisibility === "circle" ? selectedCircleId : null,
       });
@@ -161,6 +173,10 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
     setLocation("");
     setShowMap(false);
     setDescription("");
+    setImageUrl("");
+    setMaxParticipants("");
+    setContactInfo("");
+    setPriceInfo("");
     setEventVisibility(defaultCircleId ? "circle" : "public");
     setSelectedCircleId(defaultCircleId ?? null);
   }
@@ -270,7 +286,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
 
                 <View style={styles.fieldContainer}>
                   <Text style={styles.fieldLabel}>Location</Text>
-                  <View style={styles.inputRow}>
+                  <View style={styles.locationInputRow}>
                     <Ionicons
                       name={location ? "location" : "location-outline"}
                       size={16}
@@ -283,6 +299,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                       placeholder="Enter an address"
                       placeholderTextColor={colors.textMuted}
                       style={styles.locationInput}
+                      numberOfLines={1}
                     />
                   </View>
                   <TouchableOpacity
@@ -298,6 +315,16 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                 </View>
 
                 <Field label="Description" value={description} onChangeText={setDescription} placeholder="A few words about the event…" multiline />
+                <Field label="Image URL" value={imageUrl} onChangeText={setImageUrl} placeholder="https://example.com/event.jpg" keyboardType="url" />
+                <Field
+                  label="Maximum Participants"
+                  value={maxParticipants}
+                  onChangeText={(v) => setMaxParticipants(v.replace(/[^0-9]/g, ""))}
+                  placeholder="Limit number of participants"
+                  keyboardType="number-pad"
+                />
+                <Field label="Contact Info" value={contactInfo} onChangeText={setContactInfo} placeholder="Phone / Email" keyboardType="email-address" />
+                <Field label="Price" value={priceInfo} onChangeText={setPriceInfo} placeholder="Free / Paid" />
 
                 {!defaultCircleId && (
                   <View style={styles.fieldContainer}>
@@ -459,9 +486,10 @@ type FieldProps = {
   onChangeText: (v: string) => void;
   placeholder?: string;
   multiline?: boolean;
+  keyboardType?: "default" | "number-pad" | "email-address" | "phone-pad" | "url";
 };
 
-function Field({ label, value, onChangeText, placeholder, multiline }: FieldProps) {
+function Field({ label, value, onChangeText, placeholder, multiline, keyboardType }: FieldProps) {
   const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
@@ -477,6 +505,9 @@ function Field({ label, value, onChangeText, placeholder, multiline }: FieldProp
           style={[styles.input, multiline && styles.inputMultiline]}
           multiline={multiline}
           numberOfLines={multiline ? 3 : 1}
+          keyboardType={keyboardType}
+          autoCapitalize={keyboardType === "url" || keyboardType === "email-address" ? "none" : "sentences"}
+          autoCorrect={keyboardType === "url" || keyboardType === "email-address" ? false : true}
         />
       </View>
     </View>
@@ -613,6 +644,18 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     fontSize: 16,
     height: 24,
     fontFamily: "Lora_400Regular",
+    paddingVertical: 0,
+    margin: 0,
+  },
+  locationInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   locationMapButton: {
     flexDirection: "row",

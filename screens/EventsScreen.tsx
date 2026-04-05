@@ -106,13 +106,14 @@ export default function EventsScreen() {
       if (eventIds.length > 0) {
         const { data: noteCounts } = await supabase
           .from("event_notes")
-          .select("event_id, created_at")
+          .select("event_id, created_at, user_id")
           .in("event_id", eventIds);
         if (noteCounts) {
           const map: Record<string, number> = {};
           const latestMap: Record<string, number> = {};
           for (const row of noteCounts as any[]) {
             map[row.event_id] = (map[row.event_id] ?? 0) + 1;
+            if (user?.id && row.user_id === user.id) continue;
             const t = new Date(row.created_at).getTime();
             if (!latestMap[row.event_id] || t > latestMap[row.event_id]) latestMap[row.event_id] = t;
           }
@@ -150,6 +151,10 @@ export default function EventsScreen() {
       duration_minutes: event.duration ?? null,
       location: event.location,
       description: event.description,
+      image_url: event.image_url || null,
+      max_participants: event.max_participants,
+      contact_info: event.contact_info || null,
+      price_info: event.price_info || null,
       visibility: event.visibility,
       circle_id: event.circle_id,
       created_by: user?.id ?? null,
@@ -334,6 +339,10 @@ export default function EventsScreen() {
                     maybe: event.maybe,
                     rsvp: rsvpStatusMap[event.id],
                     description: event.description,
+                    image_url: event.image_url ?? null,
+                    max_participants: event.max_participants ?? null,
+                    contact_info: event.contact_info ?? null,
+                    price_info: event.price_info ?? null,
                     created_by: event.created_by,
                     circleName: event.circles?.name ?? null,
                     circle_id: event.circle_id,
@@ -394,6 +403,10 @@ export default function EventsScreen() {
                   maybe: event.maybe,
                   rsvp: rsvpStatusMap[event.id],
                   description: event.description,
+                  image_url: event.image_url ?? null,
+                  max_participants: event.max_participants ?? null,
+                  contact_info: event.contact_info ?? null,
+                  price_info: event.price_info ?? null,
                   created_by: event.created_by,
                   circleName: event.circles?.name ?? null,
                   circle_id: event.circle_id,

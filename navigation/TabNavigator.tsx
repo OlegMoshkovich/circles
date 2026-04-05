@@ -128,11 +128,11 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: colors.text,
+    backgroundColor: "#FF4D00",
     marginTop: -6,
   },
   tabDotOnboarding: {
-    backgroundColor: "rgba(255, 255, 255, 0.92)",
+    backgroundColor: "#FF4D00",
   },
   labelText: {
     fontSize: 14,

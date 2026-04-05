@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { Image, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import { useFocusEffect } from "@react-navigation/native";
@@ -36,6 +36,8 @@ export default function MyProfileScreen() {
   const { setUnreadCount } = useNotificationContext();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [showGlassPalette, setShowGlassPalette] = useState(false);
+  const [showCustomHex, setShowCustomHex] = useState(false);
+  const [customHex, setCustomHex] = useState("");
   const [circleCount, setCircleCount] = useState(0);
   const [eventCount, setEventCount] = useState(0);
   const { bgOption, setBgOption, glassBackground, setGlassBackground } = useBackground();
@@ -196,6 +198,7 @@ export default function MyProfileScreen() {
                         key={color}
                         onPress={() => {
                           setGlassBackground(color);
+                          setShowCustomHex(false);
                           setShowGlassPalette(false);
                         }}
                         style={[
@@ -207,6 +210,48 @@ export default function MyProfileScreen() {
                         <View style={[styles.glassPaletteSwatch, { backgroundColor: color }]} />
                       </TouchableOpacity>
                     ))}
+                    {/* Custom color button */}
+                    <TouchableOpacity
+                      onPress={() => setShowCustomHex((prev) => !prev)}
+                      style={[
+                        styles.glassPaletteSwatchButton,
+                        showCustomHex && styles.glassPaletteSwatchButtonSelected,
+                      ]}
+                      activeOpacity={0.85}
+                    >
+                      <View style={styles.glassPaletteCustomSwatch}>
+                        <Text style={styles.glassPaletteCustomPlus}>+</Text>
+                      </View>
+                    </TouchableOpacity>
+                    {showCustomHex ? (
+                      <View style={styles.hexInputRow}>
+                        <Text style={styles.hexHash}>#</Text>
+                        <TextInput
+                          value={customHex}
+                          onChangeText={(v) => setCustomHex(v.replace(/[^0-9A-Fa-f]/g, "").slice(0, 6))}
+                          placeholder="3D5A3E"
+                          placeholderTextColor="rgba(255,255,255,0.35)"
+                          style={styles.hexInput}
+                          maxLength={6}
+                          autoCapitalize="characters"
+                          autoCorrect={false}
+                        />
+                        <TouchableOpacity
+                          onPress={() => {
+                            const hex = `#${customHex}`;
+                            if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+                              setGlassBackground(hex);
+                              setShowCustomHex(false);
+                              setShowGlassPalette(false);
+                            }
+                          }}
+                          style={styles.hexConfirm}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.hexConfirmText}>✓</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : null}
                   </View>
                 ) : null}
               </View>
@@ -233,32 +278,6 @@ export default function MyProfileScreen() {
         </View>
 
       </ScreenHeaderCard>
-      {notifications.length > 0 ? (
-        <>
-          <Text style={styles.sectionLabel}>Notifications</Text>
-          {notifications.map((notif) => (
-            <View key={notif.id} style={styles.notifCard}>
-              <View style={styles.notifIcon}>
-                <Ionicons name="mail-outline" size={16} color={colors.textMuted} />
-              </View>
-              <View style={styles.notifContent}>
-                <Text style={styles.notifTitle}>{notif.title}</Text>
-                {notif.body ? <Text style={styles.notifBody}>{notif.body}</Text> : null}
-              </View>
-              <View style={styles.notifActions}>
-                <TouchableOpacity style={styles.acceptBtn} onPress={() => handleAccept(notif)}>
-                  <Text style={styles.acceptBtnText}>Accept</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.declineBtn} onPress={() => handleDecline(notif)}>
-                  <Ionicons name="close" size={16} color={colors.textMuted} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
-          <View style={styles.divider} />
-        </>
-      ) : null}
-
       {/* Neighbourhood card */}
       {/* <Text style={styles.sectionLabel}>{t.profile.neighbourhood}</Text> */}
       <View style={styles.card}>
@@ -305,7 +324,29 @@ export default function MyProfileScreen() {
 
       <View style={styles.sectionGap} />
 
-     
+      {notifications.length > 0 ? (
+        <>
+          {notifications.map((notif) => (
+            <View key={notif.id} style={styles.notifCard}>
+              <View style={styles.notifIcon}>
+                <Ionicons name="mail-outline" size={16} color={colors.textMuted} />
+              </View>
+              <View style={styles.notifContent}>
+                <Text style={styles.notifTitle}>{notif.title}</Text>
+                {notif.body ? <Text style={styles.notifBody}>{notif.body}</Text> : null}
+              </View>
+              <View style={styles.notifActions}>
+                <TouchableOpacity style={styles.acceptBtn} onPress={() => handleAccept(notif)}>
+                  <Text style={styles.acceptBtnText}>Accept</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.declineBtn} onPress={() => handleDecline(notif)}>
+                  <Ionicons name="close" size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </>
+      ) : null}
 
     </ScreenLayout>
   );
@@ -452,6 +493,57 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       width: 20,
       height: 20,
       borderRadius: 10,
+    },
+    glassPaletteCustomSwatch: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      borderWidth: 1.5,
+      borderColor: "rgba(255,255,255,0.55)",
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    hexInputRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: "rgba(0,0,0,0.45)",
+      borderRadius: 10,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      gap: 2,
+      marginTop: 2,
+    },
+    glassPaletteCustomPlus: {
+      color: "rgba(255,255,255,0.7)",
+      fontSize: 13,
+      lineHeight: 16,
+      fontWeight: "600" as const,
+    },
+    hexHash: {
+      color: "rgba(255,255,255,0.6)",
+      fontSize: 13,
+      fontFamily: "Lora_400Regular",
+    },
+    hexInput: {
+      color: "#fff",
+      fontSize: 13,
+      fontFamily: "Lora_400Regular",
+      width: 52,
+      height: 24,
+      padding: 0,
+    },
+    hexConfirm: {
+      width: 24,
+      height: 24,
+      borderRadius: 12,
+      backgroundColor: "rgba(255,255,255,0.18)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    hexConfirmText: {
+      color: "#fff",
+      fontSize: 13,
+      fontWeight: "600" as const,
     },
     flagRow: {
       flexDirection: "row",

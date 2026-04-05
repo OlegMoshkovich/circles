@@ -30,6 +30,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "EventDetail">;
 export default function EventDetailScreen({ route, navigation }: Props) {
   const { id, created_by, circleName, circle_id } = route.params;
   const insets = useSafeAreaInsets();
+  const footerBottomInset = insets.bottom > 0 ? insets.bottom - 8 : 16;
   const { user } = useUser();
 
   const { bgOption } = useBackground();
@@ -46,6 +47,10 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const [time, setTime] = useState(route.params.time);
   const [location, setLocation] = useState(route.params.location);
   const [description, setDescription] = useState(route.params.description ?? "");
+  const [imageUrl, setImageUrl] = useState(route.params.image_url ?? "");
+  const [maxParticipants, setMaxParticipants] = useState(route.params.max_participants ?? null);
+  const [contactInfo, setContactInfo] = useState(route.params.contact_info ?? "");
+  const [priceInfo, setPriceInfo] = useState(route.params.price_info ?? "");
 
   async function handleDelete() {
     Alert.alert(
@@ -244,6 +249,9 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerCard}>
+        {imageUrl ? (
+          <Image source={{ uri: imageUrl }} style={styles.eventImage} />
+        ) : null}
         <Text style={styles.title}>{title}</Text>
         <View style={styles.organizerRow}>
           <Text style={styles.organizer}>Hosted by {organizer}</Text>
@@ -272,11 +280,30 @@ export default function EventDetailScreen({ route, navigation }: Props) {
           <>
             <View style={styles.divider} />
             <Text style={styles.description}>{description}</Text>
-            <View style={styles.divider} />
           </>
-        ) : (
-          <View style={styles.divider} />
-        )}
+        ) : null}
+
+        {(maxParticipants !== null || contactInfo.trim() || priceInfo.trim()) && <View style={styles.divider} />}
+        {maxParticipants !== null ? (
+          <View style={styles.metaRow}>
+            <Ionicons name="people-circle-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
+            <Text style={styles.metaText}>Maximum participants: {maxParticipants}</Text>
+          </View>
+        ) : null}
+        {contactInfo.trim() ? (
+          <View style={styles.metaRow}>
+            <Ionicons name="call-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
+            <Text style={styles.metaText}>{contactInfo}</Text>
+          </View>
+        ) : null}
+        {priceInfo.trim() ? (
+          <View style={styles.metaRow}>
+            <Ionicons name="cash-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
+            <Text style={styles.metaText}>{priceInfo}</Text>
+          </View>
+        ) : null}
+
+        <View style={styles.divider} />
 
         {/* Attendees */}
         <View style={styles.attendeesHeader}>
@@ -373,7 +400,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
       </ScrollView>
 
       {/* Fixed RSVP bar */}
-      <View style={styles.rsvpBar}>
+      <View style={[styles.rsvpBar, { paddingBottom: footerBottomInset }]}>
         {isCreator && circle_id ? (
           <TouchableOpacity
             style={styles.inviteButton}
@@ -426,6 +453,10 @@ export default function EventDetailScreen({ route, navigation }: Props) {
           setTime(data.time);
           setLocation(data.location);
           setDescription(data.description);
+          setImageUrl(data.image_url);
+          setMaxParticipants(data.max_participants);
+          setContactInfo(data.contact_info);
+          setPriceInfo(data.price_info);
           navigation.setParams({
             title: data.title,
             organizer: data.organizer,
@@ -433,10 +464,14 @@ export default function EventDetailScreen({ route, navigation }: Props) {
             time: data.time,
             location: data.location,
             description: data.description,
+            image_url: data.image_url,
+            max_participants: data.max_participants,
+            contact_info: data.contact_info,
+            price_info: data.price_info,
           });
         }}
         eventId={id}
-        initialValues={{ title, organizer, date, time, location, description }}
+        initialValues={{ title, organizer, date, time, location, description, image_url: imageUrl, max_participants: maxParticipants, contact_info: contactInfo, price_info: priceInfo }}
       />
       </View>
     </ThemedBackground>
@@ -499,6 +534,12 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     color: colors.text,
     lineHeight: 38,
     marginBottom: spacing.sm,
+  },
+  eventImage: {
+    width: "100%",
+    height: 190,
+    borderRadius: 16,
+    marginBottom: spacing.md,
   },
   organizerRow: {
     flexDirection: "row",
@@ -609,7 +650,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   rsvpBar: {
     paddingHorizontal: spacing.pageHorizontal,
-    paddingBottom: spacing.md,
+    paddingBottom: 16,
     backgroundColor: isOnboarding ? "transparent" : colors.background,
   },
   rsvpButtons: {
@@ -711,19 +752,19 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   postButton: {
     alignSelf: "flex-end",
-    backgroundColor: isOnboarding ? "rgba(255,255,255,0.14)" : colors.text,
-    paddingHorizontal: 16,
-    paddingVertical: 7,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 18,
+    paddingVertical: 9,
     borderRadius: 999,
-    marginTop: 6,
-    minWidth: 60,
+    marginTop: 10,
+    minWidth: 84,
     alignItems: "center",
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
+    borderWidth: 1,
+    borderColor: "rgba(27,36,23,0.12)",
   },
   postButtonText: {
-    color: isOnboarding ? colors.text : colors.card,
-    fontSize: 13,
+    color: "#35412A",
+    fontSize: 14,
     fontWeight: "600" as const,
   },
   noteCard: {

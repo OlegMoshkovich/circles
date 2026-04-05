@@ -24,6 +24,10 @@ export type EditEventData = {
   time: string;
   location: string;
   description: string;
+  image_url: string;
+  max_participants: number | null;
+  contact_info: string;
+  price_info: string;
 };
 
 type Props = {
@@ -66,6 +70,10 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
   const [pickerMode, setPickerMode] = useState<"date" | "time" | null>(null);
   const [location, setLocation] = useState(initialValues.location);
   const [description, setDescription] = useState(initialValues.description);
+  const [imageUrl, setImageUrl] = useState(initialValues.image_url);
+  const [maxParticipants, setMaxParticipants] = useState(initialValues.max_participants ? String(initialValues.max_participants) : "");
+  const [contactInfo, setContactInfo] = useState(initialValues.contact_info);
+  const [priceInfo, setPriceInfo] = useState(initialValues.price_info);
   const [showMap, setShowMap] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +86,10 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
       setPickerMode(null);
       setLocation(initialValues.location);
       setDescription(initialValues.description);
+      setImageUrl(initialValues.image_url);
+      setMaxParticipants(initialValues.max_participants ? String(initialValues.max_participants) : "");
+      setContactInfo(initialValues.contact_info);
+      setPriceInfo(initialValues.price_info);
       setShowMap(false);
       setError(null);
     }
@@ -98,6 +110,10 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
         time_label: fmtTime(selectedDate),
         location: location.trim(),
         description: description.trim(),
+        image_url: imageUrl.trim() || null,
+        max_participants: maxParticipants.trim() ? Number(maxParticipants.trim()) : null,
+        contact_info: contactInfo.trim() || null,
+        price_info: priceInfo.trim() || null,
       })
       .eq("id", eventId)
       .select("id")
@@ -118,6 +134,10 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
         time: fmtTime(selectedDate),
         location: location.trim(),
         description: description.trim(),
+        image_url: imageUrl.trim(),
+        max_participants: maxParticipants.trim() ? Number(maxParticipants.trim()) : null,
+        contact_info: contactInfo.trim(),
+        price_info: priceInfo.trim(),
       });
       onClose();
     }
@@ -202,7 +222,7 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
 
                 <View style={styles.fieldContainer}>
                   <Text style={styles.fieldLabel}>Location</Text>
-                  <View style={styles.inputRow}>
+                  <View style={styles.locationInputRow}>
                     <Ionicons
                       name={location ? "location" : "location-outline"}
                       size={16}
@@ -215,6 +235,7 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
                       placeholder="Enter an address"
                       placeholderTextColor={colors.textMuted}
                       style={styles.locationInput}
+                      numberOfLines={1}
                     />
                   </View>
                   <TouchableOpacity
@@ -230,6 +251,16 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
                 </View>
 
                 <Field label="Description" value={description} onChangeText={setDescription} placeholder="A few words about the event…" multiline />
+                <Field label="Image URL" value={imageUrl} onChangeText={setImageUrl} placeholder="https://example.com/event.jpg" keyboardType="url" />
+                <Field
+                  label="Maximum Participants"
+                  value={maxParticipants}
+                  onChangeText={(v) => setMaxParticipants(v.replace(/[^0-9]/g, ""))}
+                  placeholder="Limit number of participants"
+                  keyboardType="number-pad"
+                />
+                <Field label="Contact Info" value={contactInfo} onChangeText={setContactInfo} placeholder="Phone / Email" keyboardType="email-address" />
+                <Field label="Price" value={priceInfo} onChangeText={setPriceInfo} placeholder="Free / Paid" />
               </ScrollView>
 
               {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -281,9 +312,10 @@ type FieldProps = {
   onChangeText: (v: string) => void;
   placeholder?: string;
   multiline?: boolean;
+  keyboardType?: "default" | "number-pad" | "email-address" | "phone-pad" | "url";
 };
 
-function Field({ label, value, onChangeText, placeholder, multiline }: FieldProps) {
+function Field({ label, value, onChangeText, placeholder, multiline, keyboardType }: FieldProps) {
   const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
@@ -299,6 +331,9 @@ function Field({ label, value, onChangeText, placeholder, multiline }: FieldProp
           style={[styles.input, multiline && styles.inputMultiline]}
           multiline={multiline}
           numberOfLines={multiline ? 3 : 1}
+          keyboardType={keyboardType}
+          autoCapitalize={keyboardType === "url" || keyboardType === "email-address" ? "none" : "sentences"}
+          autoCorrect={keyboardType === "url" || keyboardType === "email-address" ? false : true}
         />
       </View>
     </View>
@@ -432,6 +467,18 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     fontSize: 16,
     height: 24,
     fontFamily: "Lora_400Regular",
+    paddingVertical: 0,
+    margin: 0,
+  },
+  locationInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   locationMapButton: {
     flexDirection: "row",

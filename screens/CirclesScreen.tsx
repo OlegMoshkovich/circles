@@ -142,15 +142,17 @@ export default function CirclesScreen() {
 
     // Fetch latest activity per circle (notes + events)
     const [notesActivity, eventsActivity] = await Promise.all([
-      supabase.from("circle_notes").select("circle_id, created_at").order("created_at", { ascending: false }),
-      supabase.from("events").select("circle_id, created_at").not("circle_id", "is", null).order("created_at", { ascending: false }),
+      supabase.from("circle_notes").select("circle_id, created_at, user_id").order("created_at", { ascending: false }),
+      supabase.from("events").select("circle_id, created_at, created_by").not("circle_id", "is", null).order("created_at", { ascending: false }),
     ]);
     const newActivityMap: Record<string, number> = {};
     for (const row of (notesActivity.data ?? []) as any[]) {
+      if (user?.id && row.user_id === user.id) continue;
       const t = new Date(row.created_at).getTime();
       if (!newActivityMap[row.circle_id] || t > newActivityMap[row.circle_id]) newActivityMap[row.circle_id] = t;
     }
     for (const row of (eventsActivity.data ?? []) as any[]) {
+      if (user?.id && row.created_by === user.id) continue;
       const t = new Date(row.created_at).getTime();
       if (!newActivityMap[row.circle_id] || t > newActivityMap[row.circle_id]) newActivityMap[row.circle_id] = t;
     }

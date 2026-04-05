@@ -4,7 +4,7 @@ export const GLASS_BACKGROUND_OPTIONS = [
   "#2B30AF",
 ] as const;
 
-export type GlassBackgroundColor = (typeof GLASS_BACKGROUND_OPTIONS)[number];
+export type GlassBackgroundColor = string;
 
 /**
  * Calm "paper on warm background" palette

@@ -45,6 +45,7 @@ const VISIBILITY_LABEL: Record<string, string> = {
 export default function CircleDetailScreen({ route, navigation }: Props) {
   const { id, owner_id } = route.params;
   const insets = useSafeAreaInsets();
+  const footerBottomInset = insets.bottom > 0 ? 0 : 24;
   const { user } = useUser();
   const nav = useNavigation<Nav>();
 
@@ -79,6 +80,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [circleInviteVisible, setCircleInviteVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [createEventVisible, setCreateEventVisible] = useState(false);
+  const [didAutoSelectInitialTab, setDidAutoSelectInitialTab] = useState(false);
 
   // Load current user's membership status
   useEffect(() => {
@@ -193,9 +195,21 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         }
       }
       if (!notesResult.error && notesResult.data) setNotes(notesResult.data);
+      const eventRows = eventsResult.error ? [] : (eventsResult.data ?? []);
+      const noteRows = notesResult.error ? [] : (notesResult.data ?? []);
+      if (!didAutoSelectInitialTab) {
+        const nextTab: Tab =
+          eventRows.length > 0
+            ? "events"
+            : noteRows.length > 0
+              ? "feed"
+              : "description";
+        setActiveTab(nextTab);
+        setDidAutoSelectInitialTab(true);
+      }
       setLoadingFeed(false);
     });
-  }, [id]);
+  }, [didAutoSelectInitialTab, id]);
 
   // Load circle events + feed items
   useEffect(() => {
@@ -219,6 +233,10 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       duration_minutes: data.duration ?? null,
       location: data.location,
       description: data.description,
+      image_url: data.image_url || null,
+      max_participants: data.max_participants,
+      contact_info: data.contact_info || null,
+      price_info: data.price_info || null,
       visibility: "circle",
       circle_id: id,
       created_by: user?.id ?? null,
@@ -454,11 +472,11 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
     return (
       <TouchableOpacity
-        style={styles.actionButton}
+        style={[styles.actionButton, styles.joinButton]}
         onPress={handleJoin}
         disabled={submitting}
       >
-        <Text style={styles.actionButtonText}>
+        <Text style={styles.joinButtonText}>
           {visibility === "request" ? "Request to Join" : "Join Circle"}
         </Text>
       </TouchableOpacity>
@@ -590,6 +608,10 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                           going: event.going,
                           maybe: event.maybe,
                           description: event.description,
+                          image_url: event.image_url ?? null,
+                          max_participants: event.max_participants ?? null,
+                          contact_info: event.contact_info ?? null,
+                          price_info: event.price_info ?? null,
                           created_by: event.created_by,
                           circleName: name,
                           circle_id: id,
@@ -828,7 +850,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       </ScrollView>
 
       {/* Fixed footer: join/leave or invite */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: footerBottomInset }]}>
         {isOwner ? (
           <TouchableOpacity
             style={styles.actionButton}
@@ -1148,7 +1170,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   footer: {
     paddingHorizontal: spacing.pageHorizontal,
-    paddingBottom: spacing.md,
+    paddingBottom: 16,
     backgroundColor: isOnboarding ? "transparent" : colors.background,
   },
   footerDivider: {
@@ -1161,6 +1183,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     backgroundColor: isOnboarding ? "rgba(15,13,10,0.78)" : colors.text,
     borderRadius: 999,
     height: 54,
+    marginTop: spacing.lg,
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
@@ -1183,7 +1206,19 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     borderColor: colors.cardBorder,
   },
   actionButtonText: {
-    color: isOnboarding ? colors.text : colors.card,
+    // color: isOnboarding ? colors.text : colors.card,
+    color: colors.background,
+    fontSize: 16,
+    fontFamily: "Lora_400Regular",
+    
+  },
+  joinButton: {
+    backgroundColor: "#F5EFE3",
+    borderWidth: 1,
+    borderColor: "rgba(53,65,42,0.08)",
+  },
+  joinButtonText: {
+    color: "#35412A",
     fontSize: 16,
     fontFamily: "Lora_400Regular",
   },
@@ -1309,19 +1344,19 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   postButton: {
     alignSelf: "flex-end",
-    backgroundColor: isOnboarding ? "rgba(255,255,255,0.14)" : colors.text,
-    paddingHorizontal: 16,
-    paddingVertical: 7,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 18,
+    paddingVertical: 9,
     borderRadius: 999,
-    marginTop: 6,
-    minWidth: 60,
+    marginTop: 10,
+    minWidth: 84,
     alignItems: "center",
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
+    borderWidth: 1,
+    borderColor: "rgba(27,36,23,0.12)",
   },
   postButtonText: {
-    color: isOnboarding ? colors.text : colors.card,
-    fontSize: 13,
+    color: "#35412A",
+    fontSize: 14,
     fontWeight: "600" as const,
   },
   noteCard: {
