@@ -17,7 +17,7 @@ import { CreateCircleModal, NewCircleData } from "../src/components/modals/Creat
 import { Colors } from "../src/theme/colors";
 
 import { useLanguage } from "../src/i18n/LanguageContext";
-import { useColors } from "../src/contexts/BackgroundContext";
+import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { supabase, Circle } from "../lib/supabase";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -231,8 +231,9 @@ export default function CirclesScreen() {
   }
 
 
+  const { bgOption } = useBackground();
   const colors = useColors();
-  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const screenBgColor = colors.background;
 
   return (
@@ -507,7 +508,7 @@ export default function CirclesScreen() {
   );
 }
 
-function makeStyles(colors: Colors) {
+function makeStyles(colors: Colors, isOnboarding: boolean) {
   return StyleSheet.create({
   addButton: {
     width: 30,
@@ -533,16 +534,16 @@ function makeStyles(colors: Colors) {
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    backgroundColor: colors.card,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
     alignItems: "center",
     justifyContent: "center",
   },
   filterIconButtonActive: {
-    borderColor: colors.iconbBg,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.iconbBg,
   },
   filterPanel: {
     backgroundColor: colors.card,
-    borderRadius: 16,
+    borderRadius: isOnboarding ? 22 : 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     padding: 14,
@@ -570,15 +571,15 @@ function makeStyles(colors: Colors) {
     borderRadius: 999,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    backgroundColor: colors.card,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
   },
   filterChipNearMe: {
     flexDirection: "row",
     alignItems: "center",
   },
   filterChipActive: {
-    backgroundColor: colors.text,
-    borderColor: colors.text,
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : colors.text,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.text,
   },
   filterChipText: {
     fontSize: 13,
@@ -586,14 +587,16 @@ function makeStyles(colors: Colors) {
     color: colors.textMuted,
   },
   filterChipTextActive: {
-    color: colors.background,
+    color: isOnboarding ? colors.text : colors.background,
   },
   toggle: {
     flexDirection: "row",
-    borderRadius: 16,
-    backgroundColor: colors.cardBorder,
+    borderRadius: 999,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.cardBorder,
     padding: 3,
     alignSelf: "flex-start",
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   toggleOption: {
     paddingHorizontal: 14,
@@ -601,7 +604,7 @@ function makeStyles(colors: Colors) {
     borderRadius: 17,
   },
   toggleOptionActive: {
-    backgroundColor: colors.card,
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : colors.card,
   },
   toggleLabel: {
     fontSize: 13,

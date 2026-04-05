@@ -16,7 +16,7 @@ import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/dat
 import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@clerk/clerk-expo";
 import { Colors } from "../../theme/colors";
-import { useColors } from "../../contexts/BackgroundContext";
+import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { supabase, Circle } from "../../../lib/supabase";
 import { MapPickerView } from "./LocationPickerModal";
 
@@ -73,6 +73,7 @@ function fmtDuration(minutes: number | null): string {
 
 export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: Props) {
   const { user } = useUser();
+  const { bgOption } = useBackground();
 
   function defaultOrganizer() {
     return user?.fullName
@@ -98,7 +99,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
   const [myCircles, setMyCircles] = useState<Circle[]>([]);
   const scrollRef = useRef<ScrollView>(null);
   const colors = useColors();
-  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
 
   useEffect(() => {
     if (!visible || !user) return;
@@ -393,8 +394,9 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
 }
 
 function DurationWheelPicker({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
+  const { bgOption } = useBackground();
   const colors = useColors();
-  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -444,8 +446,9 @@ type FieldProps = {
 };
 
 function Field({ label, value, onChangeText, placeholder, multiline }: FieldProps) {
+  const { bgOption } = useBackground();
   const colors = useColors();
-  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   return (
     <View style={styles.fieldContainer}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -464,7 +467,7 @@ function Field({ label, value, onChangeText, placeholder, multiline }: FieldProp
   );
 }
 
-function makeStyles(colors: Colors) { return StyleSheet.create({
+function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.35)",
@@ -472,19 +475,21 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   },
   kav: { justifyContent: "flex-end" },
   sheetBacking: {
-    backgroundColor: colors.background,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: isOnboarding ? "rgba(15,13,10,0.45)" : colors.background,
+    borderTopLeftRadius: isOnboarding ? 28 : 20,
+    borderTopRightRadius: isOnboarding ? 28 : 20,
     height: "95%",
   },
   sheet: {
     backgroundColor: colors.card,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: isOnboarding ? 28 : 20,
+    borderTopRightRadius: isOnboarding ? 28 : 20,
     paddingHorizontal: 24,
     paddingBottom: 40,
     paddingTop: 12,
     flex: 1,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   mapSheet: {
     flex: 1,
@@ -523,21 +528,32 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
     marginBottom: 8,
   },
   inputRow: {
-    borderBottomWidth: 1,
+    borderBottomWidth: isOnboarding ? 0 : 1,
     borderBottomColor: colors.cardBorder,
-    paddingBottom: 8,
+    paddingBottom: isOnboarding ? 0 : 8,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
+    backgroundColor: isOnboarding ? colors.badgeBg : "transparent",
+    borderRadius: isOnboarding ? 16 : 0,
+    paddingHorizontal: isOnboarding ? 14 : 0,
+    paddingVertical: isOnboarding ? 10 : 0,
   },
   inputRowMultiline: { paddingBottom: 4 },
-  input: { color: colors.text, fontSize: 16, height: 36 },
+  input: { color: colors.text, fontSize: 16, height: 36, fontFamily: "Lora_400Regular" },
   inputMultiline: { height: 72, textAlignVertical: "top", paddingTop: 4 },
   // Date / time picker buttons
   pickerButton: {
     flexDirection: "row",
     alignItems: "center",
-    borderBottomWidth: 1,
+    borderBottomWidth: isOnboarding ? 0 : 1,
     borderBottomColor: colors.cardBorder,
-    paddingBottom: 10,
-    paddingTop: 2,
+    paddingBottom: isOnboarding ? 12 : 10,
+    paddingTop: isOnboarding ? 12 : 2,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
+    backgroundColor: isOnboarding ? colors.badgeBg : "transparent",
+    borderRadius: isOnboarding ? 16 : 0,
+    paddingHorizontal: isOnboarding ? 14 : 0,
   },
   pickerIcon: { marginRight: 6 },
   pickerButtonText: {
@@ -555,11 +571,13 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   },
   pickerCard: {
     width: "92%",
-    backgroundColor: colors.background,
-    borderRadius: 16,
+    backgroundColor: isOnboarding ? colors.card : colors.background,
+    borderRadius: isOnboarding ? 24 : 16,
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 12,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   pickerOverlayHeader: {
     flexDirection: "row",
@@ -597,16 +615,18 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   locationButtonPlaceholder: { color: colors.textMuted },
   // Save
   saveButton: {
-    backgroundColor: colors.text,
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.14)" : colors.text,
     borderRadius: 50,
     height: 54,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 20,
     marginBottom: 8,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
   },
   saveButtonDisabled: { opacity: 0.35 },
-  saveButtonText: { color: colors.background, fontSize: 16, fontWeight: "600" },
+  saveButtonText: { color: isOnboarding ? colors.text : colors.background, fontSize: 16, fontWeight: "600" },
   // Visibility
   toggleRow: { flexDirection: "row", gap: 8 },
   toggleButton: {
@@ -616,11 +636,14 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     alignItems: "center",
-    backgroundColor: colors.card,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
   },
-  toggleButtonActive: { backgroundColor: colors.text, borderColor: colors.text },
-  toggleText: { fontSize: 14, fontWeight: "500" as const, color: colors.textMuted },
-  toggleTextActive: { color: colors.background },
+  toggleButtonActive: {
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : colors.text,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.text,
+  },
+  toggleText: { fontSize: 14, fontFamily: "Lora_400Regular", color: colors.textMuted },
+  toggleTextActive: { color: isOnboarding ? colors.text : colors.background },
   // Circles
   circleRow: {
     flexDirection: "row",
@@ -631,12 +654,15 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     marginBottom: 8,
-    backgroundColor: colors.card,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
   },
-  circleRowActive: { backgroundColor: colors.text, borderColor: colors.text },
+  circleRowActive: {
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : colors.text,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.text,
+  },
   circleCheck: { marginRight: 6 },
-  circleName: { fontSize: 15, color: colors.text },
-  circleNameActive: { color: colors.card },
+  circleName: { fontSize: 15, color: colors.text, fontFamily: "Lora_400Regular" },
+  circleNameActive: { color: isOnboarding ? colors.text : colors.card },
   noCirclesHint: { fontSize: 13, color: colors.textMuted, fontStyle: "italic" },
   readOnlyValue: { fontSize: 16, color: colors.textMuted, height: 36, textAlignVertical: "center" },
   pickerButtonPlaceholder: { color: colors.textMuted },

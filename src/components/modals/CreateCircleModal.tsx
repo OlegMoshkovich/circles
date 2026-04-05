@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../../theme/colors";
-import { useColors } from "../../contexts/BackgroundContext";
+import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { MapPickerView } from "./LocationPickerModal";
 
 export type NewCircleData = {
@@ -41,6 +41,7 @@ const PRESET_CATEGORIES = ["Culture", "Friends", "Nature", "Sport", "Food", "Tra
 
 export function CreateCircleModal({ visible, onClose, onSave }: Props) {
   const { user } = useUser();
+  const { bgOption } = useBackground();
 
   function defaultOrganizer() {
     return user?.fullName
@@ -61,7 +62,7 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const colors = useColors();
-  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
 
   useEffect(() => {
     if (visible) {
@@ -249,8 +250,9 @@ type FieldProps = {
 };
 
 function Field({ label, value, onChangeText, placeholder, multiline }: FieldProps) {
+  const { bgOption } = useBackground();
   const colors = useColors();
-  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   return (
     <View style={styles.fieldContainer}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -269,7 +271,7 @@ function Field({ label, value, onChangeText, placeholder, multiline }: FieldProp
   );
 }
 
-function makeStyles(colors: Colors) { return StyleSheet.create({
+function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.35)",
@@ -279,19 +281,21 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheetBacking: {
-    backgroundColor: colors.background,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    backgroundColor: isOnboarding ? "rgba(15,13,10,0.45)" : colors.background,
+    borderTopLeftRadius: isOnboarding ? 28 : 20,
+    borderTopRightRadius: isOnboarding ? 28 : 20,
     height: "94%",
   },
   sheet: {
     backgroundColor: colors.card,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: isOnboarding ? 28 : 20,
+    borderTopRightRadius: isOnboarding ? 28 : 20,
     paddingHorizontal: 24,
     paddingBottom: 40,
     paddingTop: 12,
     flex: 1,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   mapSheet: {
     flex: 1,
@@ -333,17 +337,24 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
     marginBottom: 8,
   },
   inputRow: {
-    borderBottomWidth: 1,
+    borderBottomWidth: isOnboarding ? 0 : 1,
     borderBottomColor: colors.cardBorder,
-    paddingBottom: 8,
+    paddingBottom: isOnboarding ? 0 : 8,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
+    backgroundColor: isOnboarding ? colors.badgeBg : "transparent",
+    borderRadius: isOnboarding ? 16 : 0,
+    paddingHorizontal: isOnboarding ? 14 : 0,
+    paddingVertical: isOnboarding ? 10 : 0,
   },
   inputRowMultiline: {
-    paddingBottom: 4,
+    paddingBottom: isOnboarding ? 10 : 4,
   },
   input: {
     color: colors.text,
     fontSize: 16,
     height: 36,
+    fontFamily: "Lora_400Regular",
   },
   inputMultiline: {
     height: 72,
@@ -361,19 +372,19 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    backgroundColor: colors.card,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
   },
   categoryPillActive: {
-    backgroundColor: colors.text,
-    borderColor: colors.text,
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : colors.text,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.text,
   },
   categoryPillText: {
     fontSize: 14,
-    fontWeight: "500" as const,
+    fontFamily: "Lora_400Regular",
     color: colors.textMuted,
   },
   categoryPillTextActive: {
-    color: colors.card,
+    color: isOnboarding ? colors.text : colors.card,
   },
   toggleRow: {
     flexDirection: "row",
@@ -386,34 +397,36 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     alignItems: "center",
-    backgroundColor: colors.card,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
   },
   toggleButtonActive: {
-    backgroundColor: colors.text,
-    borderColor: colors.text,
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : colors.text,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.text,
   },
   toggleText: {
     fontSize: 14,
-    fontWeight: "500" as const,
+    fontFamily: "Lora_400Regular",
     color: colors.textMuted,
   },
   toggleTextActive: {
-    color: colors.background,
+    color: isOnboarding ? colors.text : colors.background,
   },
   saveButton: {
-    backgroundColor: colors.text,
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.14)" : colors.text,
     borderRadius: 50,
     height: 54,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 20,
     marginBottom: 8,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
   },
   saveButtonDisabled: {
     opacity: 0.35,
   },
   saveButtonText: {
-    color: colors.background,
+    color: isOnboarding ? colors.text : colors.background,
     fontSize: 16,
     fontWeight: "600",
   },
@@ -426,10 +439,15 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   locationButton: {
     flexDirection: "row",
     alignItems: "center",
-    borderBottomWidth: 1,
+    borderBottomWidth: isOnboarding ? 0 : 1,
     borderBottomColor: colors.cardBorder,
-    paddingBottom: 10,
-    paddingTop: 2,
+    paddingBottom: isOnboarding ? 12 : 10,
+    paddingTop: isOnboarding ? 12 : 2,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
+    backgroundColor: isOnboarding ? colors.badgeBg : "transparent",
+    borderRadius: isOnboarding ? 16 : 0,
+    paddingHorizontal: isOnboarding ? 14 : 0,
   },
   locationIcon: {
     marginRight: 8,
@@ -443,5 +461,5 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   locationButtonPlaceholder: {
     color: colors.textMuted,
   },
-  readOnlyValue: { fontSize: 16, color: colors.textMuted, height: 36, textAlignVertical: "center" },
+  readOnlyValue: { fontSize: 16, color: colors.textMuted, height: 36, textAlignVertical: "center", fontFamily: "Lora_400Regular" },
 }); }

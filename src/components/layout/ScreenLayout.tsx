@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
-
+import { useBackground } from "../../contexts/BackgroundContext";
+import { ThemedBackground } from "./ThemedBackground";
 
 type ScreenLayoutProps = {
   header?: React.ReactNode;
@@ -19,12 +20,14 @@ type ScreenLayoutProps = {
 export function ScreenLayout({ header, children, stickyTop, contentStyle, backgroundImage, backgroundBlurIntensity = 55, backgroundColor }: ScreenLayoutProps) {
   const insets = useSafeAreaInsets();
   const resolvedBg = backgroundColor ?? colors.background;
+  const { bgOption } = useBackground();
+  const shouldUseThemedBackground = backgroundImage == null && bgOption === "onboarding";
 
   const inner = (
     <View
       style={[
         styles.wrapper,
-        !backgroundImage && { backgroundColor: resolvedBg },
+        !backgroundImage && !shouldUseThemedBackground && { backgroundColor: resolvedBg },
         {
           paddingTop: insets.top,
           paddingLeft: insets.left + spacing.pageHorizontal,
@@ -52,6 +55,10 @@ export function ScreenLayout({ header, children, stickyTop, contentStyle, backgr
         {inner}
       </ImageBackground>
     );
+  }
+
+  if (shouldUseThemedBackground) {
+    return <ThemedBackground backgroundBlurIntensity={0}>{inner}</ThemedBackground>;
   }
 
   return inner;

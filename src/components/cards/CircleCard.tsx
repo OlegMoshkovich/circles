@@ -2,7 +2,7 @@ import React from "react";
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../../theme/colors";
-import { useColors } from "../../contexts/BackgroundContext";
+import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 
@@ -41,8 +41,9 @@ export function CircleCard({
   hasNewActivity = false,
   onPress,
 }: CircleCardProps) {
+  const { bgOption } = useBackground();
   const colors = useColors();
-  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
@@ -123,7 +124,7 @@ export function CircleCard({
   );
 }
 
-function makeStyles(colors: Colors) {
+function makeStyles(colors: Colors, isOnboarding: boolean) {
   return StyleSheet.create({
     activityBell: {
       backgroundColor: "#FF4D00",
@@ -136,19 +137,19 @@ function makeStyles(colors: Colors) {
     },
     card: {
       backgroundColor: colors.card,
-      borderRadius: 16,
-      padding: spacing.cardPadding,
+      borderRadius: isOnboarding ? 24 : 16,
+      padding: isOnboarding ? 18 : spacing.cardPadding,
       marginBottom: spacing.md,
       borderWidth: 1,
       borderColor: colors.cardBorder,
       ...Platform.select({
         ios: {
-          shadowColor: "#2C2A26",
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.06,
-          shadowRadius: 3,
+          shadowColor: "#000000",
+          shadowOffset: { width: 0, height: isOnboarding ? 10 : 1 },
+          shadowOpacity: isOnboarding ? 0.14 : 0.06,
+          shadowRadius: isOnboarding ? 24 : 3,
         },
-        android: { elevation: 2 },
+        android: { elevation: isOnboarding ? 4 : 2 },
         default: {},
       }),
     },
@@ -159,7 +160,9 @@ function makeStyles(colors: Colors) {
       marginBottom: spacing.xs,
     },
     name: {
-      fontSize: 18,
+      fontSize: isOnboarding ? 28 : 18,
+      fontFamily: isOnboarding ? "CormorantGaramond_300Light" : undefined,
+      lineHeight: isOnboarding ? 30 : undefined,
       color: colors.text,
       flex: 1,
       marginRight: spacing.sm,
@@ -167,8 +170,10 @@ function makeStyles(colors: Colors) {
     badge: {
       backgroundColor: colors.badgeBg,
       paddingHorizontal: 10,
-      paddingVertical: 3,
+      paddingVertical: isOnboarding ? 5 : 3,
       borderRadius: 999,
+      borderWidth: isOnboarding ? 1 : 0,
+      borderColor: isOnboarding ? colors.cardBorder : "transparent",
     },
     badgeText: {
       fontSize: 11,
@@ -181,6 +186,7 @@ function makeStyles(colors: Colors) {
       ...typography.bodySmall,
       color: colors.textMuted,
       marginBottom: spacing.sm,
+      fontFamily: "Lora_400Regular",
     },
     divider: {
       height: 1,
@@ -218,6 +224,8 @@ function makeStyles(colors: Colors) {
       paddingHorizontal: 10,
       paddingVertical: 4,
       borderRadius: 999,
+      borderWidth: isOnboarding ? 1 : 0,
+      borderColor: isOnboarding ? colors.cardBorder : "transparent",
     },
     statusBadgeMuted: {
       backgroundColor: "transparent",
@@ -231,15 +239,17 @@ function makeStyles(colors: Colors) {
       color: colors.textMuted,
     },
     joinButton: {
-      backgroundColor: colors.text,
+      backgroundColor: isOnboarding ? "rgba(255,255,255,0.12)" : colors.text,
       paddingHorizontal: 14,
       paddingVertical: 5,
       borderRadius: 999,
+      borderWidth: isOnboarding ? 1 : 0,
+      borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
     },
     joinButtonText: {
       fontSize: 12,
       fontWeight: "600" as const,
-      color: colors.background,
+      color: isOnboarding ? colors.text : colors.background,
       letterSpacing: 0.3,
     },
     ownerBadgeRow: {

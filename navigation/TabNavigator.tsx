@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLanguage, Language } from "../src/i18n/LanguageContext";
 import { Translations } from "../src/i18n/translations";
 import { useNotificationContext } from "../src/contexts/NotificationContext";
+import { useBackground } from "../src/contexts/BackgroundContext";
 
 const Tab = createBottomTabNavigator();
 
@@ -29,16 +30,21 @@ function GlassBackground() {
 function makeTabButton(getLabel: (t: Translations) => string, showBadge = false) {
   return function TabButton({ onPress, accessibilityState }: any) {
     const { t } = useLanguage();
+    const { bgOption } = useBackground();
     const { unreadCount } = useNotificationContext();
     const focused = accessibilityState?.selected;
+    const labelColor = bgOption === "onboarding"
+      ? (focused ? "rgba(255, 255, 255, 0.96)" : "rgba(255, 255, 255, 0.72)")
+      : (focused ? colors.text : colors.textMuted);
+
     return (
       <TouchableOpacity onPress={onPress} style={styles.tabButton} activeOpacity={0.7}>
         <View style={styles.tabLabelRow}>
-          <Text style={[styles.labelText, { color: focused ? colors.text : colors.textMuted }]}>
+          <Text style={[styles.labelText, { color: labelColor }]}>
             {getLabel(t)}
           </Text>
           {showBadge && unreadCount > 0 && (
-            <View style={styles.tabDot} />
+            <View style={[styles.tabDot, bgOption === "onboarding" && styles.tabDotOnboarding]} />
           )}
         </View>
       </TouchableOpacity>
@@ -122,6 +128,9 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: colors.text,
     marginTop: -6,
+  },
+  tabDotOnboarding: {
+    backgroundColor: "rgba(255, 255, 255, 0.92)",
   },
   labelText: {
     fontSize: 14,

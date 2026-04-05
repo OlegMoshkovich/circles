@@ -15,7 +15,22 @@ export const lightColors = {
 } as const;
 
 /**
- * Glassmorphism palette — semi-transparent cards over blurred image background
+ * Onboarding-inspired palette — dark frosted cards over scenic image background
+ */
+export const onboardingColors = {
+  background: "#1B2417",
+  card: "rgba(15, 13, 10, 0.78)",
+  cardBorder: "rgba(239, 237, 225, 0.18)",
+  text: "#EFEDE1",
+  iconbBg: "rgba(255, 255, 255, 0.16)",
+  textOnIconBg: "#EFEDE1",
+  textMuted: "rgba(239, 237, 225, 0.62)",
+  badgeBg: "rgba(255, 255, 255, 0.08)",
+  divider: "rgba(239, 237, 225, 0.14)",
+} as const;
+
+/**
+ * Glassmorphism palette — semi-transparent cards over a muted green base
  */
 export const glassColors = {
   background: "#35412A",
@@ -44,7 +59,17 @@ export const greenColors = {
   divider: "rgba(240, 235, 224, 0.18)",
 } as const;
 
-export type Colors = typeof lightColors;
+export type Colors = {
+  background: string;
+  card: string;
+  cardBorder: string;
+  text: string;
+  iconbBg: string;
+  textOnIconBg: string;
+  textMuted: string;
+  badgeBg: string;
+  divider: string;
+};
 
 // Default export kept for files not yet on the theme system
 export const colors = lightColors;

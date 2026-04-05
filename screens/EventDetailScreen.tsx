@@ -17,12 +17,13 @@ import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useUser } from "@clerk/clerk-expo";
 import { RootStackParamList } from "../types";
 import { Colors } from "../src/theme/colors";
-import { useColors } from "../src/contexts/BackgroundContext";
+import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, EventNote } from "../lib/supabase";
 import { InviteModal } from "../src/components/modals/InviteModal";
 import { EditEventModal, EditEventData } from "../src/components/modals/EditEventModal";
+import { ThemedBackground } from "../src/components/layout/ThemedBackground";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EventDetail">;
 
@@ -31,8 +32,9 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { user } = useUser();
 
+  const { bgOption } = useBackground();
   const colors = useColors();
-  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const isCreator = !!user && !!created_by && user.id === created_by;
   const [inviteVisible, setInviteVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
@@ -74,7 +76,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
 
   // Load fresh counts + this user's RSVP on every mount
   useEffect(() => {
-    const queries: [Promise<any>, Promise<any>, Promise<any>] = [
+    Promise.all([
       supabase
         .from("event_rsvps")
         .select("*", { count: "exact", head: true })
@@ -93,9 +95,14 @@ export default function EventDetailScreen({ route, navigation }: Props) {
             .eq("user_id", user.id)
             .maybeSingle()
         : Promise.resolve({ data: null }),
-    ];
+    ]).then(([goingResult, maybeResult, rsvpResult]) => {
+      const g = "count" in goingResult ? goingResult.count : null;
+      const m = "count" in maybeResult ? maybeResult.count : null;
+      const rsvpData =
+        rsvpResult && "data" in rsvpResult && rsvpResult.data && !Array.isArray(rsvpResult.data)
+          ? rsvpResult.data
+          : null;
 
-    Promise.all(queries).then(([{ count: g }, { count: m }, { data: rsvpData }]) => {
       if (g !== null) setGoing(g);
       if (m !== null) setMaybe(m);
       if (rsvpData) setRsvp(rsvpData.status as "going" | "maybe");
@@ -200,7 +207,8 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   }
 
   return (
-    <View style={[styles.wrapper, { paddingBottom: insets.bottom }]}>
+    <ThemedBackground backgroundColor={colors.background}>
+      <View style={[styles.wrapper, { paddingBottom: insets.bottom }]}>
       {/* Fixed back button */}
       <View style={[styles.backRow, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity
@@ -425,25 +433,31 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         eventId={id}
         initialValues={{ title, organizer, date, time, location, description }}
       />
-    </View>
+      </View>
+    </ThemedBackground>
   );
 }
 
-function makeStyles(colors: Colors) { return StyleSheet.create({
+function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.create({
   wrapper: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: isOnboarding ? "transparent" : colors.background,
   },
   headerCard: {
     backgroundColor: colors.card,
-    borderRadius: 20,
+    borderRadius: isOnboarding ? 28 : 20,
     padding: spacing.cardPadding,
     marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     ...Platform.select({
-      ios: { shadowColor: "#2C2A26", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3 },
-      android: { elevation: 2 },
+      ios: {
+        shadowColor: "#000000",
+        shadowOffset: { width: 0, height: isOnboarding ? 10 : 1 },
+        shadowOpacity: isOnboarding ? 0.14 : 0.06,
+        shadowRadius: isOnboarding ? 24 : 3,
+      },
+      android: { elevation: isOnboarding ? 4 : 2 },
       default: {},
     }),
   },
@@ -457,6 +471,12 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   backButton: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: isOnboarding ? "rgba(15,13,10,0.68)" : "transparent",
+    borderRadius: 999,
+    paddingHorizontal: isOnboarding ? 12 : 0,
+    paddingVertical: isOnboarding ? 8 : 0,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   backLabel: {
     ...typography.body,
@@ -469,7 +489,7 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   title: {
-    fontSize: 32,
+    fontSize: isOnboarding ? 36 : 32,
     fontFamily: "CormorantGaramond_300Light",
     color: colors.text,
     lineHeight: 38,
@@ -494,6 +514,8 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 999,
     marginLeft: spacing.sm,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   circlePillText: {
     fontSize: 11,
@@ -583,7 +605,7 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   rsvpBar: {
     paddingHorizontal: spacing.pageHorizontal,
     paddingBottom: spacing.md,
-    backgroundColor: colors.background,
+    backgroundColor: isOnboarding ? "transparent" : colors.background,
   },
   rsvpButtons: {
     flexDirection: "row",
@@ -593,13 +615,15 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colors.text,
+    backgroundColor: isOnboarding ? "rgba(15,13,10,0.78)" : colors.text,
     borderRadius: 999,
     height: 54,
     gap: 8,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
   },
   inviteButtonText: {
-    color: colors.card,
+    color: isOnboarding ? colors.text : colors.card,
     fontSize: 16,
     fontWeight: "500" as const,
   },
@@ -612,12 +636,14 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
     borderRadius: 999,
   },
   rsvpButtonOutline: {
-    backgroundColor: colors.card,
+    backgroundColor: isOnboarding ? "rgba(15,13,10,0.78)" : colors.card,
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
   rsvpButtonActive: {
-    backgroundColor: "#9E9088",
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : "#9E9088",
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : "transparent",
   },
   rsvpIcon: {
     marginRight: 4,
@@ -630,7 +656,7 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
     color: colors.text,
   },
   rsvpButtonTextActive: {
-    color: colors.card,
+    color: isOnboarding ? colors.text : colors.card,
   },
   headerActions: {
     flexDirection: "row",
@@ -640,19 +666,19 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   headerAction: {},
   composeBox: {
     backgroundColor: colors.card,
-    borderRadius: 12,
+    borderRadius: isOnboarding ? 24 : 12,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     padding: spacing.cardPadding,
     marginBottom: spacing.md,
     ...Platform.select({
       ios: {
-        shadowColor: "#2C2A26",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
+        shadowColor: "#000000",
+        shadowOffset: { width: 0, height: isOnboarding ? 10 : 1 },
+        shadowOpacity: isOnboarding ? 0.12 : 0.05,
+        shadowRadius: isOnboarding ? 20 : 2,
       },
-      android: { elevation: 1 },
+      android: { elevation: isOnboarding ? 4 : 1 },
       default: {},
     }),
   },
@@ -674,22 +700,24 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   },
   postButton: {
     alignSelf: "flex-end",
-    backgroundColor: colors.text,
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.14)" : colors.text,
     paddingHorizontal: 16,
     paddingVertical: 7,
     borderRadius: 999,
     marginTop: 6,
     minWidth: 60,
     alignItems: "center",
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
   },
   postButtonText: {
-    color: colors.card,
+    color: isOnboarding ? colors.text : colors.card,
     fontSize: 13,
     fontWeight: "600" as const,
   },
   noteCard: {
     backgroundColor: colors.card,
-    borderRadius: 20,
+    borderRadius: isOnboarding ? 24 : 20,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     padding: spacing.cardPadding,

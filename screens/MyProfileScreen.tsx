@@ -38,7 +38,7 @@ export default function MyProfileScreen() {
   const [loadingNotifs, setLoadingNotifs] = useState(false);
   const { bgOption, setBgOption } = useBackground();
   const colors = useColors();
-  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
@@ -114,9 +114,7 @@ export default function MyProfileScreen() {
   const screenBgColor = colors.background;
 
   return (
-    <ScreenLayout
-      backgroundColor={screenBgColor}
-    >
+    <ScreenLayout backgroundColor={screenBgColor}>
       <ScreenHeaderCard style={{ marginBottom: spacing.lg }}>
         <NavbarTitle
           title={t.nav.profile}
@@ -133,8 +131,8 @@ export default function MyProfileScreen() {
               <TouchableOpacity
                 onPress={() => {
                   setBgOption((prev) => {
-                    if (prev === "light") return "green";
-                    if (prev === "green") return "light";
+                    if (prev === "light") return "onboarding";
+                    if (prev === "onboarding") return "glass";
                     return "light";
                   });
                 }}
@@ -144,11 +142,11 @@ export default function MyProfileScreen() {
                 {bgOption === "light" && (
                   <Ionicons name="sunny-outline" size={16} color={colors.textOnIconBg} />
                 )}
-                {bgOption === "green" && (
-                  <Ionicons name="leaf-outline" size={16} color={colors.textOnIconBg} />
+                {bgOption === "onboarding" && (
+                  <Ionicons name="images-outline" size={16} color={colors.textOnIconBg} />
                 )}
-                {bgOption === "solid" && (
-                  <Ionicons name="contrast-outline" size={16} color={colors.textOnIconBg} />
+                {bgOption === "glass" && (
+                  <Ionicons name="moon-outline" size={16} color={colors.textOnIconBg} />
                 )}
               </TouchableOpacity>
               <TouchableOpacity
@@ -263,7 +261,7 @@ export default function MyProfileScreen() {
   );
 }
 
-function makeStyles(colors: Colors) {
+function makeStyles(colors: Colors, isOnboarding: boolean) {
   return StyleSheet.create({
     cardDivider: {
       height: 1,
@@ -296,9 +294,9 @@ function makeStyles(colors: Colors) {
       color: colors.text,
     },
     name: {
-      fontSize: 20,
+      fontSize: isOnboarding ? 30 : 20,
       fontWeight: "400" as const,
-      fontFamily: "Lora_400Regular",
+      fontFamily: isOnboarding ? "CormorantGaramond_300Light" : "Lora_400Regular",
       color: colors.text,
       marginBottom: spacing.xs,
     },
@@ -321,17 +319,17 @@ function makeStyles(colors: Colors) {
     },
     card: {
       backgroundColor: colors.card,
-      borderRadius: 16,
+      borderRadius: isOnboarding ? 24 : 16,
       borderWidth: 1,
       borderColor: colors.cardBorder,
       ...Platform.select({
         ios: {
-          shadowColor: "#2C2A26",
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.05,
-          shadowRadius: 2,
+          shadowColor: "#000000",
+          shadowOffset: { width: 0, height: isOnboarding ? 10 : 1 },
+          shadowOpacity: isOnboarding ? 0.14 : 0.05,
+          shadowRadius: isOnboarding ? 24 : 2,
         },
-        android: { elevation: 1 },
+        android: { elevation: isOnboarding ? 4 : 1 },
         default: {},
       }),
     },
@@ -350,10 +348,12 @@ function makeStyles(colors: Colors) {
     rowLabel: {
       ...typography.body,
       color: colors.text,
+      fontFamily: "Lora_400Regular",
     },
     rowValue: {
       ...typography.body,
       color: colors.textMuted,
+      fontFamily: "Lora_400Regular",
     },
     headerButtons: {
       flexDirection: "row",
@@ -363,7 +363,9 @@ function makeStyles(colors: Colors) {
       width: 30,
       height: 30,
       borderRadius: 16,
-      backgroundColor: colors.iconbBg,
+      backgroundColor: isOnboarding ? "rgba(255,255,255,0.12)" : colors.iconbBg,
+      borderWidth: isOnboarding ? 1 : 0,
+      borderColor: isOnboarding ? colors.cardBorder : "transparent",
       alignItems: "center",
       justifyContent: "center",
     },
@@ -378,12 +380,13 @@ function makeStyles(colors: Colors) {
       paddingVertical: 7,
       paddingHorizontal: 12,
       borderRadius: 16,
-      borderWidth: 0.4,
+      borderWidth: 1,
       borderColor: colors.cardBorder,
-      backgroundColor: colors.card,
+      backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
     },
     flagButtonSelected: {
-      borderColor: colors.text,
+      borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.text,
+      backgroundColor: isOnboarding ? "rgba(255,255,255,0.14)" : colors.card,
     },
     flagEmoji: {
       fontSize: 20,
@@ -400,7 +403,7 @@ function makeStyles(colors: Colors) {
       flexDirection: "row",
       alignItems: "center",
       backgroundColor: colors.card,
-      borderRadius: 12,
+      borderRadius: isOnboarding ? 20 : 12,
       borderWidth: 1,
       borderColor: colors.cardBorder,
       padding: 12,
@@ -435,13 +438,15 @@ function makeStyles(colors: Colors) {
       gap: 4,
     },
     acceptBtn: {
-      backgroundColor: colors.text,
+      backgroundColor: isOnboarding ? "rgba(255,255,255,0.14)" : colors.text,
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: 999,
+      borderWidth: isOnboarding ? 1 : 0,
+      borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
     },
     acceptBtnText: {
-      color: colors.background,
+      color: isOnboarding ? colors.text : colors.background,
       fontSize: 12,
       fontWeight: "600" as const,
     },

@@ -20,7 +20,8 @@ import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import MapView, { Region } from "react-native-maps";
 import * as Location from "expo-location";
-import { colors } from "../src/theme/colors";
+import { colors, glassColors, greenColors, lightColors, onboardingColors, Colors } from "../src/theme/colors";
+import { BgOption, useBackground } from "../src/contexts/BackgroundContext";
 import { supabase, Circle } from "../lib/supabase";
 
 const DEFAULT_MAP_REGION: Region = {
@@ -49,7 +50,33 @@ function makeInitialData(displayName: string): OnboardingData {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;
+
+const THEME_OPTIONS: {
+  key: BgOption;
+  title: string;
+  subtitle: string;
+  swatches: [string, string, string];
+}[] = [
+  {
+    key: "onboarding",
+    title: "Photo",
+    subtitle: "Scenic background with dark frosted cards",
+    swatches: ["#1B2417", "rgba(15, 13, 10, 0.78)", "#EFEDE1"],
+  },
+  {
+    key: "glass",
+    title: "Dark",
+    subtitle: "Moody translucent cards over a soft green base",
+    swatches: ["#35412A", "rgba(255, 255, 255, 0.14)", "#F0EBE0"],
+  },
+  {
+    key: "light",
+    title: "Light",
+    subtitle: "Calm paper tones with crisp contrast",
+    swatches: ["#F7F4EF", "#FDFBF7", "#2C2A26"],
+  },
+];
 
 const USER_TYPES: { key: UserType; label: string; icon: keyof typeof Ionicons.glyphMap; desc: string }[] = [
   { key: "local", label: "Local", icon: "home-outline", desc: "I live here year-round" },
@@ -75,6 +102,17 @@ const INTERESTS: { key: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { key: "Entrepreneurs", icon: "rocket-outline" },
 ];
 
+function getThemePreviewColors(theme: BgOption): Colors {
+  if (theme === "light") return lightColors;
+  if (theme === "glass") return glassColors;
+  if (theme === "solid") return greenColors;
+  return onboardingColors;
+}
+
+function isDarkPreviewTheme(theme: BgOption) {
+  return theme !== "light";
+}
+
 // ─── Progress Bar ─────────────────────────────────────────────────────────────
 
 function ProgressBar({ step, total }: { step: number; total: number }) {
@@ -97,11 +135,26 @@ function GlassButton({
   label,
   onPress,
   disabled,
+  previewTheme,
 }: {
   label: string;
   onPress?: () => void;
   disabled?: boolean;
+  previewTheme?: BgOption;
 }) {
+  const themeColors = previewTheme ? getThemePreviewColors(previewTheme) : onboardingColors;
+  const isDark = previewTheme ? isDarkPreviewTheme(previewTheme) : true;
+  const fillColor =
+    previewTheme === "light"
+      ? "rgba(44,42,38,0.08)"
+      : previewTheme === "solid"
+        ? "rgba(240,235,224,0.14)"
+        : "rgba(255,255,255,0.15)";
+  const borderColor =
+    previewTheme === "light"
+      ? "rgba(44,42,38,0.16)"
+      : "rgba(255,255,255,0.35)";
+
   return (
     <TouchableOpacity
       style={[styles.glassBtn, disabled && styles.glassBtnDisabled]}
@@ -109,16 +162,27 @@ function GlassButton({
       activeOpacity={0.85}
     >
       <BlurView intensity={28} tint="light" style={StyleSheet.absoluteFill} />
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(255,255,255,0.15)" }]} />
-      <View style={[StyleSheet.absoluteFill, { borderRadius: 50, borderWidth: 1, borderColor: "rgba(255,255,255,0.35)" }]} />
-      <Text style={styles.glassBtnText}>{label}</Text>
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: fillColor }]} />
+      <View style={[StyleSheet.absoluteFill, { borderRadius: 50, borderWidth: 1, borderColor }]} />
+      <Text style={[styles.glassBtnText, { color: isDark ? themeColors.text : themeColors.text }]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
 // ─── Step Header ──────────────────────────────────────────────────────────────
 
-function StepHeader({ title, subtitle, onBack }: { title: string; subtitle?: string; onBack?: () => void }) {
+function StepHeader({
+  title,
+  subtitle,
+  onBack,
+  previewTheme,
+}: {
+  title: string;
+  subtitle?: string;
+  onBack?: () => void;
+  previewTheme?: BgOption;
+}) {
+  const themeColors = previewTheme ? getThemePreviewColors(previewTheme) : onboardingColors;
   return (
     <View style={styles.stepHeader}>
       {onBack ? (
@@ -127,13 +191,13 @@ function StepHeader({ title, subtitle, onBack }: { title: string; subtitle?: str
           style={styles.backBtn}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <Ionicons name="arrow-back" size={22} color="#efede1" />
+          <Ionicons name="arrow-back" size={22} color={themeColors.text} />
         </TouchableOpacity>
       ) : (
         <View style={styles.backBtn} />
       )}
-      <Text style={styles.stepTitle}>{title}</Text>
-      {subtitle ? <Text style={styles.stepSubtitle}>{subtitle}</Text> : null}
+      <Text style={[styles.stepTitle, { color: themeColors.text }]}>{title}</Text>
+      {subtitle ? <Text style={[styles.stepSubtitle, { color: themeColors.textMuted }]}>{subtitle}</Text> : null}
     </View>
   );
 }
@@ -531,12 +595,100 @@ function NotificationsStep({ onDone, onSkip }: { onDone: () => void; onSkip: () 
   );
 }
 
+// ─── Step 7: Theme Picker ────────────────────────────────────────────────────
+
+function ThemeStep({
+  selectedTheme,
+  onSelectTheme,
+  onDone,
+  onBack,
+}: {
+  selectedTheme: BgOption;
+  onSelectTheme: (theme: BgOption) => void;
+  onDone: () => void;
+  onBack: () => void;
+}) {
+  const previewColors = getThemePreviewColors(selectedTheme);
+  const isDark = isDarkPreviewTheme(selectedTheme);
+  const panelBackground =
+    selectedTheme === "light"
+      ? "rgba(253,251,247,0.95)"
+      : selectedTheme === "glass"
+        ? "rgba(255,255,255,0.12)"
+        : previewColors.card;
+  const cardBackground =
+    selectedTheme === "light"
+      ? "rgba(44,42,38,0.03)"
+      : selectedTheme === "solid"
+        ? "rgba(240,235,224,0.08)"
+        : "rgba(255,255,255,0.07)";
+  const selectedCardBackground =
+    selectedTheme === "light"
+      ? "rgba(44,42,38,0.08)"
+      : selectedTheme === "solid"
+        ? "rgba(240,235,224,0.16)"
+        : "rgba(255,255,255,0.18)";
+
+  return (
+    <View style={styles.formStep}>
+      <View style={[styles.panel, styles.themePanel, { backgroundColor: panelBackground, borderColor: previewColors.cardBorder }]}>
+        <StepHeader
+          title="Choose your theme"
+          subtitle="Pick the look you want to enter the app with. You can change it later in your profile."
+          onBack={onBack}
+          previewTheme={selectedTheme}
+        />
+        <View style={styles.themeList}>
+          {THEME_OPTIONS.map((theme) => {
+            const selected = selectedTheme === theme.key;
+            return (
+              <TouchableOpacity
+                key={theme.key}
+                style={[
+                  styles.themeCard,
+                  {
+                    backgroundColor: selected ? selectedCardBackground : cardBackground,
+                    borderColor: selected ? previewColors.cardBorder : previewColors.divider,
+                  },
+                  selected && styles.themeCardSelected,
+                ]}
+                onPress={() => onSelectTheme(theme.key)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.themePreviewRow}>
+                  {theme.swatches.map((swatch, index) => (
+                    <View
+                      key={`${theme.key}-${index}`}
+                      style={[styles.themeSwatch, { backgroundColor: swatch }]}
+                    />
+                  ))}
+                </View>
+                <View style={styles.themeTextWrap}>
+                  <Text style={[styles.themeTitle, { color: previewColors.text }]}>{theme.title}</Text>
+                  <Text style={[styles.themeSubtitleText, { color: previewColors.textMuted }]}>{theme.subtitle}</Text>
+                </View>
+                {selected ? (
+                  <Ionicons name="checkmark-circle" size={20} color={previewColors.text} />
+                ) : (
+                  <View style={[styles.themeRadio, { borderColor: previewColors.cardBorder }]} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        <GlassButton label="Enter App" onPress={onDone} previewTheme={selectedTheme} />
+      </View>
+    </View>
+  );
+}
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 type Props = { onComplete: () => void };
 
 export default function OnboardingScreen({ onComplete }: Props) {
   const { user } = useUser();
+  const { bgOption, setBgOption } = useBackground();
   const [step, setStep] = useState(0);
   const [data, setData] = useState<OnboardingData>(() =>
     makeInitialData(user?.fullName ?? user?.firstName ?? "")
@@ -589,6 +741,8 @@ export default function OnboardingScreen({ onComplete }: Props) {
     }
   }
 
+  const pickerTheme = bgOption === "solid" ? "glass" : bgOption;
+
   const steps = [
     <WelcomeStep onNext={onNext} />,
     <UserTypeStep data={data} onUpdate={update} onNext={onNext} onBack={onBack} />,
@@ -596,24 +750,54 @@ export default function OnboardingScreen({ onComplete }: Props) {
     <LocationStep onUpdate={update} onNext={onNext} onBack={onBack} onSkip={onSkip} />,
     <ProfileStep data={data} onUpdate={update} onNext={onNext} onBack={onBack} />,
     <CircleSuggestionsStep data={data} onUpdate={update} onNext={onNext} onBack={onBack} onSkip={onSkip} />,
-    <NotificationsStep onDone={handleComplete} onSkip={handleComplete} />,
+    <NotificationsStep onDone={onNext} onSkip={onNext} />,
+    <ThemeStep
+      selectedTheme={pickerTheme}
+      onSelectTheme={setBgOption}
+      onDone={handleComplete}
+      onBack={onBack}
+    />,
   ];
+
+  const showingThemeStep = step === steps.length - 1;
+  const previewColors = getThemePreviewColors(pickerTheme);
+  const darkThemePreview = isDarkPreviewTheme(pickerTheme);
+  const content = (
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        showingThemeStep && pickerTheme !== "onboarding" ? { backgroundColor: previewColors.background } : null,
+      ]}
+      edges={["top", "left", "right"]}
+    >
+      {step > 0 && !showingThemeStep && (
+        <ProgressBar step={step} total={TOTAL_STEPS} />
+      )}
+      <Animated.View style={[{ flex: 1 }, { opacity: fadeAnim }]}>
+        {saving ? (
+          <View style={styles.savingOverlay}>
+            <ActivityIndicator color={darkThemePreview ? previewColors.text : "#2C2A26"} size="large" />
+          </View>
+        ) : (
+          steps[step]
+        )}
+      </Animated.View>
+    </SafeAreaView>
+  );
+
+  if (showingThemeStep && pickerTheme !== "onboarding") {
+    return (
+      <View style={{ flex: 1, backgroundColor: previewColors.background }}>
+        <StatusBar barStyle={pickerTheme === "light" ? "dark-content" : "light-content"} />
+        {content}
+      </View>
+    );
+  }
 
   return (
     <ImageBackground source={require("../assets/Background.webp")} style={{ flex: 1 }} resizeMode="cover">
       <StatusBar barStyle="light-content" />
-      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
-        {step > 0 && <ProgressBar step={step} total={TOTAL_STEPS} />}
-        <Animated.View style={[{ flex: 1 }, { opacity: fadeAnim }]}>
-          {saving ? (
-            <View style={styles.savingOverlay}>
-              <ActivityIndicator color="#efede1" size="large" />
-            </View>
-          ) : (
-            steps[step]
-          )}
-        </Animated.View>
-      </SafeAreaView>
+      {content}
     </ImageBackground>
   );
 }
@@ -717,6 +901,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 8,
     paddingBottom: Platform.OS === "ios" ? 36 : 24,
+  },
+  themePanel: {
+    borderWidth: 1,
   },
   panelTall: {
     maxHeight: "76%",
@@ -902,6 +1089,58 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Lora_400Regular",
     color: "rgba(239,237,225,0.8)",
+  },
+  themeList: {
+    gap: 10,
+    paddingBottom: 8,
+  },
+  themeCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(239,237,225,0.15)",
+    backgroundColor: "rgba(255,255,255,0.07)",
+    gap: 14,
+  },
+  themeCardSelected: {
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderColor: "rgba(239,237,225,0.55)",
+  },
+  themePreviewRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  themeSwatch: {
+    width: 18,
+    height: 44,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: "rgba(239,237,225,0.12)",
+  },
+  themeTextWrap: {
+    flex: 1,
+  },
+  themeTitle: {
+    fontSize: 17,
+    fontFamily: "Lora_400Regular",
+    color: "#efede1",
+    marginBottom: 2,
+  },
+  themeSubtitleText: {
+    fontSize: 12,
+    fontFamily: "Lora_400Regular",
+    color: "rgba(239,237,225,0.55)",
+    lineHeight: 18,
+  },
+  themeRadio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: "rgba(239,237,225,0.35)",
   },
   // Skip link
   skipLink: {

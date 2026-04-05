@@ -19,7 +19,7 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
 import { Colors } from "../src/theme/colors";
-import { useColors } from "../src/contexts/BackgroundContext";
+import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, CircleMember, CircleNote, Event, UserProfile } from "../lib/supabase";
@@ -27,6 +27,7 @@ import { CircleInviteModal } from "../src/components/modals/CircleInviteModal";
 import { EditCircleModal, EditCircleData } from "../src/components/modals/EditCircleModal";
 import { CreateEventModal, NewEventData } from "../src/components/modals/CreateEventModal";
 import { EventCard } from "../src/components/cards/EventCard";
+import { ThemedBackground } from "../src/components/layout/ThemedBackground";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CircleDetail">;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -47,8 +48,9 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const { user } = useUser();
   const nav = useNavigation<Nav>();
 
+  const { bgOption } = useBackground();
   const colors = useColors();
-  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const isOwner = user?.id === owner_id;
 
   // Mutable display fields (can be updated via edit modal)
@@ -439,7 +441,8 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   }
 
   return (
-    <View style={[styles.wrapper, { paddingBottom: insets.bottom }]}>
+    <ThemedBackground backgroundColor={colors.background}>
+      <View style={[styles.wrapper, { paddingBottom: insets.bottom }]}>
       {/* Back button */}
       <View style={[styles.backRow, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity
@@ -784,7 +787,8 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         circleId={id}
         initialValues={{ name, description, visibility }}
       />
-    </View>
+      </View>
+    </ThemedBackground>
   );
 }
 
@@ -801,8 +805,9 @@ function MemberRow({
   currentUserName?: string | null;
   profileMap: Record<string, string>;
 }) {
+  const { bgOption } = useBackground();
   const colors = useColors();
-  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const name =
     (member.user_id === currentUserId && currentUserName)
       ? currentUserName
@@ -832,21 +837,26 @@ function MemberRow({
   );
 }
 
-function makeStyles(colors: Colors) { return StyleSheet.create({
+function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.create({
   wrapper: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: isOnboarding ? "transparent" : colors.background,
   },
   headerCard: {
     backgroundColor: colors.card,
-    borderRadius: 16,
+    borderRadius: isOnboarding ? 28 : 16,
     padding: spacing.cardPadding,
     marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     ...Platform.select({
-      ios: { shadowColor: "#2C2A26", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3 },
-      android: { elevation: 2 },
+      ios: {
+        shadowColor: "#000000",
+        shadowOffset: { width: 0, height: isOnboarding ? 10 : 1 },
+        shadowOpacity: isOnboarding ? 0.14 : 0.06,
+        shadowRadius: isOnboarding ? 24 : 3,
+      },
+      android: { elevation: isOnboarding ? 4 : 2 },
       default: {},
     }),
   },
@@ -860,6 +870,12 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   backButton: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: isOnboarding ? "rgba(15,13,10,0.68)" : "transparent",
+    borderRadius: 999,
+    paddingHorizontal: isOnboarding ? 12 : 0,
+    paddingVertical: isOnboarding ? 8 : 0,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   backLabel: {
     ...typography.body,
@@ -876,7 +892,7 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   title: {
-    fontSize: 32,
+    fontSize: isOnboarding ? 36 : 32,
     fontFamily: "CormorantGaramond_300Light",
     color: colors.text,
     lineHeight: 38,
@@ -982,6 +998,8 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   roleBadgeText: {
     fontSize: 10,
@@ -993,7 +1011,7 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   footer: {
     paddingHorizontal: spacing.pageHorizontal,
     paddingBottom: spacing.md,
-    backgroundColor: colors.background,
+    backgroundColor: isOnboarding ? "transparent" : colors.background,
   },
   footerDivider: {
     height: 1,
@@ -1002,30 +1020,32 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   },
   actionButton: {
     flexDirection: "row",
-    backgroundColor: colors.text,
+    backgroundColor: isOnboarding ? "rgba(15,13,10,0.78)" : colors.text,
     borderRadius: 999,
     height: 54,
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
     ...Platform.select({
       ios: {
-        shadowColor: "#2C2A26",
+        shadowColor: "#000000",
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOpacity: isOnboarding ? 0.18 : 0.1,
+        shadowRadius: isOnboarding ? 16 : 4,
       },
-      android: { elevation: 2 },
+      android: { elevation: isOnboarding ? 4 : 2 },
       default: {},
     }),
   },
   actionButtonOutline: {
-    backgroundColor: colors.card,
+    backgroundColor: isOnboarding ? "rgba(15,13,10,0.78)" : colors.card,
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
   actionButtonText: {
-    color: colors.card,
+    color: isOnboarding ? colors.text : colors.card,
     fontSize: 16,
     fontWeight: "500" as const,
   },
@@ -1085,6 +1105,8 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   invitedBadgeText: {
     fontSize: 10,
@@ -1100,19 +1122,19 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   },
   composeBox: {
     backgroundColor: colors.card,
-    borderRadius: 12,
+    borderRadius: isOnboarding ? 24 : 12,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     padding: spacing.cardPadding,
     marginBottom: spacing.md,
     ...Platform.select({
       ios: {
-        shadowColor: "#2C2A26",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
+        shadowColor: "#000000",
+        shadowOffset: { width: 0, height: isOnboarding ? 10 : 1 },
+        shadowOpacity: isOnboarding ? 0.12 : 0.05,
+        shadowRadius: isOnboarding ? 20 : 2,
       },
-      android: { elevation: 1 },
+      android: { elevation: isOnboarding ? 4 : 1 },
       default: {},
     }),
   },
@@ -1134,22 +1156,24 @@ function makeStyles(colors: Colors) { return StyleSheet.create({
   },
   postButton: {
     alignSelf: "flex-end",
-    backgroundColor: colors.text,
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.14)" : colors.text,
     paddingHorizontal: 16,
     paddingVertical: 7,
     borderRadius: 999,
     marginTop: 6,
     minWidth: 60,
     alignItems: "center",
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
   },
   postButtonText: {
-    color: colors.card,
+    color: isOnboarding ? colors.text : colors.card,
     fontSize: 13,
     fontWeight: "600" as const,
   },
   noteCard: {
     backgroundColor: colors.card,
-    borderRadius: 16,
+    borderRadius: isOnboarding ? 24 : 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     padding: spacing.cardPadding,
