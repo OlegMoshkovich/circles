@@ -70,12 +70,6 @@ const THEME_OPTIONS: {
     subtitle: "Moody translucent cards over a soft green base",
     swatches: ["#35412A", "rgba(255, 255, 255, 0.14)", "#F0EBE0"],
   },
-  {
-    key: "light",
-    title: "Light",
-    subtitle: "Calm paper tones with crisp contrast",
-    swatches: ["#F7F4EF", "#FDFBF7", "#2C2A26"],
-  },
 ];
 
 const USER_TYPES: { key: UserType; label: string; icon: keyof typeof Ionicons.glyphMap; desc: string }[] = [
@@ -459,35 +453,41 @@ function ProfileStep({
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <View style={styles.panel}>
-        <StepHeader title="Your profile" subtitle="Let the community know who you are." onBack={onBack} />
-        <View style={{ paddingBottom: 8 }}>
-          <Text style={styles.fieldLabel}>Name</Text>
-          <View style={styles.inputRow}>
-            <TextInput
-              value={data.displayName}
-              onChangeText={(v) => onUpdate({ displayName: v })}
-              placeholder="Your name"
-              placeholderTextColor="rgba(239,237,225,0.35)"
-              style={styles.textInput}
-              autoCapitalize="words"
-            />
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.profileStepContent}
+        >
+          <StepHeader title="Your profile" subtitle="Let the community know who you are." onBack={onBack} />
+          <View style={{ paddingBottom: 8 }}>
+            <Text style={styles.fieldLabel}>Name</Text>
+            <View style={styles.inputRow}>
+              <TextInput
+                value={data.displayName}
+                onChangeText={(v) => onUpdate({ displayName: v })}
+                placeholder="Your name"
+                placeholderTextColor="rgba(239,237,225,0.35)"
+                style={styles.textInput}
+                autoCapitalize="words"
+              />
+            </View>
+            <Text style={[styles.fieldLabel, { marginTop: 20 }]}>
+              Bio <Text style={styles.optionalLabel}>(optional)</Text>
+            </Text>
+            <View style={[styles.inputRow, { alignItems: "flex-start", paddingTop: 8, height: 90 }]}>
+              <TextInput
+                value={data.bio}
+                onChangeText={(v) => onUpdate({ bio: v })}
+                placeholder="A few words about yourself…"
+                placeholderTextColor="rgba(239,237,225,0.35)"
+                style={[styles.textInput, { height: 64, textAlignVertical: "top" }]}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
           </View>
-          <Text style={[styles.fieldLabel, { marginTop: 20 }]}>
-            Bio <Text style={styles.optionalLabel}>(optional)</Text>
-          </Text>
-          <View style={[styles.inputRow, { alignItems: "flex-start", paddingTop: 8, height: 90 }]}>
-            <TextInput
-              value={data.bio}
-              onChangeText={(v) => onUpdate({ bio: v })}
-              placeholder="A few words about yourself…"
-              placeholderTextColor="rgba(239,237,225,0.35)"
-              style={[styles.textInput, { height: 64, textAlignVertical: "top" }]}
-              multiline
-              numberOfLines={3}
-            />
-          </View>
-        </View>
-        <GlassButton label="Continue" onPress={canContinue ? onNext : undefined} disabled={!canContinue} />
+          <GlassButton label="Continue" onPress={canContinue ? onNext : undefined} disabled={!canContinue} />
+        </ScrollView>
       </View>
     </KeyboardAvoidingView>
   );
@@ -907,6 +907,9 @@ const styles = StyleSheet.create({
   },
   panelTall: {
     maxHeight: "76%",
+  },
+  profileStepContent: {
+    paddingBottom: Platform.OS === "ios" ? 28 : 12,
   },
   // User type cards
   typeCard: {

@@ -160,22 +160,21 @@ export default function MyProfileScreen() {
               <TouchableOpacity
                 onPress={() => {
                   setBgOption((prev) => {
-                    if (prev === "light") return "onboarding";
-                    if (prev === "onboarding") return "glass";
-                    return "light";
+                    if (prev === "glass") return "onboarding";
+                    return "glass";
                   });
                 }}
                 style={styles.iconButton}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
-                {bgOption === "light" && (
-                  <Ionicons name="sunny-outline" size={16} color={colors.textOnIconBg} />
-                )}
                 {bgOption === "onboarding" && (
                   <Ionicons name="images-outline" size={16} color={colors.textOnIconBg} />
                 )}
                 {bgOption === "glass" && (
                   <Ionicons name="moon-outline" size={16} color={colors.textOnIconBg} />
+                )}
+                {bgOption !== "onboarding" && bgOption !== "glass" && (
+                  <Ionicons name="images-outline" size={16} color={colors.textOnIconBg} />
                 )}
               </TouchableOpacity>
               <TouchableOpacity
