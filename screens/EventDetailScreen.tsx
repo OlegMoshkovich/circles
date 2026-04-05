@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
@@ -30,7 +31,7 @@ type Props = NativeStackScreenProps<RootStackParamList, "EventDetail">;
 export default function EventDetailScreen({ route, navigation }: Props) {
   const { id, created_by, circleName, circle_id } = route.params;
   const insets = useSafeAreaInsets();
-  const footerBottomInset = insets.bottom > 0 ? insets.bottom - 8 : 16;
+  const footerBottomInset = 0;
   const { user } = useUser();
 
   const { bgOption } = useBackground();
@@ -213,6 +214,11 @@ export default function EventDetailScreen({ route, navigation }: Props) {
 
   return (
     <ThemedBackground backgroundColor={colors.background}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
+      >
       <View style={[styles.wrapper, { paddingBottom: insets.bottom }]}>
       {/* Fixed back button */}
       <View style={[styles.backRow, { paddingTop: insets.top + spacing.sm }]}>
@@ -247,6 +253,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <View style={styles.headerCard}>
         {imageUrl ? (
@@ -406,7 +413,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
             style={styles.inviteButton}
             onPress={() => setInviteVisible(true)}
           >
-            <Ionicons name="person-add-outline" size={16} color={styles.inviteButtonText.color} style={styles.rsvpIcon} />
+            {/* <Ionicons name="person-add-outline" size={16} color={styles.inviteButtonText.color} style={styles.rsvpIcon} /> */}
             <Text style={styles.inviteButtonText}>Invite Members</Text>
           </TouchableOpacity>
         ) : (
@@ -474,6 +481,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         initialValues={{ title, organizer, date, time, location, description, image_url: imageUrl, max_participants: maxParticipants, contact_info: contactInfo, price_info: priceInfo }}
       />
       </View>
+      </KeyboardAvoidingView>
     </ThemedBackground>
   );
 }
@@ -650,8 +658,10 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   rsvpBar: {
     paddingHorizontal: spacing.pageHorizontal,
+    paddingTop: spacing.md,
     paddingBottom: 16,
     backgroundColor: isOnboarding ? "transparent" : colors.background,
+    fontFamily: "Lora_400Regular",
   },
   rsvpButtons: {
     flexDirection: "row",
@@ -671,7 +681,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   inviteButtonText: {
     color: isOnboarding ? colors.text : colors.background,
     fontSize: 16,
-    fontWeight: "500" as const,
+    fontFamily: "Lora_400Regular",
   },
   rsvpButton: {
     flex: 1,
@@ -697,6 +707,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   rsvpButtonText: {
     fontSize: 16,
     fontWeight: "400" as const,
+    fontFamily: "Lora_400Regular",
   },
   rsvpButtonTextOutline: {
     color: colors.text,

@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
@@ -485,6 +486,11 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
   return (
     <ThemedBackground backgroundColor={colors.background}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
+      >
       <View style={[styles.wrapper, { paddingBottom: insets.bottom }]}>
       {/* Back button */}
       <View style={[styles.backRow, { paddingTop: insets.top + spacing.sm }]}>
@@ -524,7 +530,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         )}
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.headerCard}>
           <Text style={styles.title}>{name}</Text>
 
@@ -889,6 +895,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         initialValues={{ name, description, visibility }}
       />
       </View>
+      </KeyboardAvoidingView>
     </ThemedBackground>
   );
 }
