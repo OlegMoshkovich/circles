@@ -70,6 +70,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [notes, setNotes] = useState<CircleNote[]>([]);
   const [noteText, setNoteText] = useState("");
   const [postingNote, setPostingNote] = useState(false);
+  const [messagesExpanded, setMessagesExpanded] = useState(false);
   const [requests, setRequests] = useState<CircleMember[]>([]);
   const [requestCount, setRequestCount] = useState(0);
   const [loadingFeed, setLoadingFeed] = useState(false);
@@ -537,51 +538,134 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         {/* Feed tab */}
         {activeTab === "feed" && (
           <>
-            {(isOwner || isMember) && (
-              <View style={styles.composeBox}>
-                <View style={styles.composeRow}>
-                  <Ionicons name="chatbubble-outline" size={18} color={colors.text} style={styles.composeIcon} />
-                  <TextInput
-                    style={styles.composeInput}
-                    placeholder="Share a note with the circle…"
-                    placeholderTextColor={colors.textMuted}
-                    value={noteText}
-                    onChangeText={setNoteText}
-                    multiline
-                    maxLength={500}
-                  />
-                </View>
-                {noteText.trim().length > 0 && (
-                  <TouchableOpacity
-                    style={styles.postButton}
-                    onPress={handlePostNote}
-                    disabled={postingNote}
-                  >
-                    {postingNote ? (
-                      <ActivityIndicator size="small" color={colors.card} />
-                    ) : (
-                      <Text style={styles.postButtonText}>Post</Text>
-                    )}
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
             {loadingFeed ? (
               <View style={styles.loader}>
                 <ActivityIndicator size="small" color={colors.textMuted} />
               </View>
             ) : (() => {
-              const feed: FeedItem[] = [
-                ...events.map((e): FeedItem => ({ kind: "event", data: e })),
-                ...notes.map((n): FeedItem => ({ kind: "note", data: n })),
-              ].sort((a, b) =>
-                new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime()
+              const sortedEvents = [...events].sort(
+                (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
               );
-              if (feed.length === 0) return <Text style={styles.emptyText}>No posts yet</Text>;
-              return feed.map((item) => {
-                if (item.kind === "event") {
-                  const event = item.data;
-                  return (
+              const sortedNotes = [...notes].sort(
+                (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+              );
+
+              return (
+                <>
+                  {sortedEvents.length === 0 && sortedNotes.length === 0 ? (
+                    <Text style={styles.emptyText}>No posts yet</Text>
+                  ) : null}
+
+                  <View style={styles.messagesAccordion}>
+                    <TouchableOpacity
+                      style={styles.messagesAccordionHeader}
+                      onPress={() => setMessagesExpanded((prev) => !prev)}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.messagesAccordionTitleRow}>
+                        <Ionicons name="chatbubbles-outline" size={18} color={colors.text} />
+                        <Text style={styles.messagesAccordionTitle}>Messages</Text>
+                      </View>
+                      <View style={styles.messagesAccordionMeta}>
+                        <Text style={styles.messagesAccordionCount}>
+                          {sortedNotes.length}
+                        </Text>
+                        <Ionicons
+                          name={messagesExpanded ? "chevron-up" : "chevron-down"}
+                          size={18}
+                          color={colors.textMuted}
+                        />
+                      </View>
+                    </TouchableOpacity>
+
+                    {messagesExpanded ? (
+                      <View style={styles.messagesAccordionBody}>
+                        {(isOwner || isMember) && (
+                          <View style={styles.composeBox}>
+                            <View style={styles.composeRow}>
+                              <Ionicons name="chatbubble-outline" size={18} color={colors.text} style={styles.composeIcon} />
+                              <TextInput
+                                style={styles.composeInput}
+                                placeholder="Share a note with the circle…"
+                                placeholderTextColor={colors.textMuted}
+                                value={noteText}
+                                onChangeText={setNoteText}
+                                multiline
+                                maxLength={500}
+                              />
+                            </View>
+                            {noteText.trim().length > 0 && (
+                              <TouchableOpacity
+                                style={styles.postButton}
+                                onPress={handlePostNote}
+                                disabled={postingNote}
+                              >
+                                {postingNote ? (
+                                  <ActivityIndicator size="small" color={colors.card} />
+                                ) : (
+                                  <Text style={styles.postButtonText}>Post</Text>
+                                )}
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        )}
+
+                        {sortedNotes.length === 0 ? (
+                          <Text style={styles.emptyText}>No messages yet</Text>
+                        ) : (
+                          sortedNotes.map((note) => {
+                            const initials = (() => {
+                              const n = note.display_name ?? "?";
+                              const parts = n.trim().split(" ");
+                              return parts.length >= 2
+                                ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+                                : n.slice(0, 2).toUpperCase();
+                            })();
+                            const timeAgo = (() => {
+                              const diff = Date.now() - new Date(note.created_at).getTime();
+                              const mins = Math.floor(diff / 60000);
+                              if (mins < 1) return "just now";
+                              if (mins < 60) return `${mins}m ago`;
+                              const hrs = Math.floor(mins / 60);
+                              if (hrs < 24) return `${hrs}h ago`;
+                              return `${Math.floor(hrs / 24)}d ago`;
+                            })();
+                            return (
+                              <View key={`note-${note.id}`} style={styles.noteCard}>
+                                <View style={styles.noteHeader}>
+                                  <View style={styles.avatar}>
+                                    {note.avatar_url ? (
+                                      <Image source={{ uri: note.avatar_url }} style={styles.avatarImage} />
+                                    ) : (
+                                      <Text style={styles.avatarText}>{initials}</Text>
+                                    )}
+                                  </View>
+                                  <View style={styles.noteHeaderText}>
+                                    <Text style={styles.noteName}>{note.display_name ?? "Member"}</Text>
+                                    <Text style={styles.noteTime}>{timeAgo}</Text>
+                                  </View>
+                                  {note.user_id === user?.id && (
+                                    <TouchableOpacity
+                                      onPress={async () => {
+                                        await supabase.from("circle_notes").delete().eq("id", note.id);
+                                        setNotes((prev) => prev.filter((n) => n.id !== note.id));
+                                      }}
+                                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                    >
+                                      <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
+                                    </TouchableOpacity>
+                                  )}
+                                </View>
+                                <Text style={styles.noteContent}>{note.content}</Text>
+                              </View>
+                            );
+                          })
+                        )}
+                      </View>
+                    ) : null}
+                  </View>
+
+                  {sortedEvents.map((event) => (
                     <EventCard
                       key={`event-${event.id}`}
                       title={event.title}
@@ -609,55 +693,9 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                         })
                       }
                     />
-                  );
-                }
-                const note = item.data;
-                const initials = (() => {
-                  const n = note.display_name ?? "?";
-                  const parts = n.trim().split(" ");
-                  return parts.length >= 2
-                    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-                    : n.slice(0, 2).toUpperCase();
-                })();
-                const timeAgo = (() => {
-                  const diff = Date.now() - new Date(note.created_at).getTime();
-                  const mins = Math.floor(diff / 60000);
-                  if (mins < 1) return "just now";
-                  if (mins < 60) return `${mins}m ago`;
-                  const hrs = Math.floor(mins / 60);
-                  if (hrs < 24) return `${hrs}h ago`;
-                  return `${Math.floor(hrs / 24)}d ago`;
-                })();
-                return (
-                  <View key={`note-${note.id}`} style={styles.noteCard}>
-                    <View style={styles.noteHeader}>
-                      <View style={styles.avatar}>
-                        {note.avatar_url ? (
-                          <Image source={{ uri: note.avatar_url }} style={styles.avatarImage} />
-                        ) : (
-                          <Text style={styles.avatarText}>{initials}</Text>
-                        )}
-                      </View>
-                      <View style={styles.noteHeaderText}>
-                        <Text style={styles.noteName}>{note.display_name ?? "Member"}</Text>
-                        <Text style={styles.noteTime}>{timeAgo}</Text>
-                      </View>
-                      {note.user_id === user?.id && (
-                        <TouchableOpacity
-                          onPress={async () => {
-                            await supabase.from("circle_notes").delete().eq("id", note.id);
-                            setNotes((prev) => prev.filter((n) => n.id !== note.id));
-                          }}
-                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                          <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                    <Text style={styles.noteContent}>{note.content}</Text>
-                  </View>
-                );
-              });
+                  ))}
+                </>
+              );
             })()}
           </>
         )}
@@ -748,13 +786,11 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
       {/* Fixed footer: join/leave or invite */}
       <View style={styles.footer}>
-        <View style={styles.footerDivider} />
         {isOwner ? (
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => setCircleInviteVisible(true)}
           >
-            <Ionicons name="person-add-outline" size={16} color={colors.card} style={{ marginRight: 8 }} />
             <Text style={styles.actionButtonText}>Invite Members</Text>
           </TouchableOpacity>
         ) : (
@@ -1119,6 +1155,44 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     flexDirection: "row",
     alignItems: "center",
     gap: 16,
+  },
+  messagesAccordion: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    marginBottom: spacing.md,
+    overflow: "hidden",
+  },
+  messagesAccordionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.cardPadding,
+    paddingVertical: 14,
+  },
+  messagesAccordionTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  messagesAccordionTitle: {
+    ...typography.body,
+    color: colors.text,
+    fontWeight: "500" as const,
+  },
+  messagesAccordionMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  messagesAccordionCount: {
+    ...typography.bodySmall,
+    color: colors.textMuted,
+  },
+  messagesAccordionBody: {
+    paddingHorizontal: spacing.cardPadding,
+    paddingBottom: spacing.cardPadding,
   },
   composeBox: {
     backgroundColor: colors.card,

@@ -167,7 +167,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
     <Modal
       visible={visible}
       animationType="slide"
-      transparent
+      transparent={false}
       onRequestClose={showMap ? () => setShowMap(false) : pickerMode ? () => setPickerMode(null) : showDurationPicker ? () => setShowDurationPicker(false) : handleClose}
     >
       <View style={styles.overlay}>
@@ -470,12 +470,12 @@ function Field({ label, value, onChangeText, placeholder, multiline }: FieldProp
 function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: colors.background,
     justifyContent: "flex-end",
   },
   kav: { justifyContent: "flex-end" },
   sheetBacking: {
-    backgroundColor: isOnboarding ? "rgba(15,13,10,0.45)" : colors.background,
+    backgroundColor: colors.background,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     height: "95%",
@@ -528,32 +528,26 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     marginBottom: 8,
   },
   inputRow: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-    paddingBottom: 8,
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? colors.cardBorder : "transparent",
-    backgroundColor: isOnboarding ? colors.badgeBg : "transparent",
-    borderRadius: 0,
-    paddingHorizontal: 0,
-    paddingVertical: 0,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
-  inputRowMultiline: { paddingBottom: 4 },
-  input: { color: colors.text, fontSize: 16, height: 36, fontFamily: "Lora_400Regular" },
-  inputMultiline: { height: 72, textAlignVertical: "top", paddingTop: 4 },
+  inputRowMultiline: { paddingBottom: 10 },
+  input: { color: colors.text, fontSize: 16, height: 24, fontFamily: "Lora_400Regular" },
+  inputMultiline: { height: 72, textAlignVertical: "top", paddingTop: 0 },
   // Date / time picker buttons
   pickerButton: {
     flexDirection: "row",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-    paddingBottom: 10,
-    paddingTop: 2,
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? colors.cardBorder : "transparent",
-    backgroundColor: isOnboarding ? colors.badgeBg : "transparent",
-    borderRadius: 0,
-    paddingHorizontal: 0,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   pickerIcon: { marginRight: 6 },
   pickerButtonText: {
@@ -600,10 +594,12 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   locationButton: {
     flexDirection: "row",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-    paddingBottom: 10,
-    paddingTop: 2,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   locationIcon: { marginRight: 8 },
   locationButtonText: {
@@ -664,7 +660,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   circleName: { fontSize: 15, color: colors.text, fontFamily: "Lora_400Regular" },
   circleNameActive: { color: isOnboarding ? colors.text : colors.card },
   noCirclesHint: { fontSize: 13, color: colors.textMuted, fontStyle: "italic" },
-  readOnlyValue: { fontSize: 16, color: colors.textMuted, height: 36, textAlignVertical: "center" },
+  readOnlyValue: { fontSize: 16, color: colors.textMuted, height: 24, textAlignVertical: "center", fontFamily: "Lora_400Regular" },
   pickerButtonPlaceholder: { color: colors.textMuted },
   optionalLabel: { fontSize: 10, fontWeight: "400" as const, letterSpacing: 0, textTransform: "none" as const, color: colors.textMuted },
   // Duration wheel picker

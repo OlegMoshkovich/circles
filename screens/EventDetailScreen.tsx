@@ -268,11 +268,15 @@ export default function EventDetailScreen({ route, navigation }: Props) {
           <Text style={styles.metaText}>{location}</Text>
         </View>
 
-        <View style={styles.divider} />
-
-        <Text style={styles.description}>{description}</Text>
-
-        <View style={styles.divider} />
+        {description.trim().length > 0 ? (
+          <>
+            <View style={styles.divider} />
+            <Text style={styles.description}>{description}</Text>
+            <View style={styles.divider} />
+          </>
+        ) : (
+          <View style={styles.divider} />
+        )}
 
         {/* Attendees */}
         <View style={styles.attendeesHeader}>
@@ -370,7 +374,6 @@ export default function EventDetailScreen({ route, navigation }: Props) {
 
       {/* Fixed RSVP bar */}
       <View style={styles.rsvpBar}>
-        <View style={styles.divider} />
         {isCreator && circle_id ? (
           <TouchableOpacity
             style={styles.inviteButton}
@@ -386,9 +389,6 @@ export default function EventDetailScreen({ route, navigation }: Props) {
               onPress={() => handleRsvp("going")}
               disabled={submitting}
             >
-              {rsvp === "going" && (
-                <Ionicons name="checkmark" size={15} color={colors.card} style={styles.rsvpIcon} />
-              )}
               <Text style={[styles.rsvpButtonText, rsvp === "going" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline]}>
                 Going
               </Text>
@@ -399,9 +399,6 @@ export default function EventDetailScreen({ route, navigation }: Props) {
               onPress={() => handleRsvp("maybe")}
               disabled={submitting}
             >
-              {rsvp === "maybe" && (
-                <Ionicons name="checkmark" size={15} color={colors.card} style={styles.rsvpIcon} />
-              )}
               <Text style={[styles.rsvpButtonText, rsvp === "maybe" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline]}>
                 Maybe
               </Text>

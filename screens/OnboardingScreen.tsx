@@ -66,7 +66,7 @@ const THEME_OPTIONS: {
   },
   {
     key: "glass",
-    title: "Dark",
+    title: "Green",
     subtitle: "Moody translucent cards over a soft green base",
     swatches: ["#35412A", "rgba(255, 255, 255, 0.14)", "#F0EBE0"],
   },

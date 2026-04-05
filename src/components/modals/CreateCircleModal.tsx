@@ -110,7 +110,7 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
     <Modal
       visible={visible}
       animationType="slide"
-      transparent
+      transparent={false}
       onRequestClose={showMap ? () => setShowMap(false) : handleClose}
     >
       <View style={styles.overlay}>
@@ -274,14 +274,14 @@ function Field({ label, value, onChangeText, placeholder, multiline }: FieldProp
 function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: colors.background,
     justifyContent: "flex-end",
   },
   kav: {
     justifyContent: "flex-end",
   },
   sheetBacking: {
-    backgroundColor: isOnboarding ? "rgba(15,13,10,0.45)" : colors.background,
+    backgroundColor: colors.background,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     height: "94%",
@@ -337,29 +337,29 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     marginBottom: 8,
   },
   inputRow: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-    paddingBottom: 8,
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? colors.cardBorder : "transparent",
-    backgroundColor: isOnboarding ? colors.badgeBg : "transparent",
-    borderRadius: 0,
-    paddingHorizontal: 0,
-    paddingVertical: 0,
+    minHeight: 52,
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.background,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   inputRowMultiline: {
-    paddingBottom: 4,
+    minHeight: 112,
+    alignItems: "flex-start",
+    paddingTop: 12,
   },
   input: {
     color: colors.text,
     fontSize: 16,
-    height: 36,
+    minHeight: 24,
     fontFamily: "Lora_400Regular",
   },
   inputMultiline: {
-    height: 72,
+    minHeight: 88,
     textAlignVertical: "top",
-    paddingTop: 4,
   },
   categoryGrid: {
     flexDirection: "row",
@@ -439,15 +439,13 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   locationButton: {
     flexDirection: "row",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-    paddingBottom: 10,
-    paddingTop: 2,
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? colors.cardBorder : "transparent",
-    backgroundColor: isOnboarding ? colors.badgeBg : "transparent",
-    borderRadius: 0,
-    paddingHorizontal: 0,
+    minHeight: 52,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.background,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   locationIcon: {
     marginRight: 8,
@@ -461,5 +459,5 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   locationButtonPlaceholder: {
     color: colors.textMuted,
   },
-  readOnlyValue: { fontSize: 16, color: colors.textMuted, height: 36, textAlignVertical: "center", fontFamily: "Lora_400Regular" },
+  readOnlyValue: { fontSize: 16, color: colors.textMuted, minHeight: 24, textAlignVertical: "center", fontFamily: "Lora_400Regular" },
 }); }
