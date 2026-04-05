@@ -36,9 +36,18 @@ export default function MyProfileScreen() {
   const { setUnreadCount } = useNotificationContext();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loadingNotifs, setLoadingNotifs] = useState(false);
+  const [circleCount, setCircleCount] = useState(0);
+  const [eventCount, setEventCount] = useState(0);
   const { bgOption, setBgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
+  const headerCardStyle = React.useMemo(
+    () => ({
+      marginBottom: spacing.lg,
+      ...(bgOption === "onboarding" ? { borderRadius: 16, paddingTop: 0 } : null),
+    }),
+    [bgOption]
+  );
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
@@ -56,9 +65,29 @@ export default function MyProfileScreen() {
     setLoadingNotifs(false);
   }, [user, setUnreadCount]);
 
+  const fetchProfileCounts = useCallback(async () => {
+    if (!user) return;
+
+    const [circlesResult, eventsResult] = await Promise.all([
+      supabase
+        .from("circle_members")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("status", "active"),
+      supabase
+        .from("event_rsvps")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id),
+    ]);
+
+    setCircleCount(circlesResult.count ?? 0);
+    setEventCount(eventsResult.count ?? 0);
+  }, [user]);
+
   useFocusEffect(useCallback(() => {
     fetchNotifications();
-  }, [fetchNotifications]));
+    fetchProfileCounts();
+  }, [fetchNotifications, fetchProfileCounts]));
 
   async function handleAccept(notif: AppNotification) {
     if (!user) return;
@@ -115,7 +144,7 @@ export default function MyProfileScreen() {
 
   return (
     <ScreenLayout backgroundColor={screenBgColor}>
-      <ScreenHeaderCard style={{ marginBottom: spacing.lg }}>
+      <ScreenHeaderCard style={headerCardStyle}>
         <NavbarTitle
           title={t.nav.profile}
           rightElement={
@@ -200,22 +229,6 @@ export default function MyProfileScreen() {
         </>
       ) : null}
 
-      {/* Account card */}
-      <Text style={styles.sectionLabel}>{t.profile.account}</Text>
-      <View style={styles.card}>
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>{t.profile.circle}</Text>
-          <Text style={styles.rowValue}>{t.profile.circleValue}</Text>
-        </View>
-        {/* <View style={styles.rowDivider} /> */}
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>{t.profile.memberSince}</Text>
-          <Text style={styles.rowValue}>{memberSince}</Text>
-        </View>
-      </View>
-
-      <View style={styles.divider} />
-
       {/* Neighbourhood card */}
       <Text style={styles.sectionLabel}>{t.profile.neighbourhood}</Text>
       <View style={styles.card}>
@@ -223,10 +236,17 @@ export default function MyProfileScreen() {
           <Text style={styles.rowLabel}>{t.profile.location}</Text>
           <Text style={styles.rowValue}>{t.profile.locationValue}</Text>
         </View>
-        {/* <View style={styles.rowDivider} /> */}
         <View style={styles.row}>
           <Text style={styles.rowLabel}>{t.profile.neighbours}</Text>
           <Text style={styles.rowValue}>{t.profile.neighboursValue}</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>{t.nav.circles}</Text>
+          <Text style={styles.rowValue}>{circleCount}</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.rowLabel}>{t.nav.events}</Text>
+          <Text style={styles.rowValue}>{eventCount}</Text>
         </View>
       </View>
 
@@ -294,9 +314,9 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       color: colors.text,
     },
     name: {
-      fontSize: isOnboarding ? 30 : 20,
+      fontSize: 20,
       fontWeight: "400" as const,
-      fontFamily: isOnboarding ? "CormorantGaramond_300Light" : "Lora_400Regular",
+      fontFamily: "Lora_400Regular",
       color: colors.text,
       marginBottom: spacing.xs,
     },
@@ -319,17 +339,17 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     },
     card: {
       backgroundColor: colors.card,
-      borderRadius: isOnboarding ? 24 : 16,
+      borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.cardBorder,
       ...Platform.select({
         ios: {
           shadowColor: "#000000",
-          shadowOffset: { width: 0, height: isOnboarding ? 10 : 1 },
-          shadowOpacity: isOnboarding ? 0.14 : 0.05,
-          shadowRadius: isOnboarding ? 24 : 2,
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.05,
+          shadowRadius: 2,
         },
-        android: { elevation: isOnboarding ? 4 : 1 },
+        android: { elevation: 1 },
         default: {},
       }),
     },
@@ -403,7 +423,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       flexDirection: "row",
       alignItems: "center",
       backgroundColor: colors.card,
-      borderRadius: isOnboarding ? 20 : 12,
+      borderRadius: 12,
       borderWidth: 1,
       borderColor: colors.cardBorder,
       padding: 12,

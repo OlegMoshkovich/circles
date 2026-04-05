@@ -20,9 +20,9 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
   return StyleSheet.create({
     card: {
       backgroundColor: colors.card,
-      borderRadius: isOnboarding ? 28 : 16,
+      borderRadius: 16,
       paddingHorizontal: spacing.cardPadding,
-      paddingTop: isOnboarding ? 8 : 0,
+      paddingTop: 0,
       paddingBottom: spacing.cardPadding,
       marginTop: 20,
       marginBottom: spacing.xl,
@@ -31,11 +31,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       ...Platform.select({
         ios: {
           shadowColor: "#000000",
-          shadowOffset: { width: 0, height: isOnboarding ? 10 : 1 },
+          shadowOffset: { width: 0, height: 1 },
           shadowOpacity: isOnboarding ? 0.16 : 0.06,
-          shadowRadius: isOnboarding ? 24 : 3,
+          shadowRadius: 3,
         },
-        android: { elevation: isOnboarding ? 4 : 2 },
+        android: { elevation: 2 },
         default: {},
       }),
     },

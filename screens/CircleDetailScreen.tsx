@@ -844,7 +844,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   headerCard: {
     backgroundColor: colors.card,
-    borderRadius: isOnboarding ? 28 : 16,
+    borderRadius: 16,
     padding: spacing.cardPadding,
     marginBottom: spacing.md,
     borderWidth: 1,
@@ -852,11 +852,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     ...Platform.select({
       ios: {
         shadowColor: "#000000",
-        shadowOffset: { width: 0, height: isOnboarding ? 10 : 1 },
+        shadowOffset: { width: 0, height: 1 },
         shadowOpacity: isOnboarding ? 0.14 : 0.06,
-        shadowRadius: isOnboarding ? 24 : 3,
+        shadowRadius: 3,
       },
-      android: { elevation: isOnboarding ? 4 : 2 },
+      android: { elevation: 2 },
       default: {},
     }),
   },
@@ -892,7 +892,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     paddingBottom: spacing.xl,
   },
   title: {
-    fontSize: isOnboarding ? 36 : 32,
+    fontSize: 32,
     fontFamily: "CormorantGaramond_300Light",
     color: colors.text,
     lineHeight: 38,
@@ -1122,7 +1122,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   composeBox: {
     backgroundColor: colors.card,
-    borderRadius: isOnboarding ? 24 : 12,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     padding: spacing.cardPadding,
@@ -1130,11 +1130,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     ...Platform.select({
       ios: {
         shadowColor: "#000000",
-        shadowOffset: { width: 0, height: isOnboarding ? 10 : 1 },
+        shadowOffset: { width: 0, height: 1 },
         shadowOpacity: isOnboarding ? 0.12 : 0.05,
-        shadowRadius: isOnboarding ? 20 : 2,
+        shadowRadius: 2,
       },
-      android: { elevation: isOnboarding ? 4 : 1 },
+      android: { elevation: 1 },
       default: {},
     }),
   },
@@ -1173,7 +1173,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   noteCard: {
     backgroundColor: colors.card,
-    borderRadius: isOnboarding ? 24 : 16,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     padding: spacing.cardPadding,

@@ -35,6 +35,8 @@ function makeTabButton(getLabel: (t: Translations) => string, showBadge = false)
     const focused = accessibilityState?.selected;
     const labelColor = bgOption === "onboarding"
       ? (focused ? "rgba(255, 255, 255, 0.96)" : "rgba(255, 255, 255, 0.72)")
+      : bgOption === "glass"
+        ? (focused ? "rgba(255, 255, 255, 0.96)" : "rgba(255, 255, 255, 0.72)")
       : (focused ? colors.text : colors.textMuted);
 
     return (
@@ -63,8 +65,8 @@ export default function TabNavigator() {
         tabBarStyle: {
           position: "absolute",
           bottom: tabBarBottom,
-          left: 20,
-          right: 20,
+          left: 28,
+          right: 28,
           borderRadius: 32,
           height: 56,
           backgroundColor: "transparent",

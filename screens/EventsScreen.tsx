@@ -447,7 +447,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
   },
   filterPanel: {
     backgroundColor: colors.card,
-    borderRadius: isOnboarding ? 22 : 16,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     padding: 14,
