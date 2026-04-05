@@ -1,3 +1,14 @@
+export const GLASS_BACKGROUND_OPTIONS = [
+  "#768445",
+  "#35412A",
+  "#6B8426",
+  "#B3C8C0",
+  "#1F3A2A",
+  "#9AAA73",
+] as const;
+
+export type GlassBackgroundColor = (typeof GLASS_BACKGROUND_OPTIONS)[number];
+
 /**
  * Calm "paper on warm background" palette
  */
@@ -32,8 +43,9 @@ export const onboardingColors = {
 /**
  * Glassmorphism palette — semi-transparent cards over a muted green base
  */
-export const glassColors = {
-  background: "#35412A",
+export function createGlassColors(background: GlassBackgroundColor = GLASS_BACKGROUND_OPTIONS[1]) {
+  return {
+  background,
   card: "rgba(255, 255, 255, 0.14)",
   cardBorder: "rgba(255, 255, 255, 0.28)",
   text: "#F0EBE0",
@@ -43,6 +55,9 @@ export const glassColors = {
   badgeBg: "rgba(255, 255, 255, 0.14)",
   divider: "rgba(255, 255, 255, 0.2)",
 } as const;
+}
+
+export const glassColors = createGlassColors();
 
 /**
  * Forest green palette — cream text and lines on olive background

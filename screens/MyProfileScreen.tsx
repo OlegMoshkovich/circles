@@ -6,7 +6,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { ScreenLayout } from "../src/components/layout/ScreenLayout";
 import { ScreenHeaderCard } from "../src/components/layout/ScreenHeaderCard";
 import { NavbarTitle } from "../src/components/layout/NavbarTitle";
-import { Colors } from "../src/theme/colors";
+import { Colors, GLASS_BACKGROUND_OPTIONS } from "../src/theme/colors";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { useLanguage, Language } from "../src/i18n/LanguageContext";
@@ -35,10 +35,10 @@ export default function MyProfileScreen() {
   const { language, setLanguage, t } = useLanguage();
   const { setUnreadCount } = useNotificationContext();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [loadingNotifs, setLoadingNotifs] = useState(false);
+  const [showGlassPalette, setShowGlassPalette] = useState(false);
   const [circleCount, setCircleCount] = useState(0);
   const [eventCount, setEventCount] = useState(0);
-  const { bgOption, setBgOption } = useBackground();
+  const { bgOption, setBgOption, glassBackground, setGlassBackground } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const headerCardStyle = React.useMemo(
@@ -51,7 +51,6 @@ export default function MyProfileScreen() {
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
-    setLoadingNotifs(true);
     const { data } = await supabase
       .from("notifications")
       .select("*")
@@ -62,7 +61,6 @@ export default function MyProfileScreen() {
       setNotifications(data as AppNotification[]);
       setUnreadCount(data.length);
     }
-    setLoadingNotifs(false);
   }, [user, setUnreadCount]);
 
   const fetchProfileCounts = useCallback(async () => {
@@ -88,6 +86,12 @@ export default function MyProfileScreen() {
     fetchNotifications();
     fetchProfileCounts();
   }, [fetchNotifications, fetchProfileCounts]));
+
+  React.useEffect(() => {
+    if (bgOption !== "glass") {
+      setShowGlassPalette(false);
+    }
+  }, [bgOption]);
 
   async function handleAccept(notif: AppNotification) {
     if (!user) return;
@@ -157,26 +161,55 @@ export default function MyProfileScreen() {
                 <Ionicons name="play-outline" size={16} color={colors.textOnIconBg} />
               </TouchableOpacity>
               {/* Theme Toggle Button */}
-              <TouchableOpacity
-                onPress={() => {
-                  setBgOption((prev) => {
-                    if (prev === "glass") return "onboarding";
-                    return "glass";
-                  });
-                }}
-                style={styles.iconButton}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              >
-                {bgOption === "onboarding" && (
-                  <Ionicons name="images-outline" size={16} color={colors.textOnIconBg} />
-                )}
-                {bgOption === "glass" && (
-                  <Ionicons name="moon-outline" size={16} color={colors.textOnIconBg} />
-                )}
-                {bgOption !== "onboarding" && bgOption !== "glass" && (
-                  <Ionicons name="images-outline" size={16} color={colors.textOnIconBg} />
-                )}
-              </TouchableOpacity>
+              <View style={styles.paletteAnchor}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowGlassPalette(false);
+                    setBgOption((prev) => {
+                      if (prev === "glass") return "onboarding";
+                      return "glass";
+                    });
+                  }}
+                  onLongPress={() => {
+                    if (bgOption === "glass") {
+                      setShowGlassPalette((prev) => !prev);
+                    }
+                  }}
+                  delayLongPress={220}
+                  style={styles.iconButton}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  {bgOption === "onboarding" && (
+                    <Ionicons name="images-outline" size={16} color={colors.textOnIconBg} />
+                  )}
+                  {bgOption === "glass" && (
+                    <Ionicons name="moon-outline" size={16} color={colors.textOnIconBg} />
+                  )}
+                  {bgOption !== "onboarding" && bgOption !== "glass" && (
+                    <Ionicons name="images-outline" size={16} color={colors.textOnIconBg} />
+                  )}
+                </TouchableOpacity>
+                {bgOption === "glass" && showGlassPalette ? (
+                  <View style={styles.glassPalette}>
+                    {GLASS_BACKGROUND_OPTIONS.map((color) => (
+                      <TouchableOpacity
+                        key={color}
+                        onPress={() => {
+                          setGlassBackground(color);
+                          setShowGlassPalette(false);
+                        }}
+                        style={[
+                          styles.glassPaletteSwatchButton,
+                          glassBackground === color && styles.glassPaletteSwatchButtonSelected,
+                        ]}
+                        activeOpacity={0.85}
+                      >
+                        <View style={[styles.glassPaletteSwatch, { backgroundColor: color }]} />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
               <TouchableOpacity
                 onPress={() => handleSignOut(signOut)}
                 style={styles.iconButton}
@@ -378,6 +411,12 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     headerButtons: {
       flexDirection: "row",
       gap: 8,
+      alignItems: "flex-start",
+      zIndex: 10,
+    },
+    paletteAnchor: {
+      position: "relative",
+      alignItems: "center",
     },
     iconButton: {
       width: 30,
@@ -388,6 +427,31 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       borderColor: isOnboarding ? colors.cardBorder : "transparent",
       alignItems: "center",
       justifyContent: "center",
+    },
+    glassPalette: {
+      position: "absolute",
+      top: 38,
+      alignItems: "center",
+      gap: 8,
+      zIndex: 20,
+    },
+    glassPaletteSwatchButton: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: isOnboarding ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)",
+      borderWidth: 1,
+      borderColor: "transparent",
+    },
+    glassPaletteSwatchButtonSelected: {
+      borderColor: colors.text,
+    },
+    glassPaletteSwatch: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
     },
     flagRow: {
       flexDirection: "row",
@@ -402,11 +466,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.cardBorder,
-      backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+      backgroundColor: colors.card,
     },
     flagButtonSelected: {
       borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.text,
-      backgroundColor: isOnboarding ? "rgba(255,255,255,0.14)" : colors.card,
+      backgroundColor: colors.card,
     },
     flagEmoji: {
       fontSize: 20,
