@@ -270,21 +270,30 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
 
                 <View style={styles.fieldContainer}>
                   <Text style={styles.fieldLabel}>Location</Text>
-                  <TouchableOpacity
-                    style={styles.locationButton}
-                    onPress={() => setShowMap(true)}
-                    activeOpacity={0.7}
-                  >
+                  <View style={styles.inputRow}>
                     <Ionicons
                       name={location ? "location" : "location-outline"}
                       size={16}
                       color={location ? colors.iconbBg : colors.textMuted}
                       style={styles.locationIcon}
                     />
-                    <Text style={[styles.locationButtonText, !location && styles.locationButtonPlaceholder]} numberOfLines={1}>
-                      {location || "Tap to choose on map"}
+                    <TextInput
+                      value={location}
+                      onChangeText={setLocation}
+                      placeholder="Enter an address"
+                      placeholderTextColor={colors.textMuted}
+                      style={styles.locationInput}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    style={styles.locationMapButton}
+                    onPress={() => setShowMap(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="map-outline" size={14} color={colors.textMuted} style={styles.pickerIcon} />
+                    <Text style={styles.locationMapButtonText}>
+                      Choose on map instead
                     </Text>
-                    <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
                   </TouchableOpacity>
                 </View>
 
@@ -598,24 +607,27 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   picker: { width: "100%" },
   // Location
-  locationButton: {
+  locationInput: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 16,
+    height: 24,
+    fontFamily: "Lora_400Regular",
+  },
+  locationMapButton: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
-    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    alignSelf: "flex-start",
+    marginTop: 10,
+    paddingHorizontal: 2,
+    paddingVertical: 2,
   },
   locationIcon: { marginRight: 8 },
-  locationButtonText: {
-    flex: 1,
-    fontSize: 16,
+  locationMapButtonText: {
+    fontSize: 14,
     fontFamily: "Lora_400Regular",
-    color: colors.text,
+    color: colors.textMuted,
   },
-  locationButtonPlaceholder: { color: colors.textMuted },
   // Save
   saveButton: {
     backgroundColor: isOnboarding ? "rgba(255,255,255,0.14)" : colors.text,

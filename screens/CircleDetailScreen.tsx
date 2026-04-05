@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useUser } from "@clerk/clerk-expo";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
 import { Colors } from "../src/theme/colors";
@@ -169,11 +169,9 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     }
   }
 
-  // Load circle events + feed items
-  useEffect(() => {
-    if (activeTab !== "events" && activeTab !== "feed") return;
+  const loadFeed = useCallback(() => {
     setLoadingFeed(true);
-    Promise.all([
+    return Promise.all([
       supabase.from("events").select("*").eq("circle_id", id).order("created_at", { ascending: false }),
       supabase.from("circle_notes").select("*").eq("circle_id", id).order("created_at", { ascending: false }),
     ]).then(async ([eventsResult, notesResult]) => {
@@ -197,7 +195,20 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       if (!notesResult.error && notesResult.data) setNotes(notesResult.data);
       setLoadingFeed(false);
     });
-  }, [id, activeTab]);
+  }, [id]);
+
+  // Load circle events + feed items
+  useEffect(() => {
+    if (activeTab !== "events" && activeTab !== "feed") return;
+    loadFeed();
+  }, [activeTab, loadFeed]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (activeTab !== "events" && activeTab !== "feed") return;
+      loadFeed();
+    }, [activeTab, loadFeed])
+  );
 
   async function handleSaveEvent(data: NewEventData) {
     const { data: createdEvent, error } = await supabase.from("events").insert({
@@ -227,8 +238,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       setCreateEventVisible(false);
       // Reload circle events
       setActiveTab("events");
-      supabase.from("events").select("*").eq("circle_id", id).order("created_at", { ascending: false })
-        .then(({ data: rows }) => { if (rows) setEvents(rows); });
+      await loadFeed();
       return true;
     }
     console.error("Failed to create circle event", error);
@@ -468,20 +478,30 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           <Ionicons name="chevron-back" size={18} color={colors.text} />
           <Text style={styles.backLabel}>Back</Text>
         </TouchableOpacity>
-        {isOwner && (
+        {(isOwner || isMember) && (
           <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={() => setCreateEventVisible(true)}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Ionicons name="calendar-outline" size={18} color={colors.text} />
+            </TouchableOpacity>
+            {isOwner && (
             <TouchableOpacity
               onPress={() => setEditVisible(true)}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
               <Ionicons name="create-outline" size={18} color={colors.text} />
             </TouchableOpacity>
+            )}
+            {isOwner && (
             <TouchableOpacity
               onPress={handleDelete}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
               <Ionicons name="trash-outline" size={18} color={colors.text} />
             </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
@@ -527,15 +547,6 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                 </View>
               </TouchableOpacity>
             </View>
-            {(isOwner || isMember) && activeTab === "events" && (
-              <TouchableOpacity
-                onPress={() => setCreateEventVisible(true)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                style={styles.addEventButton}
-              >
-                <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
-              </TouchableOpacity>
-            )}
           </View>
         </View>
 
@@ -1003,10 +1014,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     flexWrap: "wrap",
     gap: spacing.md,
     flex: 1,
-  },
-  addEventButton: {
-    padding: 4,
-    marginTop: 2,
   },
   tab: {
     paddingBottom: 8,

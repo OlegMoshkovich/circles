@@ -426,6 +426,14 @@ export default function EventDetailScreen({ route, navigation }: Props) {
           setTime(data.time);
           setLocation(data.location);
           setDescription(data.description);
+          navigation.setParams({
+            title: data.title,
+            organizer: data.organizer,
+            date: data.date,
+            time: data.time,
+            location: data.location,
+            description: data.description,
+          });
         }}
         eventId={id}
         initialValues={{ title, organizer, date, time, location, description }}
