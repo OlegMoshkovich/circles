@@ -21,6 +21,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
 import { Colors } from "../src/theme/colors";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
+import { useLanguage } from "../src/i18n/LanguageContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, CircleMember, CircleNote, Event, UserProfile } from "../lib/supabase";
@@ -37,11 +38,7 @@ type FeedItem =
   | { kind: "event"; data: Event }
   | { kind: "note"; data: CircleNote };
 
-const VISIBILITY_LABEL: Record<string, string> = {
-  public: "Public",
-  request: "Request to join",
-  private: "Private",
-};
+// VISIBILITY_LABEL is now built dynamically with translations (see visibilityLabel() inside the component)
 
 export default function CircleDetailScreen({ route, navigation }: Props) {
   const { id, owner_id } = route.params;
@@ -50,10 +47,16 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const { user } = useUser();
   const nav = useNavigation<Nav>();
 
+  const { t } = useLanguage();
   const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const isOwner = user?.id === owner_id;
+  const visibilityLabel: Record<string, string> = {
+    public: t.circles.public,
+    request: t.circles.visibilityRequestToJoin,
+    private: t.circles.private,
+  };
 
   // Mutable display fields (can be updated via edit modal)
   const [name, setName] = useState(route.params.name);
@@ -427,12 +430,12 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
   function handleDelete() {
     Alert.alert(
-      "Delete Circle",
-      "This will permanently delete the circle and remove all members. This cannot be undone.",
+      t.circles.deleteTitle,
+      t.circles.deleteMessage,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t.common.cancel, style: "cancel" },
         {
-          text: "Delete",
+          text: t.common.delete,
           style: "destructive",
           onPress: async () => {
             const { error } = await supabase
@@ -456,7 +459,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           onPress={handleLeave}
           disabled={submitting}
         >
-          <Text style={styles.actionButtonTextOutline}>Leave Circle</Text>
+          <Text style={styles.actionButtonTextOutline}>{t.circles.leave}</Text>
         </TouchableOpacity>
       );
     }
@@ -464,7 +467,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     if (isRequested) {
       return (
         <View style={[styles.actionButton, styles.actionButtonOutline]}>
-          <Text style={styles.actionButtonTextOutline}>Requested</Text>
+          <Text style={styles.actionButtonTextOutline}>{t.circles.requested}</Text>
         </View>
       );
     }
@@ -478,7 +481,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         disabled={submitting}
       >
         <Text style={styles.joinButtonText}>
-          {visibility === "request" ? "Request to Join" : "Join Circle"}
+          {visibility === "request" ? t.circles.requestToJoin : t.circles.join}
         </Text>
       </TouchableOpacity>
     );
@@ -500,7 +503,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
           <Ionicons name="chevron-back" size={18} color={colors.text} />
-          <Text style={styles.backLabel}>Back</Text>
+          <Text style={styles.backLabel}>{t.common.back}</Text>
         </TouchableOpacity>
         {(isOwner || isMember) && (
           <View style={styles.headerActions}>
@@ -543,26 +546,26 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                 style={[styles.tab, activeTab === "events" && styles.tabActive]}
                 onPress={() => setActiveTab("events")}
               >
-                <Text style={[styles.tabText, activeTab === "events" && styles.tabTextActive]}>Events</Text>
+                <Text style={[styles.tabText, activeTab === "events" && styles.tabTextActive]}>{t.circles.eventsTab}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.tab, activeTab === "feed" && styles.tabActive]}
                 onPress={() => setActiveTab("feed")}
               >
-                <Text style={[styles.tabText, activeTab === "feed" && styles.tabTextActive]}>Feed</Text>
+                <Text style={[styles.tabText, activeTab === "feed" && styles.tabTextActive]}>{t.circles.feed}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.tab, activeTab === "members" && styles.tabActive]}
                 onPress={() => setActiveTab("members")}
               >
-                <Text style={[styles.tabText, activeTab === "members" && styles.tabTextActive]}>Members</Text>
+                <Text style={[styles.tabText, activeTab === "members" && styles.tabTextActive]}>{t.circles.members}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.tab, activeTab === "description" && styles.tabActive]}
                 onPress={() => setActiveTab("description")}
               >
                 <View style={styles.tabWithBadge}>
-                  <Text style={[styles.tabText, activeTab === "description" && styles.tabTextActive]}>Description</Text>
+                  <Text style={[styles.tabText, activeTab === "description" && styles.tabTextActive]}>{t.circles.descriptionTab}</Text>
                   {isOwner && requestCount > 0 && (
                     <View style={styles.tabBadge}>
                       <Text style={styles.tabBadgeText}>{requestCount}</Text>
@@ -589,7 +592,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
               return (
                 <>
                   {sortedEvents.length === 0 ? (
-                    <Text style={styles.emptyText}>No circle events yet</Text>
+                    <Text style={styles.emptyText}>{t.circles.noCircleEvents}</Text>
                   ) : null}
 
                   {sortedEvents.map((event) => (
@@ -651,7 +654,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                         <Ionicons name="chatbubble-outline" size={18} color={colors.text} style={styles.composeIcon} />
                         <TextInput
                           style={styles.composeInput}
-                          placeholder="Share a note with the circle…"
+                          placeholder={t.circles.notePlaceholder}
                           placeholderTextColor={colors.textMuted}
                           value={noteText}
                           onChangeText={setNoteText}
@@ -668,7 +671,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                           {postingNote ? (
                             <ActivityIndicator size="small" color={colors.card} />
                           ) : (
-                            <Text style={styles.postButtonText}>Post</Text>
+                            <Text style={styles.postButtonText}>{t.common.post}</Text>
                           )}
                         </TouchableOpacity>
                       )}
@@ -676,7 +679,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                   )}
 
                   {sortedNotes.length === 0 ? (
-                    <Text style={styles.emptyText}>No messages yet</Text>
+                    <Text style={styles.emptyText}>{t.circles.noFeed}</Text>
                   ) : (
                     sortedNotes.map((note) => {
                       const initials = (() => {
@@ -706,7 +709,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                               )}
                             </View>
                             <View style={styles.noteHeaderText}>
-                              <Text style={styles.noteName}>{note.display_name ?? "Member"}</Text>
+                              <Text style={styles.noteName}>{note.display_name ?? t.circles.typeMember}</Text>
                               <Text style={styles.noteTime}>{timeAgo}</Text>
                             </View>
                             {note.user_id === user?.id && (
@@ -739,7 +742,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
               <ActivityIndicator size="small" color={colors.textMuted} />
             </View>
           ) : members.length === 0 && invitedUsers.length === 0 ? (
-            <Text style={styles.emptyText}>No members yet</Text>
+            <Text style={styles.emptyText}>{t.circles.noMembers}</Text>
           ) : (
             <View style={styles.membersPanel}>
               {members.map((member) => (
@@ -764,7 +767,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                     </View>
                     <Text style={styles.memberUserId} numberOfLines={1}>{u.name}</Text>
                     <View style={styles.invitedBadge}>
-                      <Text style={styles.invitedBadgeText}>INVITED</Text>
+                      <Text style={styles.invitedBadgeText}>{t.circles.badgeInvited}</Text>
                     </View>
                   </View>
                 );
@@ -781,24 +784,24 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
             </View>
           ) : (
             <View style={styles.descriptionPanel}>
-              <Text style={styles.sectionTitle}>About this circle</Text>
+              <Text style={styles.sectionTitle}>{t.circles.about}</Text>
               <Text style={styles.descriptionBody}>
-                {description?.trim() ? description : "No description yet."}
+                {description?.trim() ? description : t.circles.noDescription}
               </Text>
 
               <View style={styles.descriptionMetaList}>
                 <View style={styles.descriptionMetaRow}>
-                  <Text style={styles.descriptionMetaLabel}>Visibility</Text>
-                  <Text style={styles.descriptionMetaValue}>{VISIBILITY_LABEL[visibility]}</Text>
+                  <Text style={styles.descriptionMetaLabel}>{t.circles.visibility}</Text>
+                  <Text style={styles.descriptionMetaValue}>{visibilityLabel[visibility]}</Text>
                 </View>
                 {organizer ? (
                   <View style={styles.descriptionMetaRow}>
-                    <Text style={styles.descriptionMetaLabel}>Organizer</Text>
+                    <Text style={styles.descriptionMetaLabel}>{t.circles.organizer}</Text>
                     <Text style={styles.descriptionMetaValue}>{organizer}</Text>
                   </View>
                 ) : null}
                 <View style={styles.descriptionMetaRow}>
-                  <Text style={styles.descriptionMetaLabel}>Members</Text>
+                  <Text style={styles.descriptionMetaLabel}>{t.circles.members}</Text>
                   <Text style={styles.descriptionMetaValue}>{memberCount}</Text>
                 </View>
               </View>
@@ -807,7 +810,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                 <>
                   <View style={styles.sectionDivider} />
                   <View style={styles.ownerSectionHeader}>
-                    <Text style={styles.sectionTitle}>Pending requests</Text>
+                    <Text style={styles.sectionTitle}>{t.circles.pendingRequestsLabel}</Text>
                     {requestCount > 0 && (
                       <View style={styles.tabBadge}>
                         <Text style={styles.tabBadgeText}>{requestCount}</Text>
@@ -815,7 +818,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                     )}
                   </View>
                   {requests.length === 0 ? (
-                    <Text style={styles.emptyText}>No pending requests</Text>
+                    <Text style={styles.emptyText}>{t.circles.noPendingRequests}</Text>
                   ) : (
                     requests.map((req) => {
                       const name =
@@ -836,7 +839,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                             style={styles.acceptButton}
                             onPress={() => handleAccept(req)}
                           >
-                            <Text style={styles.acceptButtonText}>Accept</Text>
+                            <Text style={styles.acceptButtonText}>{t.common.accept}</Text>
                           </TouchableOpacity>
                           <TouchableOpacity
                             style={styles.declineButton}
@@ -862,7 +865,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
             style={styles.actionButton}
             onPress={() => setCircleInviteVisible(true)}
           >
-            <Text style={styles.actionButtonText}>Invite Members</Text>
+            <Text style={styles.actionButtonText}>{t.common.inviteMembers}</Text>
           </TouchableOpacity>
         ) : (
           renderJoinButton()
@@ -913,6 +916,7 @@ function MemberRow({
   currentUserName?: string | null;
   profileMap: Record<string, string>;
 }) {
+  const { t } = useLanguage();
   const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
@@ -933,12 +937,12 @@ function MemberRow({
       <Text style={styles.memberUserId} numberOfLines={1}>{name}</Text>
       {isOwner && (
         <View style={styles.roleBadge}>
-          <Text style={styles.roleBadgeText}>OWNER</Text>
+          <Text style={styles.roleBadgeText}>{t.circles.badgeOwner}</Text>
         </View>
       )}
       {!isOwner && member.role === "admin" && (
         <View style={styles.roleBadge}>
-          <Text style={styles.roleBadgeText}>ADMIN</Text>
+          <Text style={styles.roleBadgeText}>{t.circles.badgeAdmin}</Text>
         </View>
       )}
     </View>

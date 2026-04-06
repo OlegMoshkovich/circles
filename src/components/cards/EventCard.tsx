@@ -60,7 +60,7 @@ export function EventCard({
 
           {isOwner ? (
             <View style={[styles.badge, styles.badgeGoing]}>
-              <Text style={[styles.badgeText, styles.badgeTextGoing]}>Host</Text>
+              <Text style={[styles.badgeText, styles.badgeTextGoing]}>{t.events.badgeHost}</Text>
             </View>
           ) : rsvp != null ? (
             <View style={[styles.badge, rsvp === "going" ? styles.badgeGoing : styles.badgeMaybe]}>

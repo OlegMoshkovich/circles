@@ -264,7 +264,7 @@ export default function EventsScreen() {
           {showFilterPanel && (
             <View style={styles.filterPanel}>
               <View style={styles.filterSection}>
-                <Text style={styles.filterSectionLabel}>Sort</Text>
+                <Text style={styles.filterSectionLabel}>{t.common.sort}</Text>
                 <View style={styles.filterChipRow}>
                   {(["newest", "popular", "activity", "new_activity"] as SortBy[]).map((opt) => (
                     <TouchableOpacity
@@ -273,14 +273,14 @@ export default function EventsScreen() {
                       onPress={() => setSortBy(opt)}
                     >
                       <Text style={[styles.filterChipText, sortBy === opt && styles.filterChipTextActive]}>
-                        {opt === "newest" ? "Newest" : opt === "popular" ? "Most Popular" : opt === "activity" ? "Most Active" : "New Activity"}
+                        {opt === "newest" ? t.events.sortNewest : opt === "popular" ? t.events.sortPopular : opt === "activity" ? t.events.sortActive : t.events.sortNewActivity}
                       </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               </View>
               <View style={styles.filterSection}>
-                <Text style={styles.filterSectionLabel}>RSVP</Text>
+                <Text style={styles.filterSectionLabel}>{t.events.rsvpLabel}</Text>
                 <View style={styles.filterChipRow}>
                   {(["all", "going", "maybe"] as RsvpFilter[]).map((opt) => (
                     <TouchableOpacity
@@ -289,21 +289,21 @@ export default function EventsScreen() {
                       onPress={() => setRsvpFilter(opt)}
                     >
                       <Text style={[styles.filterChipText, rsvpFilter === opt && styles.filterChipTextActive]}>
-                        {opt === "all" ? "All" : opt === "going" ? "Going" : "Maybe"}
+                        {opt === "all" ? t.common.all : opt === "going" ? t.events.rsvpGoing : t.events.rsvpMaybe}
                       </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               </View>
               <View style={styles.filterSection}>
-                <Text style={styles.filterSectionLabel}>View</Text>
+                <Text style={styles.filterSectionLabel}>{t.common.view}</Text>
                 <View style={styles.filterChipRow}>
                   <TouchableOpacity
                     style={[styles.filterChip, showDismissed && styles.filterChipActive]}
                     onPress={() => setShowDismissed((v) => !v)}
                   >
                     <Text style={[styles.filterChipText, showDismissed && styles.filterChipTextActive]}>
-                      Dismissed
+                      {t.common.dismissed}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -318,7 +318,7 @@ export default function EventsScreen() {
         ) : showDismissed ? (
           events.filter((e) => dismissedIds.has(e.id)).length === 0 ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No dismissed events</Text>
+              <Text style={styles.emptyText}>{t.events.noDismissed}</Text>
             </View>
           ) : (
             events.filter((e) => dismissedIds.has(e.id)).map((event) => (
@@ -371,7 +371,7 @@ export default function EventsScreen() {
         ) : displayedEvents.filter((e) => !dismissedIds.has(e.id)).length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyText}>
-              {filter === "circles" ? "No events in your circles yet" : "No events yet"}
+              {filter === "circles" ? t.events.noEventsCircles : t.events.noEventsDefault}
             </Text>
           </View>
         ) : (

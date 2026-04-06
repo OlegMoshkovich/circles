@@ -312,7 +312,7 @@ export default function CirclesScreen() {
           {showFilterPanel && (
             <View style={styles.filterPanel}>
               <View style={styles.filterSection}>
-                <Text style={styles.filterSectionLabel}>Sort</Text>
+                <Text style={styles.filterSectionLabel}>{t.common.sort}</Text>
                 <View style={styles.filterChipRow}>
                   {(["newest", "members", "new_activity"] as SortBy[]).map((opt) => (
                     <TouchableOpacity
@@ -321,19 +321,19 @@ export default function CirclesScreen() {
                       onPress={() => setSortBy(opt)}
                     >
                       <Text style={[styles.filterChipText, sortBy === opt && styles.filterChipTextActive]}>
-                        {opt === "newest" ? "Newest" : opt === "members" ? "Most Members" : "New Activity"}
+                        {opt === "newest" ? t.circles.sortNewest : opt === "members" ? t.circles.sortMembers : t.circles.sortNewActivity}
                       </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               </View>
               <View style={styles.filterSection}>
-                <Text style={styles.filterSectionLabel}>Type</Text>
+                <Text style={styles.filterSectionLabel}>{t.circles.typeLabel}</Text>
                 <View style={styles.filterChipRow}>
                   {([
-                    { value: "owner", label: "Owner" },
-                    { value: "active", label: "Member" },
-                    { value: "join",   label: "Join" },
+                    { value: "owner", label: t.circles.typeOwner },
+                    { value: "active", label: t.circles.typeMember },
+                    { value: "join",   label: t.circles.typeJoin },
                   ] as { value: "owner" | "active" | "join"; label: string }[]).map(({ value, label }) => (
                     <TouchableOpacity
                       key={value}
@@ -348,7 +348,7 @@ export default function CirclesScreen() {
                 </View>
               </View>
               <View style={styles.filterSection}>
-                <Text style={styles.filterSectionLabel}>Category</Text>
+                <Text style={styles.filterSectionLabel}>{t.circles.categoryLabel}</Text>
                 <View style={styles.filterChipRow}>
                   {PRESET_CATEGORIES.map((cat) => (
                     <TouchableOpacity
@@ -364,7 +364,7 @@ export default function CirclesScreen() {
                 </View>
               </View>
               <View style={styles.filterSection}>
-                <Text style={styles.filterSectionLabel}>Location</Text>
+                <Text style={styles.filterSectionLabel}>{t.circles.location}</Text>
                 <View style={styles.filterChipRow}>
                   <TouchableOpacity
                     style={[styles.filterChip, nearMe && styles.filterChipActive, styles.filterChipNearMe]}
@@ -378,20 +378,20 @@ export default function CirclesScreen() {
                       style={{ marginRight: 4 }}
                     />
                     <Text style={[styles.filterChipText, nearMe && styles.filterChipTextActive]}>
-                      {nearMeLoading ? "Locating…" : nearMe && nearMeCity ? nearMeCity : "Near Me"}
+                      {nearMeLoading ? t.common.locating : nearMe && nearMeCity ? nearMeCity : t.common.nearMe}
                     </Text>
                   </TouchableOpacity>
                 </View>
               </View>
               <View style={styles.filterSection}>
-                <Text style={styles.filterSectionLabel}>View</Text>
+                <Text style={styles.filterSectionLabel}>{t.common.view}</Text>
                 <View style={styles.filterChipRow}>
                   <TouchableOpacity
                     style={[styles.filterChip, showDismissed && styles.filterChipActive]}
                     onPress={() => setShowDismissed((v) => !v)}
                   >
                     <Text style={[styles.filterChipText, showDismissed && styles.filterChipTextActive]}>
-                      Dismissed
+                      {t.common.dismissed}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -406,7 +406,7 @@ export default function CirclesScreen() {
         ) : showDismissed ? (
           circles.filter((c) => dismissedIds.has(c.id)).length === 0 ? (
             <View style={styles.loader}>
-              <Text style={{ fontSize: 14, fontFamily: "Lora_400Regular", color: colors.textMuted }}>No dismissed circles</Text>
+              <Text style={{ fontSize: 14, fontFamily: "Lora_400Regular", color: colors.textMuted }}>{t.circles.noDismissed}</Text>
             </View>
           ) : (
             circles.filter((c) => dismissedIds.has(c.id)).map((circle) => (

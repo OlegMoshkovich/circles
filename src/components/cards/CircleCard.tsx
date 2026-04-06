@@ -5,6 +5,7 @@ import { Colors } from "../../theme/colors";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 type MemberStatus = "owner" | "active" | "requested" | null;
 
@@ -45,6 +46,7 @@ export function CircleCard({
   onActionPress,
   actionIcon,
 }: CircleCardProps) {
+  const { t } = useLanguage();
   const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
@@ -83,7 +85,7 @@ export function CircleCard({
         <View style={styles.footerLeft}>
           <View style={styles.footerRow}>
             <Ionicons name="people-outline" size={14} color={colors.textMuted} style={styles.footerIcon} />
-            <Text style={styles.footerText}>{memberCount} {memberCount === 1 ? "member" : "members"}</Text>
+            <Text style={styles.footerText}>{memberCount} {memberCount === 1 ? t.circles.typeMember.toLowerCase() : t.circles.members.toLowerCase()}</Text>
           </View>
           {location ? (
             <View style={styles.footerRow}>
@@ -104,7 +106,7 @@ export function CircleCard({
           {memberStatus === "owner" && (
             <View style={styles.ownerBadgeRow}>
               <View style={styles.statusBadge}>
-                <Text style={styles.statusBadgeText}>Owner</Text>
+                <Text style={styles.statusBadgeText}>{t.circles.typeOwner}</Text>
               </View>
               {pendingRequests > 0 && (
                 <View style={styles.requestDot}>
@@ -115,18 +117,18 @@ export function CircleCard({
           )}
           {memberStatus === "active" && (
             <View style={styles.statusBadge}>
-              <Text style={styles.statusBadgeText}>Member</Text>
+              <Text style={styles.statusBadgeText}>{t.circles.typeMember}</Text>
             </View>
           )}
           {memberStatus === "requested" && (
             <View style={[styles.statusBadge, styles.statusBadgeMuted]}>
-              <Text style={styles.statusBadgeText}>Requested</Text>
+              <Text style={styles.statusBadgeText}>{t.circles.requested}</Text>
             </View>
           )}
           {memberStatus === null && visibility !== "private" && (
             <View style={styles.joinButton}>
               <Text style={styles.joinButtonText}>
-                {visibility === "request" ? "Request" : "Join"}
+                {visibility === "request" ? t.circles.request : t.circles.typeJoin}
               </Text>
             </View>
           )}

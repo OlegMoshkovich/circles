@@ -19,6 +19,7 @@ import { useUser } from "@clerk/clerk-expo";
 import { RootStackParamList } from "../types";
 import { Colors } from "../src/theme/colors";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
+import { useLanguage } from "../src/i18n/LanguageContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, EventNote } from "../lib/supabase";
@@ -34,6 +35,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const footerBottomInset = 0;
   const { user } = useUser();
 
+  const { t } = useLanguage();
   const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
@@ -56,12 +58,12 @@ export default function EventDetailScreen({ route, navigation }: Props) {
 
   async function handleDelete() {
     Alert.alert(
-      "Delete Event",
-      "This will permanently delete the event. This cannot be undone.",
+      t.events.deleteTitle,
+      t.events.deleteMessage,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t.common.cancel, style: "cancel" },
         {
-          text: "Delete",
+          text: t.common.delete,
           style: "destructive",
           onPress: async () => {
             const { error } = await supabase.from("events").delete().eq("id", id);
@@ -229,7 +231,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
           <Ionicons name="chevron-back" size={18} color={colors.text} />
-          <Text style={styles.backLabel}>Back</Text>
+          <Text style={styles.backLabel}>{t.common.back}</Text>
         </TouchableOpacity>
         <View style={styles.headerActions}>
           <TouchableOpacity
@@ -275,7 +277,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         ) : null}
         <Text style={styles.title}>{title}</Text>
         <View style={styles.organizerRow}>
-          <Text style={styles.organizer}>Hosted by {organizer}</Text>
+          <Text style={styles.organizer}>{t.events.hostedBy} {organizer}</Text>
           {circleName ? (
             <View style={styles.circlePill}>
               <Ionicons name="people-outline" size={11} color={colors.textMuted} style={{ marginRight: 4 }} />
@@ -308,7 +310,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         {maxParticipants !== null ? (
           <View style={styles.metaRow}>
             <Ionicons name="people-circle-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
-            <Text style={styles.metaText}>Maximum participants: {maxParticipants}</Text>
+            <Text style={styles.metaText}>{t.events.maxParticipants}: {maxParticipants}</Text>
           </View>
         ) : null}
         {contactInfo.trim() ? (
@@ -329,16 +331,16 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         {/* Attendees */}
         <View style={styles.attendeesHeader}>
           <Ionicons name="people-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
-          <Text style={styles.sectionLabel}>ATTENDEES</Text>
+          <Text style={styles.sectionLabel}>{t.events.attendees}</Text>
         </View>
         <View style={styles.attendeesRow}>
           <View style={styles.attendeeStat}>
             <Text style={styles.attendeeCount}>{going}</Text>
-            <Text style={styles.attendeeLabel}>Going</Text>
+            <Text style={styles.attendeeLabel}>{t.events.rsvpGoing}</Text>
           </View>
           <View style={styles.attendeeStat}>
             <Text style={styles.attendeeCount}>{maybe}</Text>
-            <Text style={styles.attendeeLabel}>Maybe</Text>
+            <Text style={styles.attendeeLabel}>{t.events.rsvpMaybe}</Text>
           </View>
         </View>
 
@@ -352,7 +354,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
               <Ionicons name="chatbubble-outline" size={18} color={colors.text} style={styles.composeIcon} />
               <TextInput
                 style={styles.composeInput}
-                placeholder="Share a note with the event…"
+                placeholder={t.events.notePlaceholder}
                 placeholderTextColor={colors.textMuted}
                 value={noteText}
                 onChangeText={setNoteText}
@@ -369,7 +371,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
                 {postingNote ? (
                   <ActivityIndicator size="small" color={colors.card} />
                 ) : (
-                  <Text style={styles.postButtonText}>Post</Text>
+                  <Text style={styles.postButtonText}>{t.common.post}</Text>
                 )}
               </TouchableOpacity>
             )}
@@ -428,7 +430,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
             onPress={() => setInviteVisible(true)}
           >
             {/* <Ionicons name="person-add-outline" size={16} color={styles.inviteButtonText.color} style={styles.rsvpIcon} /> */}
-            <Text style={styles.inviteButtonText}>Invite Members</Text>
+            <Text style={styles.inviteButtonText}>{t.common.inviteMembers}</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.rsvpButtons}>
@@ -438,7 +440,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
               disabled={submitting}
             >
               <Text style={[styles.rsvpButtonText, rsvp === "going" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline]}>
-                Going
+                {t.events.rsvpGoing}
               </Text>
             </TouchableOpacity>
 
@@ -448,7 +450,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
               disabled={submitting}
             >
               <Text style={[styles.rsvpButtonText, rsvp === "maybe" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline]}>
-                Maybe
+                {t.events.rsvpMaybe}
               </Text>
             </TouchableOpacity>
           </View>
