@@ -265,162 +265,169 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         </View>
       </View>
 
-      {/* Scrollable content */}
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {!showChat && <View style={styles.headerCard}>
-        {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.eventImage} />
-        ) : null}
-        <Text style={styles.title}>{title}</Text>
-        <View style={styles.organizerRow}>
-          <Text style={styles.organizer}>{t.events.hostedBy} {organizer}</Text>
-          {circleName ? (
-            <View style={styles.circlePill}>
-              <Ionicons name="people-outline" size={11} color={colors.textMuted} style={{ marginRight: 4 }} />
-              <Text style={styles.circlePillText}>{circleName}</Text>
+      {/* Info card mode - scrollable */}
+      {!showChat && (
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.headerCard}>
+          {imageUrl ? (
+            <Image source={{ uri: imageUrl }} style={styles.eventImage} />
+          ) : null}
+          <Text style={styles.title}>{title}</Text>
+          <View style={styles.organizerRow}>
+            <Text style={styles.organizer}>{t.events.hostedBy} {organizer}</Text>
+            {circleName ? (
+              <View style={styles.circlePill}>
+                <Ionicons name="people-outline" size={11} color={colors.textMuted} style={{ marginRight: 4 }} />
+                <Text style={styles.circlePillText}>{circleName}</Text>
+              </View>
+            ) : null}
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.metaRow}>
+            <Ionicons name="calendar-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
+            <Text style={styles.metaText}>{date}</Text>
+            <Ionicons name="time-outline" size={14} color={colors.textMuted} style={[styles.metaIcon, { marginLeft: 12 }]} />
+            <Text style={styles.metaText}>{time}</Text>
+          </View>
+          <View style={styles.metaRow}>
+            <Ionicons name="location-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
+            <Text style={styles.metaText}>{location}</Text>
+          </View>
+
+          {description.trim().length > 0 ? (
+            <>
+              <View style={styles.divider} />
+              <Text style={styles.description}>{description}</Text>
+            </>
+          ) : null}
+
+          {(maxParticipants !== null || contactInfo.trim() || priceInfo.trim()) && <View style={styles.divider} />}
+          {maxParticipants !== null ? (
+            <View style={styles.metaRow}>
+              <Ionicons name="people-circle-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
+              <Text style={styles.metaText}>{t.events.maxParticipants}: {maxParticipants}</Text>
             </View>
           ) : null}
-        </View>
-
-        <View style={styles.divider} />
-
-        <View style={styles.metaRow}>
-          <Ionicons name="calendar-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
-          <Text style={styles.metaText}>{date}</Text>
-          <Ionicons name="time-outline" size={14} color={colors.textMuted} style={[styles.metaIcon, { marginLeft: 12 }]} />
-          <Text style={styles.metaText}>{time}</Text>
-        </View>
-        <View style={styles.metaRow}>
-          <Ionicons name="location-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
-          <Text style={styles.metaText}>{location}</Text>
-        </View>
-
-        {description.trim().length > 0 ? (
-          <>
-            <View style={styles.divider} />
-            <Text style={styles.description}>{description}</Text>
-          </>
-        ) : null}
-
-        {(maxParticipants !== null || contactInfo.trim() || priceInfo.trim()) && <View style={styles.divider} />}
-        {maxParticipants !== null ? (
-          <View style={styles.metaRow}>
-            <Ionicons name="people-circle-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
-            <Text style={styles.metaText}>{t.events.maxParticipants}: {maxParticipants}</Text>
-          </View>
-        ) : null}
-        {contactInfo.trim() ? (
-          <View style={styles.metaRow}>
-            <Ionicons name="call-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
-            <Text style={styles.metaText}>{contactInfo}</Text>
-          </View>
-        ) : null}
-        {priceInfo.trim() ? (
-          <View style={styles.metaRow}>
-            <Ionicons name="cash-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
-            <Text style={styles.metaText}>{priceInfo}</Text>
-          </View>
-        ) : null}
-
-        <View style={styles.divider} />
-
-        {/* Attendees */}
-        <View style={styles.attendeesHeader}>
-          <Ionicons name="people-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
-          <Text style={styles.sectionLabel}>{t.events.attendees}</Text>
-        </View>
-        <View style={styles.attendeesRow}>
-          <View style={styles.attendeeStat}>
-            <Text style={styles.attendeeCount}>{going}</Text>
-            <Text style={styles.attendeeLabel}>{t.events.rsvpGoing}</Text>
-          </View>
-          <View style={styles.attendeeStat}>
-            <Text style={styles.attendeeCount}>{maybe}</Text>
-            <Text style={styles.attendeeLabel}>{t.events.rsvpMaybe}</Text>
-          </View>
-        </View>
-
-        <View style={styles.divider} />
-        </View>}
-
-        {/* Notes */}
-        {showChat && user && (
-          <View style={styles.composeBox}>
-            <View style={styles.composeRow}>
-              <Ionicons name="chatbubble-outline" size={18} color={colors.text} style={styles.composeIcon} />
-              <TextInput
-                style={styles.composeInput}
-                placeholder={t.events.notePlaceholder}
-                placeholderTextColor={colors.textMuted}
-                value={noteText}
-                onChangeText={setNoteText}
-                multiline
-                maxLength={500}
-              />
+          {contactInfo.trim() ? (
+            <View style={styles.metaRow}>
+              <Ionicons name="call-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
+              <Text style={styles.metaText}>{contactInfo}</Text>
             </View>
-            {noteText.trim().length > 0 && (
-              <TouchableOpacity
-                style={styles.postButton}
-                onPress={handlePostNote}
-                disabled={postingNote}
-              >
-                {postingNote ? (
-                  <ActivityIndicator size="small" color={colors.card} />
-                ) : (
-                  <Text style={styles.postButtonText}>{t.common.post}</Text>
-                )}
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
+          ) : null}
+          {priceInfo.trim() ? (
+            <View style={styles.metaRow}>
+              <Ionicons name="cash-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
+              <Text style={styles.metaText}>{priceInfo}</Text>
+            </View>
+          ) : null}
 
-        {showChat && notes.map((note) => {
-          const n = note.display_name ?? "?";
-          const parts = n.trim().split(" ");
-          const initials = parts.length >= 2
-            ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-            : n.slice(0, 2).toUpperCase();
-          const diff = Date.now() - new Date(note.created_at).getTime();
-          const mins = Math.floor(diff / 60000);
-          const timeAgo = mins < 1 ? "just now"
-            : mins < 60 ? `${mins}m ago`
-            : mins < 1440 ? `${Math.floor(mins / 60)}h ago`
-            : `${Math.floor(mins / 1440)}d ago`;
-          return (
-            <View key={note.id} style={styles.noteCard}>
-              <View style={styles.noteHeader}>
-                <View style={styles.avatar}>
-                  {note.avatar_url ? (
-                    <Image source={{ uri: note.avatar_url }} style={styles.avatarImage} />
-                  ) : (
-                    <Text style={styles.avatarText}>{initials}</Text>
-                  )}
-                </View>
-                <View style={styles.noteHeaderText}>
-                  <Text style={styles.noteName}>{note.display_name ?? "Guest"}</Text>
-                  <Text style={styles.noteTime}>{timeAgo}</Text>
-                </View>
-                {note.user_id === user?.id && (
-                  <TouchableOpacity
-                    onPress={async () => {
-                      await supabase.from("event_notes").delete().eq("id", note.id);
-                      setNotes((prev) => prev.filter((n) => n.id !== note.id));
-                    }}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
-                  </TouchableOpacity>
-                )}
+          <View style={styles.divider} />
+
+          {/* Attendees */}
+          <View style={styles.attendeesHeader}>
+            <Ionicons name="people-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
+            <Text style={styles.sectionLabel}>{t.events.attendees}</Text>
+          </View>
+          <View style={styles.attendeesRow}>
+            <View style={styles.attendeeStat}>
+              <Text style={styles.attendeeCount}>{going}</Text>
+              <Text style={styles.attendeeLabel}>{t.events.rsvpGoing}</Text>
+            </View>
+            <View style={styles.attendeeStat}>
+              <Text style={styles.attendeeCount}>{maybe}</Text>
+              <Text style={styles.attendeeLabel}>{t.events.rsvpMaybe}</Text>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+          </View>
+        </ScrollView>
+      )}
+
+      {/* Chat mode: sticky compose + scrollable notes */}
+      {showChat && (
+        <View style={styles.chatContainer}>
+          {user && (
+            <View style={styles.composeBox}>
+              <View style={styles.composeRow}>
+                <Ionicons name="chatbubble-outline" size={18} color={colors.text} style={styles.composeIcon} />
+                <TextInput
+                  style={styles.composeInput}
+                  placeholder={t.events.notePlaceholder}
+                  placeholderTextColor={colors.textMuted}
+                  value={noteText}
+                  onChangeText={setNoteText}
+                  multiline
+                  maxLength={500}
+                />
               </View>
-              <Text style={styles.noteContent}>{note.content}</Text>
+              {noteText.trim().length > 0 && (
+                <TouchableOpacity
+                  style={styles.postButton}
+                  onPress={handlePostNote}
+                  disabled={postingNote}
+                >
+                  {postingNote ? (
+                    <ActivityIndicator size="small" color={colors.card} />
+                  ) : (
+                    <Text style={styles.postButtonText}>{t.common.post}</Text>
+                  )}
+                </TouchableOpacity>
+              )}
             </View>
-          );
-        })}
-      </ScrollView>
+          )}
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            {notes.map((note) => {
+              const n = note.display_name ?? "?";
+              const parts = n.trim().split(" ");
+              const initials = parts.length >= 2
+                ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+                : n.slice(0, 2).toUpperCase();
+              const diff = Date.now() - new Date(note.created_at).getTime();
+              const mins = Math.floor(diff / 60000);
+              const timeAgo = mins < 1 ? "just now"
+                : mins < 60 ? `${mins}m ago`
+                : mins < 1440 ? `${Math.floor(mins / 60)}h ago`
+                : `${Math.floor(mins / 1440)}d ago`;
+              return (
+                <View key={note.id} style={styles.noteCard}>
+                  <View style={styles.noteHeader}>
+                    <View style={styles.avatar}>
+                      {note.avatar_url ? (
+                        <Image source={{ uri: note.avatar_url }} style={styles.avatarImage} />
+                      ) : (
+                        <Text style={styles.avatarText}>{initials}</Text>
+                      )}
+                    </View>
+                    <View style={styles.noteHeaderText}>
+                      <Text style={styles.noteName}>{note.display_name ?? "Guest"}</Text>
+                      <Text style={styles.noteTime}>{timeAgo}</Text>
+                    </View>
+                    {note.user_id === user?.id && (
+                      <TouchableOpacity
+                        onPress={async () => {
+                          await supabase.from("event_notes").delete().eq("id", note.id);
+                          setNotes((prev) => prev.filter((n) => n.id !== note.id));
+                        }}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      >
+                        <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  <Text style={styles.noteContent}>{note.content}</Text>
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
 
       {/* Fixed RSVP bar */}
       {!showChat && <View style={[styles.rsvpBar, { paddingBottom: footerBottomInset }]}>
@@ -743,6 +750,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   headerAction: {},
+  chatContainer: {
+    flex: 1,
+    paddingHorizontal: spacing.pageHorizontal,
+    paddingTop: spacing.md,
+  },
   composeBox: {
     backgroundColor: colors.card,
     borderRadius: 12,
