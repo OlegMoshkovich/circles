@@ -40,6 +40,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const isCreator = !!user && !!created_by && user.id === created_by;
   const [inviteVisible, setInviteVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
   // Mutable local copies of editable fields
   const [title, setTitle] = useState(route.params.title);
@@ -230,23 +231,36 @@ export default function EventDetailScreen({ route, navigation }: Props) {
           <Ionicons name="chevron-back" size={18} color={colors.text} />
           <Text style={styles.backLabel}>Back</Text>
         </TouchableOpacity>
-        {isCreator && (
-          <View style={styles.headerActions}>
-            <TouchableOpacity
-              onPress={() => setEditVisible(true)}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              style={styles.headerAction}
-            >
-              <Ionicons name="create-outline" size={18} color={colors.text} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleDelete}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Ionicons name="trash-outline" size={18} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-        )}
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={() => setShowChat((v) => !v)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={styles.headerAction}
+          >
+            <Ionicons
+              name={showChat ? "document-text-outline" : "chatbubble-outline"}
+              size={22}
+              color={colors.text}
+            />
+          </TouchableOpacity>
+          {isCreator && (
+            <>
+              <TouchableOpacity
+                onPress={() => setEditVisible(true)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                style={styles.headerAction}
+              >
+                <Ionicons name="create-outline" size={22} color={colors.text} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleDelete}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Ionicons name="trash-outline" size={22} color={colors.text} />
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
       </View>
 
       {/* Scrollable content */}
@@ -255,7 +269,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.headerCard}>
+        {!showChat && <View style={styles.headerCard}>
         {imageUrl ? (
           <Image source={{ uri: imageUrl }} style={styles.eventImage} />
         ) : null}
@@ -329,10 +343,10 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         </View>
 
         <View style={styles.divider} />
-        </View>
+        </View>}
 
         {/* Notes */}
-        {user && (
+        {showChat && user && (
           <View style={styles.composeBox}>
             <View style={styles.composeRow}>
               <Ionicons name="chatbubble-outline" size={18} color={colors.text} style={styles.composeIcon} />
@@ -362,7 +376,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
           </View>
         )}
 
-        {notes.map((note) => {
+        {showChat && notes.map((note) => {
           const n = note.display_name ?? "?";
           const parts = n.trim().split(" ");
           const initials = parts.length >= 2
@@ -407,7 +421,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
       </ScrollView>
 
       {/* Fixed RSVP bar */}
-      <View style={[styles.rsvpBar, { paddingBottom: footerBottomInset }]}>
+      {!showChat && <View style={[styles.rsvpBar, { paddingBottom: footerBottomInset }]}>
         {isCreator && circle_id ? (
           <TouchableOpacity
             style={styles.inviteButton}
@@ -439,7 +453,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
             </TouchableOpacity>
           </View>
         )}
-      </View>
+      </View>}
 
       <InviteModal
         visible={inviteVisible}
@@ -721,7 +735,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     gap: 12,
     backgroundColor: isOnboarding ? "rgba(15,13,10,0.68)" : "transparent",
     borderRadius: 999,
-    paddingHorizontal: isOnboarding ? 12 : 0,
+    paddingHorizontal: isOnboarding ? 16 : 0,
     paddingVertical: isOnboarding ? 8 : 0,
     borderWidth: isOnboarding ? 1 : 0,
     borderColor: isOnboarding ? colors.cardBorder : "transparent",

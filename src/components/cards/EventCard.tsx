@@ -16,6 +16,7 @@ type EventCardProps = {
   going: number;
   maybe: number;
   rsvp?: "going" | "maybe";
+  isOwner?: boolean;
   circleName?: string | null;
   noteCount?: number;
   hasNewActivity?: boolean;
@@ -33,6 +34,7 @@ export function EventCard({
   going,
   maybe,
   rsvp,
+  isOwner = false,
   circleName,
   noteCount = 0,
   hasNewActivity = false,
@@ -56,13 +58,17 @@ export function EventCard({
             </View>
           )}
 
-          {rsvp != null && (
+          {isOwner ? (
+            <View style={[styles.badge, styles.badgeGoing]}>
+              <Text style={[styles.badgeText, styles.badgeTextGoing]}>Host</Text>
+            </View>
+          ) : rsvp != null ? (
             <View style={[styles.badge, rsvp === "going" ? styles.badgeGoing : styles.badgeMaybe]}>
               <Text style={[styles.badgeText, rsvp === "going" ? styles.badgeTextGoing : styles.badgeTextMaybe]}>
                 {rsvp === "going" ? t.events.badgeGoing : t.events.badgeMaybe}
               </Text>
             </View>
-          )}
+          ) : null}
           {actionIcon && onActionPress ? (
             <TouchableOpacity style={styles.headerAction} onPress={onActionPress} activeOpacity={0.8}>
               <Ionicons name={actionIcon} size={12} color={colors.textMuted} />

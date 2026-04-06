@@ -41,6 +41,7 @@ export default function EventsScreen() {
   const [lastViewedMap, setLastViewedMap] = useState<Record<string, number>>({});
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [showDismissed, setShowDismissed] = useState(false);
+  const [hideCards, setHideCards] = useState(false);
 
   const fetchEvents = useCallback(async () => {
     if (!user) {
@@ -205,6 +206,7 @@ export default function EventsScreen() {
               >
                 <Ionicons name="add" size={16} color={colors.textOnIconBg} />
               </TouchableOpacity>
+              
             }
           />
           {/* <TextBlock subtitle={t.events.subtitle} /> */}
@@ -231,18 +233,32 @@ export default function EventsScreen() {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
-              style={[styles.filterIconButton, filterActive && styles.filterIconButtonActive]}
-              onPress={() => setShowFilterPanel((v) => !v)}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name="options-outline"
-                size={17}
-                color={filterActive ? colors.iconbBg : colors.textMuted}
-              />
-            </TouchableOpacity>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TouchableOpacity
+                style={[styles.filterIconButton, hideCards && styles.filterIconButtonActive]}
+                onPress={() => setHideCards((v) => !v)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={hideCards ? "eye-off-outline" : "eye-outline"}
+                  size={17}
+                  color={hideCards ? colors.iconbBg : colors.textMuted}
+                />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.filterIconButton, filterActive && styles.filterIconButtonActive]}
+                onPress={() => setShowFilterPanel((v) => !v)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name="options-outline"
+                  size={17}
+                  color={filterActive ? colors.iconbBg : colors.textMuted}
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {showFilterPanel && (
@@ -295,7 +311,7 @@ export default function EventsScreen() {
             </View>
           )}
         </ScreenHeaderCard>
-        {loading ? (
+        {!hideCards && (loading ? (
           <View style={styles.loader}>
             <ActivityIndicator size="small" color={colors.textMuted} />
           </View>
@@ -316,6 +332,7 @@ export default function EventsScreen() {
                 going={event.going}
                 maybe={event.maybe}
                 rsvp={rsvpStatusMap[event.id]}
+                isOwner={!!user && event.created_by === user.id}
                 circleName={event.circles?.name ?? null}
                 noteCount={noteCountMap[event.id] ?? 0}
                 hasNewActivity={false}
@@ -371,6 +388,7 @@ export default function EventsScreen() {
               going={event.going}
               maybe={event.maybe}
               rsvp={rsvpStatusMap[event.id]}
+              isOwner={!!user && event.created_by === user.id}
               circleName={event.circles?.name ?? null}
               noteCount={noteCountMap[event.id] ?? 0}
               hasNewActivity={(activityMap[event.id] ?? 0) > (lastViewedMap[event.id] ?? 0)}
@@ -414,7 +432,7 @@ export default function EventsScreen() {
               }}
             />
           ))
-        )}
+        ))}
       </ScreenLayout>
 
       <CreateEventModal
