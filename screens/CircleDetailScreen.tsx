@@ -1221,11 +1221,9 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     borderColor: colors.cardBorder,
   },
   actionButtonText: {
-    // color: isOnboarding ? colors.text : colors.card,
-    color: colors.background,
+    color: isOnboarding ? colors.text : colors.background,
     fontSize: 16,
     fontFamily: "Lora_400Regular",
-    
   },
   joinButton: {
     backgroundColor: "#F5EFE3",
@@ -1233,6 +1231,16 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     borderColor: "rgba(53,65,42,0.08)",
   },
   joinButtonText: {
+    color: "#35412A",
+    fontSize: 16,
+    fontFamily: "Lora_400Regular",
+  },
+  inviteActionButton: {
+    backgroundColor: "#F5EFE3",
+    borderWidth: 1,
+    borderColor: "rgba(53,65,42,0.08)",
+  },
+  inviteActionButtonText: {
     color: "#35412A",
     fontSize: 16,
     fontFamily: "Lora_400Regular",
