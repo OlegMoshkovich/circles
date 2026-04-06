@@ -2,9 +2,10 @@ import React from "react";
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../../theme/colors";
-import { useColors } from "../../contexts/BackgroundContext";
+import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 type MemberStatus = "owner" | "active" | "requested" | null;
 
@@ -20,6 +21,8 @@ type CircleCardProps = {
   pendingRequests?: number;
   hasNewActivity?: boolean;
   onPress?: () => void;
+  onActionPress?: () => void;
+  actionIcon?: keyof typeof Ionicons.glyphMap;
 };
 
 const VISIBILITY_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
@@ -40,24 +43,36 @@ export function CircleCard({
   pendingRequests = 0,
   hasNewActivity = false,
   onPress,
+  onActionPress,
+  actionIcon,
 }: CircleCardProps) {
+  const { t } = useLanguage();
+  const { bgOption } = useBackground();
   const colors = useColors();
-  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
       <View style={styles.header}>
         <Text style={styles.name} numberOfLines={1}>{name}</Text>
-        {hasNewActivity && (
-          <View style={styles.activityBell}>
-            <Ionicons name="notifications-outline" size={11} color="#FFFFFF" />
-          </View>
-        )}
-        {category ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{category}</Text>
-          </View>
-        ) : null}
+        <View style={styles.headerRight}>
+          {hasNewActivity && (
+            <View style={styles.activityBell}>
+              <Ionicons name="notifications-outline" size={11} color="#FFFFFF" />
+            </View>
+          )}
+   
+          {category ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{category}</Text>
+            </View>
+          ) : null}
+                 {actionIcon && onActionPress ? (
+            <TouchableOpacity style={styles.headerAction} onPress={onActionPress} activeOpacity={0.8}>
+              <Ionicons name={actionIcon} size={12} color={colors.textMuted} />
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
 
       {description ? (
@@ -70,7 +85,7 @@ export function CircleCard({
         <View style={styles.footerLeft}>
           <View style={styles.footerRow}>
             <Ionicons name="people-outline" size={14} color={colors.textMuted} style={styles.footerIcon} />
-            <Text style={styles.footerText}>{memberCount} {memberCount === 1 ? "member" : "members"}</Text>
+            <Text style={styles.footerText}>{memberCount} {memberCount === 1 ? t.circles.typeMember.toLowerCase() : t.circles.members.toLowerCase()}</Text>
           </View>
           {location ? (
             <View style={styles.footerRow}>
@@ -91,7 +106,7 @@ export function CircleCard({
           {memberStatus === "owner" && (
             <View style={styles.ownerBadgeRow}>
               <View style={styles.statusBadge}>
-                <Text style={styles.statusBadgeText}>Owner</Text>
+                <Text style={styles.statusBadgeText}>{t.circles.typeOwner}</Text>
               </View>
               {pendingRequests > 0 && (
                 <View style={styles.requestDot}>
@@ -102,18 +117,18 @@ export function CircleCard({
           )}
           {memberStatus === "active" && (
             <View style={styles.statusBadge}>
-              <Text style={styles.statusBadgeText}>Member</Text>
+              <Text style={styles.statusBadgeText}>{t.circles.typeMember}</Text>
             </View>
           )}
           {memberStatus === "requested" && (
             <View style={[styles.statusBadge, styles.statusBadgeMuted]}>
-              <Text style={styles.statusBadgeText}>Requested</Text>
+              <Text style={styles.statusBadgeText}>{t.circles.requested}</Text>
             </View>
           )}
           {memberStatus === null && visibility !== "private" && (
             <View style={styles.joinButton}>
               <Text style={styles.joinButtonText}>
-                {visibility === "request" ? "Request" : "Join"}
+                {visibility === "request" ? t.circles.request : t.circles.typeJoin}
               </Text>
             </View>
           )}
@@ -123,7 +138,7 @@ export function CircleCard({
   );
 }
 
-function makeStyles(colors: Colors) {
+function makeStyles(colors: Colors, isOnboarding: boolean) {
   return StyleSheet.create({
     activityBell: {
       backgroundColor: "#FF4D00",
@@ -136,16 +151,16 @@ function makeStyles(colors: Colors) {
     },
     card: {
       backgroundColor: colors.card,
-      borderRadius: 14,
+      borderRadius: 16,
       padding: spacing.cardPadding,
       marginBottom: spacing.md,
       borderWidth: 1,
       borderColor: colors.cardBorder,
       ...Platform.select({
         ios: {
-          shadowColor: "#2C2A26",
+          shadowColor: "#000000",
           shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.06,
+          shadowOpacity: isOnboarding ? 0.14 : 0.06,
           shadowRadius: 3,
         },
         android: { elevation: 2 },
@@ -158,18 +173,39 @@ function makeStyles(colors: Colors) {
       justifyContent: "space-between",
       marginBottom: spacing.xs,
     },
+    headerRight: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      flexShrink: 0,
+    },
     name: {
       fontSize: 18,
-      fontFamily: "CormorantGaramond_300Light",
       color: colors.text,
       flex: 1,
       marginRight: spacing.sm,
+    },
+    headerAction: {
+      minWidth: 28,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 999,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      backgroundColor: colors.badgeBg,
+      marginLeft: spacing.sm,
+      
     },
     badge: {
       backgroundColor: colors.badgeBg,
       paddingHorizontal: 10,
       paddingVertical: 3,
       borderRadius: 999,
+
+      borderWidth: isOnboarding ? 1 : 0,
+      borderColor: isOnboarding ? colors.cardBorder : "transparent",
     },
     badgeText: {
       fontSize: 11,
@@ -182,6 +218,7 @@ function makeStyles(colors: Colors) {
       ...typography.bodySmall,
       color: colors.textMuted,
       marginBottom: spacing.sm,
+      fontFamily: "Lora_400Regular",
     },
     divider: {
       height: 1,
@@ -219,6 +256,8 @@ function makeStyles(colors: Colors) {
       paddingHorizontal: 10,
       paddingVertical: 4,
       borderRadius: 999,
+      borderWidth: isOnboarding ? 1 : 0,
+      borderColor: isOnboarding ? colors.cardBorder : "transparent",
     },
     statusBadgeMuted: {
       backgroundColor: "transparent",
@@ -232,15 +271,17 @@ function makeStyles(colors: Colors) {
       color: colors.textMuted,
     },
     joinButton: {
-      backgroundColor: colors.text,
+      backgroundColor: isOnboarding ? "rgba(255,255,255,0.12)" : colors.text,
       paddingHorizontal: 14,
       paddingVertical: 5,
       borderRadius: 999,
+      borderWidth: isOnboarding ? 1 : 0,
+      borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
     },
     joinButtonText: {
       fontSize: 12,
       fontWeight: "600" as const,
-      color: colors.background,
+      color: isOnboarding ? colors.text : colors.background,
       letterSpacing: 0.3,
     },
     ownerBadgeRow: {

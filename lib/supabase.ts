@@ -12,8 +12,13 @@ export type Event = {
   organizer: string;
   date_label: string;
   time_label: string;
+  duration_minutes?: number | null;
   location: string;
   description: string;
+  image_url?: string | null;
+  max_participants?: number | null;
+  contact_info?: string | null;
+  price_info?: string | null;
   going: number;
   maybe: number;
   created_at: string;

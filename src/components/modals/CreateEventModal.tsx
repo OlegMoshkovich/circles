@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Modal,
   View,
   Text,
@@ -15,7 +16,8 @@ import {
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@clerk/clerk-expo";
-import { colors } from "../../theme/colors";
+import { Colors } from "../../theme/colors";
+import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { supabase, Circle } from "../../../lib/supabase";
 import { MapPickerView } from "./LocationPickerModal";
 
@@ -27,6 +29,10 @@ export type NewEventData = {
   duration: number | null;
   location: string;
   description: string;
+  image_url: string;
+  max_participants: number | null;
+  contact_info: string;
+  price_info: string;
   visibility: "public" | "circle";
   circle_id: string | null;
 };
@@ -34,7 +40,7 @@ export type NewEventData = {
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onSave: (event: NewEventData) => void;
+  onSave: (event: NewEventData) => Promise<boolean | void>;
   /** When provided the modal defaults visibility to "circle" and hides the visibility picker */
   defaultCircleId?: string | null;
 };
@@ -72,6 +78,7 @@ function fmtDuration(minutes: number | null): string {
 
 export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: Props) {
   const { user } = useUser();
+  const { bgOption } = useBackground();
 
   function defaultOrganizer() {
     return user?.fullName
@@ -90,12 +97,18 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
   const [location, setLocation] = useState("");
   const [showMap, setShowMap] = useState(false);
   const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [maxParticipants, setMaxParticipants] = useState("");
+  const [contactInfo, setContactInfo] = useState("");
+  const [priceInfo, setPriceInfo] = useState("");
   const [eventVisibility, setEventVisibility] = useState<"public" | "circle">(
     defaultCircleId ? "circle" : "public"
   );
   const [selectedCircleId, setSelectedCircleId] = useState<string | null>(defaultCircleId ?? null);
   const [myCircles, setMyCircles] = useState<Circle[]>([]);
   const scrollRef = useRef<ScrollView>(null);
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
 
   useEffect(() => {
     if (!visible || !user) return;
@@ -116,12 +129,12 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
   const canSave =
     !!title.trim() &&
     !!organizer.trim() &&
-    !!location.trim() &&
     (eventVisibility === "public" || selectedCircleId !== null || !!defaultCircleId);
 
-  function handleSave() {
+  async function handleSave() {
     if (!canSave) return;
-    onSave({
+    try {
+      const didSave = await onSave({
       title: title.trim(),
       organizer: organizer.trim(),
       date: fmtDate(selectedDate),
@@ -129,10 +142,20 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
       duration,
       location: location.trim(),
       description: description.trim(),
+      image_url: imageUrl.trim(),
+      max_participants: maxParticipants.trim() ? Number(maxParticipants.trim()) : null,
+      contact_info: contactInfo.trim(),
+      price_info: priceInfo.trim(),
       visibility: eventVisibility,
       circle_id: eventVisibility === "circle" ? selectedCircleId : null,
-    });
-    resetForm();
+      });
+      if (didSave !== false) {
+        resetForm();
+      }
+    } catch (error) {
+      console.error("Failed to create event", error);
+      Alert.alert("Could not create event", "Please try again.");
+    }
   }
 
   function handleClose() {
@@ -150,6 +173,10 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
     setLocation("");
     setShowMap(false);
     setDescription("");
+    setImageUrl("");
+    setMaxParticipants("");
+    setContactInfo("");
+    setPriceInfo("");
     setEventVisibility(defaultCircleId ? "circle" : "public");
     setSelectedCircleId(defaultCircleId ?? null);
   }
@@ -163,7 +190,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
     <Modal
       visible={visible}
       animationType="slide"
-      transparent
+      transparent={false}
       onRequestClose={showMap ? () => setShowMap(false) : pickerMode ? () => setPickerMode(null) : showDurationPicker ? () => setShowDurationPicker(false) : handleClose}
     >
       <View style={styles.overlay}>
@@ -179,6 +206,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={styles.kav}
           >
+            <View style={styles.sheetBacking}>
             <View style={styles.sheet}>
               <View style={styles.handle} />
 
@@ -258,25 +286,45 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
 
                 <View style={styles.fieldContainer}>
                   <Text style={styles.fieldLabel}>Location</Text>
-                  <TouchableOpacity
-                    style={styles.locationButton}
-                    onPress={() => setShowMap(true)}
-                    activeOpacity={0.7}
-                  >
+                  <View style={styles.locationInputRow}>
                     <Ionicons
                       name={location ? "location" : "location-outline"}
                       size={16}
                       color={location ? colors.iconbBg : colors.textMuted}
                       style={styles.locationIcon}
                     />
-                    <Text style={[styles.locationButtonText, !location && styles.locationButtonPlaceholder]} numberOfLines={1}>
-                      {location || "Tap to choose on map"}
+                    <TextInput
+                      value={location}
+                      onChangeText={setLocation}
+                      placeholder="Enter an address"
+                      placeholderTextColor={colors.textMuted}
+                      style={styles.locationInput}
+                      numberOfLines={1}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    style={styles.locationMapButton}
+                    onPress={() => setShowMap(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="map-outline" size={14} color={colors.textMuted} style={styles.pickerIcon} />
+                    <Text style={styles.locationMapButtonText}>
+                      Choose on map instead
                     </Text>
-                    <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
                   </TouchableOpacity>
                 </View>
 
                 <Field label="Description" value={description} onChangeText={setDescription} placeholder="A few words about the event…" multiline />
+                <Field label="Image URL" value={imageUrl} onChangeText={setImageUrl} placeholder="https://example.com/event.jpg" keyboardType="url" />
+                <Field
+                  label="Maximum Participants"
+                  value={maxParticipants}
+                  onChangeText={(v) => setMaxParticipants(v.replace(/[^0-9]/g, ""))}
+                  placeholder="Limit number of participants"
+                  keyboardType="number-pad"
+                />
+                <Field label="Contact Info" value={contactInfo} onChangeText={setContactInfo} placeholder="Phone / Email" keyboardType="email-address" />
+                <Field label="Price" value={priceInfo} onChangeText={setPriceInfo} placeholder="Free / Paid" />
 
                 {!defaultCircleId && (
                   <View style={styles.fieldContainer}>
@@ -380,6 +428,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                 </View>
               )}
             </View>
+            </View>
           </KeyboardAvoidingView>
         )}
       </View>
@@ -388,6 +437,9 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
 }
 
 function DurationWheelPicker({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
+  const { bgOption } = useBackground();
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -434,9 +486,13 @@ type FieldProps = {
   onChangeText: (v: string) => void;
   placeholder?: string;
   multiline?: boolean;
+  keyboardType?: "default" | "number-pad" | "email-address" | "phone-pad" | "url";
 };
 
-function Field({ label, value, onChangeText, placeholder, multiline }: FieldProps) {
+function Field({ label, value, onChangeText, placeholder, multiline, keyboardType }: FieldProps) {
+  const { bgOption } = useBackground();
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   return (
     <View style={styles.fieldContainer}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -449,19 +505,28 @@ function Field({ label, value, onChangeText, placeholder, multiline }: FieldProp
           style={[styles.input, multiline && styles.inputMultiline]}
           multiline={multiline}
           numberOfLines={multiline ? 3 : 1}
+          keyboardType={keyboardType}
+          autoCapitalize={keyboardType === "url" || keyboardType === "email-address" ? "none" : "sentences"}
+          autoCorrect={keyboardType === "url" || keyboardType === "email-address" ? false : true}
         />
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: colors.background,
     justifyContent: "flex-end",
   },
   kav: { justifyContent: "flex-end" },
+  sheetBacking: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    height: "95%",
+  },
   sheet: {
     backgroundColor: colors.card,
     borderTopLeftRadius: 20,
@@ -469,7 +534,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
     paddingTop: 12,
-    height: "95%",
+    flex: 1,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   mapSheet: {
     flex: 1,
@@ -508,21 +575,26 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   inputRow: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-    paddingBottom: 8,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
-  inputRowMultiline: { paddingBottom: 4 },
-  input: { color: colors.text, fontSize: 16, height: 36 },
-  inputMultiline: { height: 72, textAlignVertical: "top", paddingTop: 4 },
+  inputRowMultiline: { paddingBottom: 10 },
+  input: { color: colors.text, fontSize: 16, height: 24, fontFamily: "Lora_400Regular" },
+  inputMultiline: { height: 72, textAlignVertical: "top", paddingTop: 0 },
   // Date / time picker buttons
   pickerButton: {
     flexDirection: "row",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-    paddingBottom: 10,
-    paddingTop: 2,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   pickerIcon: { marginRight: 6 },
   pickerButtonText: {
@@ -540,11 +612,13 @@ const styles = StyleSheet.create({
   },
   pickerCard: {
     width: "92%",
-    backgroundColor: colors.background,
-    borderRadius: 20,
+    backgroundColor: isOnboarding ? colors.card : colors.background,
+    borderRadius: 16,
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 12,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   pickerOverlayHeader: {
     flexDirection: "row",
@@ -564,34 +638,53 @@ const styles = StyleSheet.create({
   },
   picker: { width: "100%" },
   // Location
-  locationButton: {
+  locationInput: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 16,
+    height: 24,
+    fontFamily: "Lora_400Regular",
+    paddingVertical: 0,
+    margin: 0,
+  },
+  locationInputRow: {
     flexDirection: "row",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-    paddingBottom: 10,
-    paddingTop: 2,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  locationMapButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    marginTop: 10,
+    paddingHorizontal: 2,
+    paddingVertical: 2,
   },
   locationIcon: { marginRight: 8 },
-  locationButtonText: {
-    flex: 1,
-    fontSize: 16,
+  locationMapButtonText: {
+    fontSize: 14,
     fontFamily: "Lora_400Regular",
-    color: colors.text,
+    color: colors.textMuted,
   },
-  locationButtonPlaceholder: { color: colors.textMuted },
   // Save
   saveButton: {
-    backgroundColor: colors.text,
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.14)" : colors.text,
     borderRadius: 50,
     height: 54,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 20,
     marginBottom: 8,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
   },
   saveButtonDisabled: { opacity: 0.35 },
-  saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  saveButtonText: { color: isOnboarding ? colors.text : colors.background, fontSize: 16, fontWeight: "600" },
   // Visibility
   toggleRow: { flexDirection: "row", gap: 8 },
   toggleButton: {
@@ -601,11 +694,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     alignItems: "center",
-    backgroundColor: colors.card,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
   },
-  toggleButtonActive: { backgroundColor: colors.text, borderColor: colors.text },
-  toggleText: { fontSize: 14, fontWeight: "500" as const, color: colors.textMuted },
-  toggleTextActive: { color: colors.card },
+  toggleButtonActive: {
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : colors.text,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.text,
+  },
+  toggleText: { fontSize: 14, fontFamily: "Lora_400Regular", color: colors.textMuted },
+  toggleTextActive: { color: isOnboarding ? colors.text : colors.background },
   // Circles
   circleRow: {
     flexDirection: "row",
@@ -616,14 +712,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.cardBorder,
     marginBottom: 8,
-    backgroundColor: colors.card,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
   },
-  circleRowActive: { backgroundColor: colors.text, borderColor: colors.text },
+  circleRowActive: {
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : colors.text,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.text,
+  },
   circleCheck: { marginRight: 6 },
-  circleName: { fontSize: 15, color: colors.text },
-  circleNameActive: { color: colors.card },
+  circleName: { fontSize: 15, color: colors.text, fontFamily: "Lora_400Regular" },
+  circleNameActive: { color: isOnboarding ? colors.text : colors.card },
   noCirclesHint: { fontSize: 13, color: colors.textMuted, fontStyle: "italic" },
-  readOnlyValue: { fontSize: 16, color: colors.textMuted, height: 36, textAlignVertical: "center" },
+  readOnlyValue: { fontSize: 16, color: colors.textMuted, height: 24, textAlignVertical: "center", fontFamily: "Lora_400Regular" },
   pickerButtonPlaceholder: { color: colors.textMuted },
   optionalLabel: { fontSize: 10, fontWeight: "400" as const, letterSpacing: 0, textTransform: "none" as const, color: colors.textMuted },
   // Duration wheel picker
@@ -655,4 +754,4 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: 20,
   },
-});
+}); }

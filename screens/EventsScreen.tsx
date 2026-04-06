@@ -1,17 +1,18 @@
 import React, { useCallback, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
 import { ScreenLayout } from "../src/components/layout/ScreenLayout";
+import { ScreenHeaderCard } from "../src/components/layout/ScreenHeaderCard";
 import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { TextBlock } from "../src/components/blocks/TextBlock";
 import { EventCard } from "../src/components/cards/EventCard";
-import { SwipeableCard } from "../src/components/layout/SwipeableCard";
 import { CreateEventModal, NewEventData } from "../src/components/modals/CreateEventModal";
 import { Colors } from "../src/theme/colors";
+
 import { useUser } from "@clerk/clerk-expo";
 import { useLanguage } from "../src/i18n/LanguageContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
@@ -40,6 +41,7 @@ export default function EventsScreen() {
   const [lastViewedMap, setLastViewedMap] = useState<Record<string, number>>({});
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [showDismissed, setShowDismissed] = useState(false);
+  const [hideCards, setHideCards] = useState(false);
 
   const fetchEvents = useCallback(async () => {
     if (!user) {
@@ -105,13 +107,14 @@ export default function EventsScreen() {
       if (eventIds.length > 0) {
         const { data: noteCounts } = await supabase
           .from("event_notes")
-          .select("event_id, created_at")
+          .select("event_id, created_at, user_id")
           .in("event_id", eventIds);
         if (noteCounts) {
           const map: Record<string, number> = {};
           const latestMap: Record<string, number> = {};
           for (const row of noteCounts as any[]) {
             map[row.event_id] = (map[row.event_id] ?? 0) + 1;
+            if (user?.id && row.user_id === user.id) continue;
             const t = new Date(row.created_at).getTime();
             if (!latestMap[row.event_id] || t > latestMap[row.event_id]) latestMap[row.event_id] = t;
           }
@@ -149,14 +152,22 @@ export default function EventsScreen() {
       duration_minutes: event.duration ?? null,
       location: event.location,
       description: event.description,
+      image_url: event.image_url || null,
+      max_participants: event.max_participants,
+      contact_info: event.contact_info || null,
+      price_info: event.price_info || null,
       visibility: event.visibility,
       circle_id: event.circle_id,
       created_by: user?.id ?? null,
     });
     if (!error) {
       setModalVisible(false);
-      fetchEvents();
+      await fetchEvents();
+      return true;
     }
+    console.error("Failed to create event", error);
+    Alert.alert("Could not create event", error.message);
+    return false;
   }
 
   const displayedEvents = events
@@ -173,16 +184,18 @@ export default function EventsScreen() {
     });
 
   const filterActive = sortBy !== "newest" || rsvpFilter !== "all";
+
   const { bgOption } = useBackground();
   const colors = useColors();
-  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const screenBgColor = colors.background;
 
   return (
     <>
       <ScreenLayout
         backgroundColor={screenBgColor}
-        header={
+      >
+        <ScreenHeaderCard>
           <NavbarTitle
             title={t.nav.events}
             rightElement={
@@ -193,35 +206,46 @@ export default function EventsScreen() {
               >
                 <Ionicons name="add" size={16} color={colors.textOnIconBg} />
               </TouchableOpacity>
+              
             }
           />
-        }
-        stickyTop={
-          <View>
-            <TextBlock subtitle={t.events.subtitle} />
+          {/* <TextBlock subtitle={t.events.subtitle} /> */}
 
-            <View style={styles.filterRow}>
-              <View style={styles.toggle}>
-                <TouchableOpacity
-                  style={[styles.toggleOption, filter === "all" && styles.toggleOptionActive]}
-                  onPress={() => setFilter("all")}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.toggleLabel, filter === "all" && styles.toggleLabelActive]}>
-                    {t.events.filterAll}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.toggleOption, filter === "circles" && styles.toggleOptionActive]}
-                  onPress={() => setFilter("circles")}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.toggleLabel, filter === "circles" && styles.toggleLabelActive]}>
-                    {t.events.filterMyCircles}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+          <View style={styles.filterRow}>
+            <View style={styles.toggle}>
+              <TouchableOpacity
+                style={[styles.toggleOption, filter === "all" && styles.toggleOptionActive]}
+                onPress={() => setFilter("all")}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.toggleLabel, filter === "all" && styles.toggleLabelActive]}>
+                  {t.events.filterAll}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.toggleOption, filter === "circles" && styles.toggleOptionActive]}
+                onPress={() => setFilter("circles")}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.toggleLabel, filter === "circles" && styles.toggleLabelActive]}>
+                  {t.events.filterMyCircles}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TouchableOpacity
+                style={[styles.filterIconButton, hideCards && styles.filterIconButtonActive]}
+                onPress={() => setHideCards((v) => !v)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={hideCards ? "eye-off-outline" : "eye-outline"}
+                  size={17}
+                  color={hideCards ? colors.iconbBg : colors.textMuted}
+                />
+              </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.filterIconButton, filterActive && styles.filterIconButtonActive]}
                 onPress={() => setShowFilterPanel((v) => !v)}
@@ -235,138 +259,127 @@ export default function EventsScreen() {
                 />
               </TouchableOpacity>
             </View>
+          </View>
 
-            {showFilterPanel && (
-              <View style={styles.filterPanel}>
-                <View style={styles.filterSection}>
-                  <Text style={styles.filterSectionLabel}>Sort</Text>
-                  <View style={styles.filterChipRow}>
-                    {(["newest", "popular", "activity", "new_activity"] as SortBy[]).map((opt) => (
-                      <TouchableOpacity
-                        key={opt}
-                        style={[styles.filterChip, sortBy === opt && styles.filterChipActive]}
-                        onPress={() => setSortBy(opt)}
-                      >
-                        <Text style={[styles.filterChipText, sortBy === opt && styles.filterChipTextActive]}>
-                          {opt === "newest" ? "Newest" : opt === "popular" ? "Most Popular" : opt === "activity" ? "Most Active" : "New Activity"}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-                <View style={styles.filterSection}>
-                  <Text style={styles.filterSectionLabel}>RSVP</Text>
-                  <View style={styles.filterChipRow}>
-                    {(["all", "going", "maybe"] as RsvpFilter[]).map((opt) => (
-                      <TouchableOpacity
-                        key={opt}
-                        style={[styles.filterChip, rsvpFilter === opt && styles.filterChipActive]}
-                        onPress={() => setRsvpFilter(opt)}
-                      >
-                        <Text style={[styles.filterChipText, rsvpFilter === opt && styles.filterChipTextActive]}>
-                          {opt === "all" ? "All" : opt === "going" ? "Going" : "Maybe"}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-                <View style={styles.filterSection}>
-                  <Text style={styles.filterSectionLabel}>View</Text>
-                  <View style={styles.filterChipRow}>
+          {showFilterPanel && (
+            <View style={styles.filterPanel}>
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionLabel}>{t.common.sort}</Text>
+                <View style={styles.filterChipRow}>
+                  {(["newest", "popular", "activity", "new_activity"] as SortBy[]).map((opt) => (
                     <TouchableOpacity
-                      style={[styles.filterChip, showDismissed && styles.filterChipActive]}
-                      onPress={() => setShowDismissed((v) => !v)}
+                      key={opt}
+                      style={[styles.filterChip, sortBy === opt && styles.filterChipActive]}
+                      onPress={() => setSortBy(opt)}
                     >
-                      <Text style={[styles.filterChipText, showDismissed && styles.filterChipTextActive]}>
-                        Dismissed
+                      <Text style={[styles.filterChipText, sortBy === opt && styles.filterChipTextActive]}>
+                        {opt === "newest" ? t.events.sortNewest : opt === "popular" ? t.events.sortPopular : opt === "activity" ? t.events.sortActive : t.events.sortNewActivity}
                       </Text>
                     </TouchableOpacity>
-                  </View>
+                  ))}
                 </View>
               </View>
-            )}
-          </View>
-        }
-      >
-        {loading ? (
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionLabel}>{t.events.rsvpLabel}</Text>
+                <View style={styles.filterChipRow}>
+                  {(["all", "going", "maybe"] as RsvpFilter[]).map((opt) => (
+                    <TouchableOpacity
+                      key={opt}
+                      style={[styles.filterChip, rsvpFilter === opt && styles.filterChipActive]}
+                      onPress={() => setRsvpFilter(opt)}
+                    >
+                      <Text style={[styles.filterChipText, rsvpFilter === opt && styles.filterChipTextActive]}>
+                        {opt === "all" ? t.common.all : opt === "going" ? t.events.rsvpGoing : t.events.rsvpMaybe}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionLabel}>{t.common.view}</Text>
+                <View style={styles.filterChipRow}>
+                  <TouchableOpacity
+                    style={[styles.filterChip, showDismissed && styles.filterChipActive]}
+                    onPress={() => setShowDismissed((v) => !v)}
+                  >
+                    <Text style={[styles.filterChipText, showDismissed && styles.filterChipTextActive]}>
+                      {t.common.dismissed}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          )}
+        </ScreenHeaderCard>
+        {!hideCards && (loading ? (
           <View style={styles.loader}>
             <ActivityIndicator size="small" color={colors.textMuted} />
           </View>
         ) : showDismissed ? (
           events.filter((e) => dismissedIds.has(e.id)).length === 0 ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>No dismissed events</Text>
+              <Text style={styles.emptyText}>{t.events.noDismissed}</Text>
             </View>
           ) : (
             events.filter((e) => dismissedIds.has(e.id)).map((event) => (
-              <SwipeableCard
+              <EventCard
                 key={event.id}
-                onRestore={() => {
+                title={event.title}
+                organizer={event.organizer}
+                date={event.date_label}
+                time={event.time_label}
+                location={event.location}
+                going={event.going}
+                maybe={event.maybe}
+                rsvp={rsvpStatusMap[event.id]}
+                isOwner={!!user && event.created_by === user.id}
+                circleName={event.circles?.name ?? null}
+                noteCount={noteCountMap[event.id] ?? 0}
+                hasNewActivity={false}
+                actionIcon="refresh"
+                onActionPress={() => {
                   setDismissedIds((prev) => { const next = new Set(prev); next.delete(event.id); return next; });
                   if (user) {
                     supabase.from("dismissed_items").delete()
                       .eq("user_id", user.id).eq("item_type", "event").eq("item_id", event.id).then(() => {});
                   }
                 }}
-              >
-                <EventCard
-                  title={event.title}
-                  organizer={event.organizer}
-                  date={event.date_label}
-                  time={event.time_label}
-                  location={event.location}
-                  going={event.going}
-                  maybe={event.maybe}
-                  rsvp={rsvpStatusMap[event.id]}
-                  circleName={event.circles?.name ?? null}
-                  noteCount={noteCountMap[event.id] ?? 0}
-                  hasNewActivity={false}
-                  onPress={() => {
-                    navigation.navigate("EventDetail", {
-                      id: event.id,
-                      title: event.title,
-                      organizer: event.organizer,
-                      date: event.date_label,
-                      time: event.time_label,
-                      location: event.location,
-                      going: event.going,
-                      maybe: event.maybe,
-                      rsvp: rsvpStatusMap[event.id],
-                      description: event.description,
-                      created_by: event.created_by,
-                      circleName: event.circles?.name ?? null,
-                      circle_id: event.circle_id,
-                    });
-                  }}
-                />
-              </SwipeableCard>
+                onPress={() => {
+                  navigation.navigate("EventDetail", {
+                    id: event.id,
+                    title: event.title,
+                    organizer: event.organizer,
+                    date: event.date_label,
+                    time: event.time_label,
+                    location: event.location,
+                    going: event.going,
+                    maybe: event.maybe,
+                    rsvp: rsvpStatusMap[event.id],
+                    description: event.description,
+                    image_url: event.image_url ?? null,
+                    max_participants: event.max_participants ?? null,
+                    contact_info: event.contact_info ?? null,
+                    price_info: event.price_info ?? null,
+                    created_by: event.created_by,
+                    circleName: event.circles?.name ?? null,
+                    circle_id: event.circle_id,
+                  });
+                }}
+              />
             ))
           )
         ) : displayedEvents.filter((e) => !dismissedIds.has(e.id)).length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyText}>
-              {filter === "circles" ? "No events in your circles yet" : "No events yet"}
+              {filter === "circles" ? t.events.noEventsCircles : t.events.noEventsDefault}
             </Text>
           </View>
         ) : (
           displayedEvents
             .filter((e) => !dismissedIds.has(e.id))
             .map((event) => (
-            <SwipeableCard
-              key={event.id}
-              disabled={!!user && event.created_by === user.id}
-              onDismiss={() => {
-                setDismissedIds((prev) => new Set(prev).add(event.id));
-                if (user) {
-                  supabase.from("dismissed_items").insert({
-                    user_id: user.id,
-                    item_type: "event",
-                    item_id: event.id,
-                  }).then(() => {});
-                }
-              }}
-            >
             <EventCard
+              key={event.id}
               title={event.title}
               organizer={event.organizer}
               date={event.date_label}
@@ -375,9 +388,25 @@ export default function EventsScreen() {
               going={event.going}
               maybe={event.maybe}
               rsvp={rsvpStatusMap[event.id]}
+              isOwner={!!user && event.created_by === user.id}
               circleName={event.circles?.name ?? null}
               noteCount={noteCountMap[event.id] ?? 0}
               hasNewActivity={(activityMap[event.id] ?? 0) > (lastViewedMap[event.id] ?? 0)}
+              actionIcon={!!user && event.created_by === user.id ? undefined : "close"}
+              onActionPress={
+                !!user && event.created_by === user.id
+                  ? undefined
+                  : () => {
+                      setDismissedIds((prev) => new Set(prev).add(event.id));
+                      if (user) {
+                        supabase.from("dismissed_items").insert({
+                          user_id: user.id,
+                          item_type: "event",
+                          item_id: event.id,
+                        }).then(() => {});
+                      }
+                    }
+              }
               onPress={() => {
                 AsyncStorage.setItem(`lastViewed_event_${event.id}`, Date.now().toString());
                 setLastViewedMap((prev) => ({ ...prev, [event.id]: Date.now() }));
@@ -392,15 +421,18 @@ export default function EventsScreen() {
                   maybe: event.maybe,
                   rsvp: rsvpStatusMap[event.id],
                   description: event.description,
+                  image_url: event.image_url ?? null,
+                  max_participants: event.max_participants ?? null,
+                  contact_info: event.contact_info ?? null,
+                  price_info: event.price_info ?? null,
                   created_by: event.created_by,
                   circleName: event.circles?.name ?? null,
                   circle_id: event.circle_id,
                 });
               }}
             />
-            </SwipeableCard>
           ))
-        )}
+        ))}
       </ScreenLayout>
 
       <CreateEventModal
@@ -412,12 +444,12 @@ export default function EventsScreen() {
   );
 }
 
-function makeStyles(colors: Colors) {
+function makeStyles(colors: Colors, isOnboarding: boolean) {
   return StyleSheet.create({
   addButton: {
     width: 30,
     height: 30,
-    borderRadius: 30,
+    borderRadius: 16,
     backgroundColor: colors.iconbBg,
     alignItems: "center",
     justifyContent: "center",
@@ -438,17 +470,17 @@ function makeStyles(colors: Colors) {
     borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    backgroundColor: colors.card,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
     alignItems: "center",
     justifyContent: "center",
   },
   filterIconButtonActive: {
-    borderColor: colors.iconbBg,
-    backgroundColor: colors.card,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.iconbBg,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
   },
   filterPanel: {
     backgroundColor: colors.card,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     padding: 14,
@@ -476,11 +508,11 @@ function makeStyles(colors: Colors) {
     borderRadius: 999,
     borderWidth: 1,
     borderColor: colors.cardBorder,
-    backgroundColor: colors.card,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
   },
   filterChipActive: {
-    backgroundColor: colors.text,
-    borderColor: colors.text,
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : colors.text,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.text,
   },
   filterChipText: {
     fontSize: 13,
@@ -488,14 +520,16 @@ function makeStyles(colors: Colors) {
     color: colors.textMuted,
   },
   filterChipTextActive: {
-    color: colors.card,
+    color: isOnboarding ? colors.text : colors.background,
   },
   toggle: {
     flexDirection: "row",
-    borderRadius: 20,
-    backgroundColor: colors.cardBorder,
+    borderRadius: 999,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.cardBorder,
     padding: 3,
     alignSelf: "flex-start",
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   toggleOption: {
     paddingHorizontal: 14,
@@ -503,7 +537,7 @@ function makeStyles(colors: Colors) {
     borderRadius: 17,
   },
   toggleOptionActive: {
-    backgroundColor: colors.card,
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : colors.card,
   },
   toggleLabel: {
     fontSize: 13,

@@ -12,7 +12,8 @@ import {
 } from "react-native";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
-import { colors } from "../../theme/colors";
+import { Colors } from "../../theme/colors";
+import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { MapPickerView } from "./LocationPickerModal";
 import { supabase } from "../../../lib/supabase";
 
@@ -23,6 +24,10 @@ export type EditEventData = {
   time: string;
   location: string;
   description: string;
+  image_url: string;
+  max_participants: number | null;
+  contact_info: string;
+  price_info: string;
 };
 
 type Props = {
@@ -42,7 +47,6 @@ function fmtTime(d: Date) {
 }
 
 function parseDateTimeStrings(dateStr: string, timeStr: string): Date {
-  // Try to parse e.g. "Sat, Mar 29" + "10:00 AM"
   try {
     const year = new Date().getFullYear();
     const d = new Date(`${dateStr} ${year} ${timeStr}`);
@@ -54,6 +58,10 @@ function parseDateTimeStrings(dateStr: string, timeStr: string): Date {
 }
 
 export function EditEventModal({ visible, onClose, onSaved, eventId, initialValues }: Props) {
+  const { bgOption } = useBackground();
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
+
   const [title, setTitle] = useState(initialValues.title);
   const [organizer, setOrganizer] = useState(initialValues.organizer);
   const [selectedDate, setSelectedDate] = useState<Date>(() =>
@@ -62,6 +70,10 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
   const [pickerMode, setPickerMode] = useState<"date" | "time" | null>(null);
   const [location, setLocation] = useState(initialValues.location);
   const [description, setDescription] = useState(initialValues.description);
+  const [imageUrl, setImageUrl] = useState(initialValues.image_url);
+  const [maxParticipants, setMaxParticipants] = useState(initialValues.max_participants ? String(initialValues.max_participants) : "");
+  const [contactInfo, setContactInfo] = useState(initialValues.contact_info);
+  const [priceInfo, setPriceInfo] = useState(initialValues.price_info);
   const [showMap, setShowMap] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,22 +86,22 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
       setPickerMode(null);
       setLocation(initialValues.location);
       setDescription(initialValues.description);
+      setImageUrl(initialValues.image_url);
+      setMaxParticipants(initialValues.max_participants ? String(initialValues.max_participants) : "");
+      setContactInfo(initialValues.contact_info);
+      setPriceInfo(initialValues.price_info);
       setShowMap(false);
       setError(null);
     }
   }, [visible]);
 
-  const canSave =
-    !saving &&
-    !!title.trim() &&
-    !!organizer.trim() &&
-    !!location.trim();
+  const canSave = !saving && !!title.trim() && !!organizer.trim();
 
   async function handleSave() {
     if (!canSave) return;
     setSaving(true);
     setError(null);
-    const { error: err } = await supabase
+    const { data: updatedEvent, error: err } = await supabase
       .from("events")
       .update({
         title: title.trim(),
@@ -98,11 +110,20 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
         time_label: fmtTime(selectedDate),
         location: location.trim(),
         description: description.trim(),
+        image_url: imageUrl.trim() || null,
+        max_participants: maxParticipants.trim() ? Number(maxParticipants.trim()) : null,
+        contact_info: contactInfo.trim() || null,
+        price_info: priceInfo.trim() || null,
       })
-      .eq("id", eventId);
+      .eq("id", eventId)
+      .select("id")
+      .maybeSingle();
 
     if (err) {
       setError(err.message);
+      setSaving(false);
+    } else if (!updatedEvent) {
+      setError("Could not update this event. Please try again.");
       setSaving(false);
     } else {
       setSaving(false);
@@ -113,6 +134,10 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
         time: fmtTime(selectedDate),
         location: location.trim(),
         description: description.trim(),
+        image_url: imageUrl.trim(),
+        max_participants: maxParticipants.trim() ? Number(maxParticipants.trim()) : null,
+        contact_info: contactInfo.trim(),
+        price_info: priceInfo.trim(),
       });
       onClose();
     }
@@ -127,7 +152,7 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
     <Modal
       visible={visible}
       animationType="slide"
-      transparent
+      transparent={false}
       onRequestClose={showMap ? () => setShowMap(false) : pickerMode ? () => setPickerMode(null) : onClose}
     >
       <View style={styles.overlay}>
@@ -143,6 +168,7 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
             behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={styles.kav}
           >
+            <View style={styles.sheetBacking}>
             <View style={styles.sheet}>
               <View style={styles.handle} />
 
@@ -196,25 +222,45 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
 
                 <View style={styles.fieldContainer}>
                   <Text style={styles.fieldLabel}>Location</Text>
-                  <TouchableOpacity
-                    style={styles.locationButton}
-                    onPress={() => setShowMap(true)}
-                    activeOpacity={0.7}
-                  >
+                  <View style={styles.locationInputRow}>
                     <Ionicons
                       name={location ? "location" : "location-outline"}
                       size={16}
                       color={location ? colors.iconbBg : colors.textMuted}
                       style={styles.locationIcon}
                     />
-                    <Text style={[styles.locationButtonText, !location && styles.locationButtonPlaceholder]} numberOfLines={1}>
-                      {location || "Tap to choose on map"}
+                    <TextInput
+                      value={location}
+                      onChangeText={setLocation}
+                      placeholder="Enter an address"
+                      placeholderTextColor={colors.textMuted}
+                      style={styles.locationInput}
+                      numberOfLines={1}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    style={styles.locationMapButton}
+                    onPress={() => setShowMap(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="map-outline" size={14} color={colors.textMuted} style={styles.pickerIcon} />
+                    <Text style={styles.locationMapButtonText}>
+                      Choose on map instead
                     </Text>
-                    <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
                   </TouchableOpacity>
                 </View>
 
                 <Field label="Description" value={description} onChangeText={setDescription} placeholder="A few words about the event…" multiline />
+                <Field label="Image URL" value={imageUrl} onChangeText={setImageUrl} placeholder="https://example.com/event.jpg" keyboardType="url" />
+                <Field
+                  label="Maximum Participants"
+                  value={maxParticipants}
+                  onChangeText={(v) => setMaxParticipants(v.replace(/[^0-9]/g, ""))}
+                  placeholder="Limit number of participants"
+                  keyboardType="number-pad"
+                />
+                <Field label="Contact Info" value={contactInfo} onChangeText={setContactInfo} placeholder="Phone / Email" keyboardType="email-address" />
+                <Field label="Price" value={priceInfo} onChangeText={setPriceInfo} placeholder="Free / Paid" />
               </ScrollView>
 
               {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -252,6 +298,7 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
                 </View>
               )}
             </View>
+            </View>
           </KeyboardAvoidingView>
         )}
       </View>
@@ -265,9 +312,13 @@ type FieldProps = {
   onChangeText: (v: string) => void;
   placeholder?: string;
   multiline?: boolean;
+  keyboardType?: "default" | "number-pad" | "email-address" | "phone-pad" | "url";
 };
 
-function Field({ label, value, onChangeText, placeholder, multiline }: FieldProps) {
+function Field({ label, value, onChangeText, placeholder, multiline, keyboardType }: FieldProps) {
+  const { bgOption } = useBackground();
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   return (
     <View style={styles.fieldContainer}>
       <Text style={styles.fieldLabel}>{label}</Text>
@@ -280,19 +331,28 @@ function Field({ label, value, onChangeText, placeholder, multiline }: FieldProp
           style={[styles.input, multiline && styles.inputMultiline]}
           multiline={multiline}
           numberOfLines={multiline ? 3 : 1}
+          keyboardType={keyboardType}
+          autoCapitalize={keyboardType === "url" || keyboardType === "email-address" ? "none" : "sentences"}
+          autoCorrect={keyboardType === "url" || keyboardType === "email-address" ? false : true}
         />
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: colors.background,
     justifyContent: "flex-end",
   },
   kav: { justifyContent: "flex-end" },
+  sheetBacking: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    height: "95%",
+  },
   sheet: {
     backgroundColor: colors.card,
     borderTopLeftRadius: 20,
@@ -300,7 +360,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
     paddingTop: 12,
-    height: "88%",
+    flex: 1,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   mapSheet: {
     flex: 1,
@@ -339,20 +401,25 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   inputRow: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-    paddingBottom: 8,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
-  inputRowMultiline: { paddingBottom: 4 },
-  input: { color: colors.text, fontSize: 16, height: 36 },
-  inputMultiline: { height: 72, textAlignVertical: "top", paddingTop: 4 },
+  inputRowMultiline: { paddingBottom: 10 },
+  input: { color: colors.text, fontSize: 16, height: 24, fontFamily: "Lora_400Regular" },
+  inputMultiline: { height: 72, textAlignVertical: "top", paddingTop: 0 },
   pickerButton: {
     flexDirection: "row",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-    paddingBottom: 10,
-    paddingTop: 2,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   pickerIcon: { marginRight: 6 },
   pickerButtonText: {
@@ -369,11 +436,13 @@ const styles = StyleSheet.create({
   },
   pickerCard: {
     width: "92%",
-    backgroundColor: colors.background,
-    borderRadius: 20,
+    backgroundColor: isOnboarding ? colors.card : colors.background,
+    borderRadius: 16,
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 12,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   pickerOverlayHeader: {
     flexDirection: "row",
@@ -392,32 +461,51 @@ const styles = StyleSheet.create({
     color: colors.iconbBg,
   },
   picker: { width: "100%" },
-  locationButton: {
+  locationInput: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 16,
+    height: 24,
+    fontFamily: "Lora_400Regular",
+    paddingVertical: 0,
+    margin: 0,
+  },
+  locationInputRow: {
     flexDirection: "row",
     alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
-    paddingBottom: 10,
-    paddingTop: 2,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  locationMapButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    marginTop: 10,
+    paddingHorizontal: 2,
+    paddingVertical: 2,
   },
   locationIcon: { marginRight: 8 },
-  locationButtonText: {
-    flex: 1,
-    fontSize: 16,
+  locationMapButtonText: {
+    fontSize: 14,
     fontFamily: "Lora_400Regular",
-    color: colors.text,
+    color: colors.textMuted,
   },
-  locationButtonPlaceholder: { color: colors.textMuted },
   saveButton: {
-    backgroundColor: colors.text,
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.14)" : colors.text,
     borderRadius: 50,
     height: 54,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 20,
     marginBottom: 8,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
   },
   saveButtonDisabled: { opacity: 0.35 },
-  saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  saveButtonText: { color: isOnboarding ? colors.text : colors.background, fontSize: 16, fontWeight: "600" },
   errorText: { fontSize: 13, color: "#C0392B", marginBottom: 8, textAlign: "center" },
-});
+}); }

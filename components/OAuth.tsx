@@ -21,7 +21,7 @@ export function OAuthButtons({ buttonStyle, textStyle }: OAuthButtonsProps) {
   const onPress = React.useCallback(async () => {
     try {
       const { createdSessionId, setActive } = await startOAuthFlow();
-      if (createdSessionId) {
+      if (createdSessionId && setActive) {
         setActive({ session: createdSessionId });
       }
     } catch (err) {

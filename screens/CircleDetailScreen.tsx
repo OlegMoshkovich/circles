@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
@@ -15,10 +16,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useUser } from "@clerk/clerk-expo";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
-import { colors } from "../src/theme/colors";
+import { Colors } from "../src/theme/colors";
+import { useBackground, useColors } from "../src/contexts/BackgroundContext";
+import { useLanguage } from "../src/i18n/LanguageContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, CircleMember, CircleNote, Event, UserProfile } from "../lib/supabase";
@@ -26,27 +29,34 @@ import { CircleInviteModal } from "../src/components/modals/CircleInviteModal";
 import { EditCircleModal, EditCircleData } from "../src/components/modals/EditCircleModal";
 import { CreateEventModal, NewEventData } from "../src/components/modals/CreateEventModal";
 import { EventCard } from "../src/components/cards/EventCard";
+import { ThemedBackground } from "../src/components/layout/ThemedBackground";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CircleDetail">;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-type Tab = "feed" | "members" | "requests";
+type Tab = "events" | "feed" | "members" | "description";
 type FeedItem =
   | { kind: "event"; data: Event }
   | { kind: "note"; data: CircleNote };
 
-const VISIBILITY_LABEL: Record<string, string> = {
-  public: "Public",
-  request: "Request to join",
-  private: "Private",
-};
+// VISIBILITY_LABEL is now built dynamically with translations (see visibilityLabel() inside the component)
 
 export default function CircleDetailScreen({ route, navigation }: Props) {
   const { id, owner_id } = route.params;
   const insets = useSafeAreaInsets();
+  const footerBottomInset = insets.bottom > 0 ? 0 : 24;
   const { user } = useUser();
   const nav = useNavigation<Nav>();
 
+  const { t } = useLanguage();
+  const { bgOption } = useBackground();
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const isOwner = user?.id === owner_id;
+  const visibilityLabel: Record<string, string> = {
+    public: t.circles.public,
+    request: t.circles.visibilityRequestToJoin,
+    private: t.circles.private,
+  };
 
   // Mutable display fields (can be updated via edit modal)
   const [name, setName] = useState(route.params.name);
@@ -54,7 +64,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [visibility, setVisibility] = useState(route.params.visibility);
   const [organizer] = useState(route.params.organizer ?? null);
 
-  const [activeTab, setActiveTab] = useState<Tab>("feed");
+  const [activeTab, setActiveTab] = useState<Tab>("events");
   const [memberCount, setMemberCount] = useState(route.params.member_count);
   const [membership, setMembership] = useState<CircleMember | null>(null);
   const [members, setMembers] = useState<CircleMember[]>([]);
@@ -74,6 +84,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [circleInviteVisible, setCircleInviteVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [createEventVisible, setCreateEventVisible] = useState(false);
+  const [didAutoSelectInitialTab, setDidAutoSelectInitialTab] = useState(false);
 
   // Load current user's membership status
   useEffect(() => {
@@ -110,9 +121,9 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       .then(({ count }) => setRequestCount(count ?? 0));
   }, [id, isOwner]);
 
-  // Load requests list when on requests tab
+  // Load requests list for the owner's description tab
   useEffect(() => {
-    if (activeTab !== "requests" || !isOwner) return;
+    if (activeTab !== "description" || !isOwner) return;
     setLoadingRequests(true);
     supabase
       .from("circle_members")
@@ -164,11 +175,9 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     }
   }
 
-  // Load feed
-  useEffect(() => {
-    if (activeTab !== "feed") return;
+  const loadFeed = useCallback(() => {
     setLoadingFeed(true);
-    Promise.all([
+    return Promise.all([
       supabase.from("events").select("*").eq("circle_id", id).order("created_at", { ascending: false }),
       supabase.from("circle_notes").select("*").eq("circle_id", id).order("created_at", { ascending: false }),
     ]).then(async ([eventsResult, notesResult]) => {
@@ -190,12 +199,37 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         }
       }
       if (!notesResult.error && notesResult.data) setNotes(notesResult.data);
+      const eventRows = eventsResult.error ? [] : (eventsResult.data ?? []);
+      const noteRows = notesResult.error ? [] : (notesResult.data ?? []);
+      if (!didAutoSelectInitialTab) {
+        const nextTab: Tab =
+          eventRows.length > 0
+            ? "events"
+            : noteRows.length > 0
+              ? "feed"
+              : "description";
+        setActiveTab(nextTab);
+        setDidAutoSelectInitialTab(true);
+      }
       setLoadingFeed(false);
     });
-  }, [id, activeTab]);
+  }, [didAutoSelectInitialTab, id]);
+
+  // Load circle events + feed items
+  useEffect(() => {
+    if (activeTab !== "events" && activeTab !== "feed") return;
+    loadFeed();
+  }, [activeTab, loadFeed]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (activeTab !== "events" && activeTab !== "feed") return;
+      loadFeed();
+    }, [activeTab, loadFeed])
+  );
 
   async function handleSaveEvent(data: NewEventData) {
-    const { error } = await supabase.from("events").insert({
+    const { data: createdEvent, error } = await supabase.from("events").insert({
       title: data.title,
       organizer: data.organizer,
       date_label: data.date,
@@ -203,17 +237,35 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       duration_minutes: data.duration ?? null,
       location: data.location,
       description: data.description,
+      image_url: data.image_url || null,
+      max_participants: data.max_participants,
+      contact_info: data.contact_info || null,
+      price_info: data.price_info || null,
       visibility: "circle",
       circle_id: id,
       created_by: user?.id ?? null,
-    });
+    }).select("id").single();
     if (!error) {
+      if (user?.id) {
+        const { error: rsvpError } = await supabase
+          .from("event_rsvps")
+          .upsert(
+            { event_id: createdEvent.id, user_id: user.id, status: "going" },
+            { onConflict: "event_id,user_id" }
+          );
+        if (rsvpError) {
+          console.error("Failed to auto-join event creator", rsvpError);
+        }
+      }
       setCreateEventVisible(false);
-      // Reload feed
-      setActiveTab("feed");
-      supabase.from("events").select("*").eq("circle_id", id).order("created_at", { ascending: false })
-        .then(({ data: rows }) => { if (rows) setEvents(rows); });
+      // Reload circle events
+      setActiveTab("events");
+      await loadFeed();
+      return true;
     }
+    console.error("Failed to create circle event", error);
+    Alert.alert("Could not create event", error.message);
+    return false;
   }
 
   async function handlePostNote() {
@@ -378,12 +430,12 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
   function handleDelete() {
     Alert.alert(
-      "Delete Circle",
-      "This will permanently delete the circle and remove all members. This cannot be undone.",
+      t.circles.deleteTitle,
+      t.circles.deleteMessage,
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t.common.cancel, style: "cancel" },
         {
-          text: "Delete",
+          text: t.common.delete,
           style: "destructive",
           onPress: async () => {
             const { error } = await supabase
@@ -407,7 +459,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           onPress={handleLeave}
           disabled={submitting}
         >
-          <Text style={styles.actionButtonTextOutline}>Leave Circle</Text>
+          <Text style={styles.actionButtonTextOutline}>{t.circles.leave}</Text>
         </TouchableOpacity>
       );
     }
@@ -415,7 +467,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     if (isRequested) {
       return (
         <View style={[styles.actionButton, styles.actionButtonOutline]}>
-          <Text style={styles.actionButtonTextOutline}>Requested</Text>
+          <Text style={styles.actionButtonTextOutline}>{t.circles.requested}</Text>
         </View>
       );
     }
@@ -424,19 +476,25 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
     return (
       <TouchableOpacity
-        style={styles.actionButton}
+        style={[styles.actionButton, styles.joinButton]}
         onPress={handleJoin}
         disabled={submitting}
       >
-        <Text style={styles.actionButtonText}>
-          {visibility === "request" ? "Request to Join" : "Join Circle"}
+        <Text style={styles.joinButtonText}>
+          {visibility === "request" ? t.circles.requestToJoin : t.circles.join}
         </Text>
       </TouchableOpacity>
     );
   }
 
   return (
-    <View style={[styles.wrapper, { paddingBottom: insets.bottom }]}>
+    <ThemedBackground backgroundColor={colors.background}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={0}
+      >
+      <View style={[styles.wrapper, { paddingBottom: insets.bottom }]}>
       {/* Back button */}
       <View style={[styles.backRow, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity
@@ -445,46 +503,39 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
           <Ionicons name="chevron-back" size={18} color={colors.text} />
-          <Text style={styles.backLabel}>Back</Text>
+          <Text style={styles.backLabel}>{t.common.back}</Text>
         </TouchableOpacity>
-        {isOwner && (
+        {(isOwner || isMember) && (
           <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={() => setCreateEventVisible(true)}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Ionicons name="calendar-outline" size={18} color={colors.text} />
+            </TouchableOpacity>
+            {isOwner && (
             <TouchableOpacity
               onPress={() => setEditVisible(true)}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <Ionicons name="create-outline" size={18} color={colors.textMuted} />
+              <Ionicons name="create-outline" size={18} color={colors.text} />
             </TouchableOpacity>
+            )}
+            {isOwner && (
             <TouchableOpacity
               onPress={handleDelete}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
+              <Ionicons name="trash-outline" size={18} color={colors.text} />
             </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
 
-      {/* Fixed header */}
-      <View style={styles.header}>
+      {/* Header card - fixed, not scrollable */}
+      <View style={[styles.headerCard, styles.headerCardOuter]}>
         <Text style={styles.title}>{name}</Text>
-
-        {description ? (
-          <Text style={styles.description}>{description}</Text>
-        ) : null}
-
-        <View style={styles.metaRow}>
-          <Ionicons name="people-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
-          <Text style={styles.metaText}>{memberCount} {memberCount === 1 ? "member" : "members"}</Text>
-          <Text style={styles.metaSep}>·</Text>
-          <Text style={styles.metaText}>{VISIBILITY_LABEL[visibility]}</Text>
-          {organizer ? (
-            <>
-              <Text style={styles.metaSep}>·</Text>
-              <Text style={styles.metaText}>{organizer}</Text>
-            </>
-          ) : null}
-        </View>
 
         <View style={styles.divider} />
 
@@ -492,272 +543,333 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         <View style={styles.tabRow}>
           <View style={styles.tabList}>
             <TouchableOpacity
+              style={[styles.tab, activeTab === "events" && styles.tabActive]}
+              onPress={() => setActiveTab("events")}
+            >
+              <Text style={[styles.tabText, activeTab === "events" && styles.tabTextActive]}>{t.circles.eventsTab}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[styles.tab, activeTab === "feed" && styles.tabActive]}
               onPress={() => setActiveTab("feed")}
             >
-              <Text style={[styles.tabText, activeTab === "feed" && styles.tabTextActive]}>Feed</Text>
+              <Text style={[styles.tabText, activeTab === "feed" && styles.tabTextActive]}>{t.circles.feed}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.tab, activeTab === "members" && styles.tabActive]}
               onPress={() => setActiveTab("members")}
             >
-              <Text style={[styles.tabText, activeTab === "members" && styles.tabTextActive]}>Members</Text>
+              <Text style={[styles.tabText, activeTab === "members" && styles.tabTextActive]}>{t.circles.members}</Text>
             </TouchableOpacity>
-            {isOwner && (
-              <TouchableOpacity
-                style={[styles.tab, activeTab === "requests" && styles.tabActive]}
-                onPress={() => setActiveTab("requests")}
-              >
-                <View style={styles.tabWithBadge}>
-                  <Text style={[styles.tabText, activeTab === "requests" && styles.tabTextActive]}>Requests</Text>
-                  {requestCount > 0 && (
-                    <View style={styles.tabBadge}>
-                      <Text style={styles.tabBadgeText}>{requestCount}</Text>
-                    </View>
-                  )}
-                </View>
-              </TouchableOpacity>
-            )}
-          </View>
-          {(isOwner || isMember) && activeTab === "feed" && (
             <TouchableOpacity
-              onPress={() => setCreateEventVisible(true)}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              style={styles.addEventButton}
+              style={[styles.tab, activeTab === "description" && styles.tabActive]}
+              onPress={() => setActiveTab("description")}
             >
-              <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <View style={styles.divider} />
-      </View>
-
-      {/* Scrollable tab content only */}
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-
-        {/* Feed tab */}
-        {activeTab === "feed" && (
-          <>
-            {(isOwner || isMember) && (
-              <View style={styles.composeBox}>
-                <View style={styles.composeRow}>
-                  <Ionicons name="chatbubble-outline" size={18} color={colors.text} style={styles.composeIcon} />
-                  <TextInput
-                    style={styles.composeInput}
-                    placeholder="Share a note with the circle…"
-                    placeholderTextColor={colors.textMuted}
-                    value={noteText}
-                    onChangeText={setNoteText}
-                    multiline
-                    maxLength={500}
-                  />
-                </View>
-                {noteText.trim().length > 0 && (
-                  <TouchableOpacity
-                    style={styles.postButton}
-                    onPress={handlePostNote}
-                    disabled={postingNote}
-                  >
-                    {postingNote ? (
-                      <ActivityIndicator size="small" color={colors.card} />
-                    ) : (
-                      <Text style={styles.postButtonText}>Post</Text>
-                    )}
-                  </TouchableOpacity>
+              <View style={styles.tabWithBadge}>
+                <Text style={[styles.tabText, activeTab === "description" && styles.tabTextActive]}>{t.circles.descriptionTab}</Text>
+                {isOwner && requestCount > 0 && (
+                  <View style={styles.tabBadge}>
+                    <Text style={styles.tabBadgeText}>{requestCount}</Text>
+                  </View>
                 )}
               </View>
-            )}
-            {loadingFeed ? (
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+
+      {/* Feed tab: sticky compose + scrollable notes */}
+      {activeTab === "feed" && (
+        <View style={styles.feedContainer}>
+          {loadingFeed ? (
+            <View style={styles.loader}>
+              <ActivityIndicator size="small" color={colors.textMuted} />
+            </View>
+          ) : (() => {
+            const sortedNotes = [...notes].sort(
+              (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            );
+            return (
+              <>
+                {(isOwner || isMember) && (
+                  <View style={styles.composeBox}>
+                    <View style={styles.composeRow}>
+                      <Ionicons name="chatbubble-outline" size={18} color={colors.text} style={styles.composeIcon} />
+                      <TextInput
+                        style={styles.composeInput}
+                        placeholder={t.circles.notePlaceholder}
+                        placeholderTextColor={colors.textMuted}
+                        value={noteText}
+                        onChangeText={setNoteText}
+                        multiline
+                        maxLength={500}
+                      />
+                    </View>
+                    {noteText.trim().length > 0 && (
+                      <TouchableOpacity
+                        style={styles.postButton}
+                        onPress={handlePostNote}
+                        disabled={postingNote}
+                      >
+                        {postingNote ? (
+                          <ActivityIndicator size="small" color={colors.card} />
+                        ) : (
+                          <Text style={styles.postButtonText}>{t.common.post}</Text>
+                        )}
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+                <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                  {sortedNotes.length === 0 ? (
+                    <Text style={styles.emptyText}>{t.circles.noFeed}</Text>
+                  ) : (
+                    sortedNotes.map((note) => {
+                      const initials = (() => {
+                        const n = note.display_name ?? "?";
+                        const parts = n.trim().split(" ");
+                        return parts.length >= 2
+                          ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+                          : n.slice(0, 2).toUpperCase();
+                      })();
+                      const timeAgo = (() => {
+                        const diff = Date.now() - new Date(note.created_at).getTime();
+                        const mins = Math.floor(diff / 60000);
+                        if (mins < 1) return "just now";
+                        if (mins < 60) return `${mins}m ago`;
+                        const hrs = Math.floor(mins / 60);
+                        if (hrs < 24) return `${hrs}h ago`;
+                        return `${Math.floor(hrs / 24)}d ago`;
+                      })();
+                      return (
+                        <View key={`note-${note.id}`} style={styles.noteCard}>
+                          <View style={styles.noteHeader}>
+                            <View style={styles.avatar}>
+                              {note.avatar_url ? (
+                                <Image source={{ uri: note.avatar_url }} style={styles.avatarImage} />
+                              ) : (
+                                <Text style={styles.avatarText}>{initials}</Text>
+                              )}
+                            </View>
+                            <View style={styles.noteHeaderText}>
+                              <Text style={styles.noteName}>{note.display_name ?? t.circles.typeMember}</Text>
+                              <Text style={styles.noteTime}>{timeAgo}</Text>
+                            </View>
+                            {note.user_id === user?.id && (
+                              <TouchableOpacity
+                                onPress={async () => {
+                                  await supabase.from("circle_notes").delete().eq("id", note.id);
+                                  setNotes((prev) => prev.filter((n) => n.id !== note.id));
+                                }}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                              >
+                                <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                          <Text style={styles.noteContent}>{note.content}</Text>
+                        </View>
+                      );
+                    })
+                  )}
+                </ScrollView>
+              </>
+            );
+          })()}
+        </View>
+      )}
+
+      {/* Other tabs: scrollable content */}
+      {activeTab !== "feed" && (
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          {/* Circle Events tab */}
+          {activeTab === "events" && (
+            <>
+              {loadingFeed ? (
+                <View style={styles.loader}>
+                  <ActivityIndicator size="small" color={colors.textMuted} />
+                </View>
+              ) : (() => {
+                const sortedEvents = [...events].sort(
+                  (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                );
+
+                return (
+                  <>
+                    {sortedEvents.length === 0 ? (
+                      <Text style={styles.emptyText}>{t.circles.noCircleEvents}</Text>
+                    ) : null}
+
+                    {sortedEvents.map((event) => (
+                      <EventCard
+                        key={`event-${event.id}`}
+                        title={event.title}
+                        organizer={event.organizer}
+                        date={event.date_label}
+                        time={event.time_label}
+                        location={event.location}
+                        going={event.going}
+                        maybe={event.maybe}
+                        noteCount={eventNoteCountMap[event.id] ?? 0}
+                        onPress={() =>
+                          nav.navigate("EventDetail", {
+                            id: event.id,
+                            title: event.title,
+                            organizer: event.organizer,
+                            date: event.date_label,
+                            time: event.time_label,
+                            location: event.location,
+                            going: event.going,
+                            maybe: event.maybe,
+                            description: event.description,
+                            image_url: event.image_url ?? null,
+                            max_participants: event.max_participants ?? null,
+                            contact_info: event.contact_info ?? null,
+                            price_info: event.price_info ?? null,
+                            created_by: event.created_by,
+                            circleName: name,
+                            circle_id: id,
+                          })
+                        }
+                      />
+                    ))}
+                  </>
+                );
+              })()}
+            </>
+          )}
+
+          {/* Members tab */}
+          {activeTab === "members" && (
+            loadingMembers ? (
               <View style={styles.loader}>
                 <ActivityIndicator size="small" color={colors.textMuted} />
               </View>
-            ) : (() => {
-              const feed: FeedItem[] = [
-                ...events.map((e): FeedItem => ({ kind: "event", data: e })),
-                ...notes.map((n): FeedItem => ({ kind: "note", data: n })),
-              ].sort((a, b) =>
-                new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime()
-              );
-              if (feed.length === 0) return <Text style={styles.emptyText}>No posts yet</Text>;
-              return feed.map((item) => {
-                if (item.kind === "event") {
-                  const event = item.data;
-                  return (
-                    <EventCard
-                      key={`event-${event.id}`}
-                      title={event.title}
-                      organizer={event.organizer}
-                      date={event.date_label}
-                      time={event.time_label}
-                      location={event.location}
-                      going={event.going}
-                      maybe={event.maybe}
-                      noteCount={eventNoteCountMap[event.id] ?? 0}
-                      onPress={() =>
-                        nav.navigate("EventDetail", {
-                          id: event.id,
-                          title: event.title,
-                          organizer: event.organizer,
-                          date: event.date_label,
-                          time: event.time_label,
-                          location: event.location,
-                          going: event.going,
-                          maybe: event.maybe,
-                          description: event.description,
-                          created_by: event.created_by,
-                          circleName: name,
-                          circle_id: id,
-                        })
-                      }
-                    />
-                  );
-                }
-                const note = item.data;
-                const initials = (() => {
-                  const n = note.display_name ?? "?";
-                  const parts = n.trim().split(" ");
-                  return parts.length >= 2
+            ) : members.length === 0 && invitedUsers.length === 0 ? (
+              <Text style={styles.emptyText}>{t.circles.noMembers}</Text>
+            ) : (
+              <View style={styles.membersPanel}>
+                {members.map((member) => (
+                  <MemberRow
+                    key={member.id}
+                    member={member}
+                    isOwner={member.user_id === owner_id}
+                    currentUserId={user?.id}
+                    currentUserName={user?.fullName ?? user?.firstName ?? null}
+                    profileMap={profileMap}
+                  />
+                ))}
+                {invitedUsers.map((u) => {
+                  const parts = u.name.trim().split(" ");
+                  const ini = parts.length >= 2
                     ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-                    : n.slice(0, 2).toUpperCase();
-                })();
-                const timeAgo = (() => {
-                  const diff = Date.now() - new Date(note.created_at).getTime();
-                  const mins = Math.floor(diff / 60000);
-                  if (mins < 1) return "just now";
-                  if (mins < 60) return `${mins}m ago`;
-                  const hrs = Math.floor(mins / 60);
-                  if (hrs < 24) return `${hrs}h ago`;
-                  return `${Math.floor(hrs / 24)}d ago`;
-                })();
-                return (
-                  <View key={`note-${note.id}`} style={styles.noteCard}>
-                    <View style={styles.noteHeader}>
+                    : u.name.slice(0, 2).toUpperCase();
+                  return (
+                    <View key={u.user_id} style={styles.memberRow}>
                       <View style={styles.avatar}>
-                        {note.avatar_url ? (
-                          <Image source={{ uri: note.avatar_url }} style={styles.avatarImage} />
-                        ) : (
-                          <Text style={styles.avatarText}>{initials}</Text>
-                        )}
+                        <Text style={styles.avatarText}>{ini}</Text>
                       </View>
-                      <View style={styles.noteHeaderText}>
-                        <Text style={styles.noteName}>{note.display_name ?? "Member"}</Text>
-                        <Text style={styles.noteTime}>{timeAgo}</Text>
+                      <Text style={styles.memberUserId} numberOfLines={1}>{u.name}</Text>
+                      <View style={styles.invitedBadge}>
+                        <Text style={styles.invitedBadgeText}>{t.circles.badgeInvited}</Text>
                       </View>
-                      {note.user_id === user?.id && (
-                        <TouchableOpacity
-                          onPress={async () => {
-                            await supabase.from("circle_notes").delete().eq("id", note.id);
-                            setNotes((prev) => prev.filter((n) => n.id !== note.id));
-                          }}
-                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                          <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
-                        </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </View>
+            )
+          )}
+
+          {/* Description tab */}
+          {activeTab === "description" && (
+            loadingRequests ? (
+              <View style={styles.loader}>
+                <ActivityIndicator size="small" color={colors.textMuted} />
+              </View>
+            ) : (
+              <View style={styles.descriptionPanel}>
+                <Text style={styles.sectionTitle}>{t.circles.about}</Text>
+                <Text style={styles.descriptionBody}>
+                  {description?.trim() ? description : t.circles.noDescription}
+                </Text>
+
+                <View style={styles.descriptionMetaList}>
+                  <View style={styles.descriptionMetaRow}>
+                    <Text style={styles.descriptionMetaLabel}>{t.circles.visibility}</Text>
+                    <Text style={styles.descriptionMetaValue}>{visibilityLabel[visibility]}</Text>
+                  </View>
+                  {organizer ? (
+                    <View style={styles.descriptionMetaRow}>
+                      <Text style={styles.descriptionMetaLabel}>{t.circles.organizer}</Text>
+                      <Text style={styles.descriptionMetaValue}>{organizer}</Text>
+                    </View>
+                  ) : null}
+                  <View style={styles.descriptionMetaRow}>
+                    <Text style={styles.descriptionMetaLabel}>{t.circles.members}</Text>
+                    <Text style={styles.descriptionMetaValue}>{memberCount}</Text>
+                  </View>
+                </View>
+
+                {isOwner && (
+                  <>
+                    <View style={styles.sectionDivider} />
+                    <View style={styles.ownerSectionHeader}>
+                      <Text style={styles.sectionTitle}>{t.circles.pendingRequestsLabel}</Text>
+                      {requestCount > 0 && (
+                        <View style={styles.tabBadge}>
+                          <Text style={styles.tabBadgeText}>{requestCount}</Text>
+                        </View>
                       )}
                     </View>
-                    <Text style={styles.noteContent}>{note.content}</Text>
-                  </View>
-                );
-              });
-            })()}
-          </>
-        )}
-
-        {/* Members tab */}
-        {activeTab === "members" && (
-          loadingMembers ? (
-            <View style={styles.loader}>
-              <ActivityIndicator size="small" color={colors.textMuted} />
-            </View>
-          ) : members.length === 0 && invitedUsers.length === 0 ? (
-            <Text style={styles.emptyText}>No members yet</Text>
-          ) : (
-            <>
-              {members.map((member) => (
-                <MemberRow
-                  key={member.id}
-                  member={member}
-                  isOwner={member.user_id === owner_id}
-                  currentUserId={user?.id}
-                  currentUserName={user?.fullName ?? user?.firstName ?? null}
-                  profileMap={profileMap}
-                />
-              ))}
-              {invitedUsers.map((u) => {
-                const parts = u.name.trim().split(" ");
-                const ini = parts.length >= 2
-                  ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-                  : u.name.slice(0, 2).toUpperCase();
-                return (
-                  <View key={u.user_id} style={styles.memberRow}>
-                    <View style={styles.avatar}>
-                      <Text style={styles.avatarText}>{ini}</Text>
-                    </View>
-                    <Text style={styles.memberUserId} numberOfLines={1}>{u.name}</Text>
-                    <View style={styles.invitedBadge}>
-                      <Text style={styles.invitedBadgeText}>INVITED</Text>
-                    </View>
-                  </View>
-                );
-              })}
-            </>
-          )
-        )}
-
-        {/* Requests tab (owner only) */}
-        {activeTab === "requests" && (
-          loadingRequests ? (
-            <View style={styles.loader}>
-              <ActivityIndicator size="small" color={colors.textMuted} />
-            </View>
-          ) : requests.length === 0 ? (
-            <Text style={styles.emptyText}>No pending requests</Text>
-          ) : (
-            requests.map((req) => {
-              const name =
-                (req.user_id === user?.id && (user?.fullName ?? user?.firstName))
-                  ? (user.fullName ?? user.firstName ?? req.user_id)
-                  : (profileMap[req.user_id] ?? req.display_name ?? req.user_id);
-              const parts = name.trim().split(" ");
-              const initials = parts.length >= 2
-                ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-                : name.slice(0, 2).toUpperCase();
-              return (
-                <View key={req.id} style={styles.requestRow}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{initials}</Text>
-                  </View>
-                  <Text style={styles.memberUserId} numberOfLines={1}>{name}</Text>
-                  <TouchableOpacity
-                    style={styles.acceptButton}
-                    onPress={() => handleAccept(req)}
-                  >
-                    <Text style={styles.acceptButtonText}>Accept</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.declineButton}
-                    onPress={() => handleDecline(req)}
-                  >
-                    <Ionicons name="close" size={16} color={colors.textMuted} />
-                  </TouchableOpacity>
-                </View>
-              );
-            })
-          )
-        )}
-      </ScrollView>
+                    {requests.length === 0 ? (
+                      <Text style={styles.emptyText}>{t.circles.noPendingRequests}</Text>
+                    ) : (
+                      requests.map((req) => {
+                        const name =
+                          (req.user_id === user?.id && (user?.fullName ?? user?.firstName))
+                            ? (user.fullName ?? user.firstName ?? req.user_id)
+                            : (profileMap[req.user_id] ?? req.display_name ?? req.user_id);
+                        const parts = name.trim().split(" ");
+                        const initials = parts.length >= 2
+                          ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+                          : name.slice(0, 2).toUpperCase();
+                        return (
+                          <View key={req.id} style={styles.requestRow}>
+                            <View style={styles.avatar}>
+                              <Text style={styles.avatarText}>{initials}</Text>
+                            </View>
+                            <Text style={styles.memberUserId} numberOfLines={1}>{name}</Text>
+                            <TouchableOpacity
+                              style={styles.acceptButton}
+                              onPress={() => handleAccept(req)}
+                            >
+                              <Text style={styles.acceptButtonText}>{t.common.accept}</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.declineButton}
+                              onPress={() => handleDecline(req)}
+                            >
+                              <Ionicons name="close" size={16} color={colors.textMuted} />
+                            </TouchableOpacity>
+                          </View>
+                        );
+                      })
+                    )}
+                  </>
+                )}
+              </View>
+            )
+          )}
+        </ScrollView>
+      )}
 
       {/* Fixed footer: join/leave or invite */}
-      <View style={styles.footer}>
-        <View style={styles.footerDivider} />
+      <View style={[styles.footer, { paddingBottom: footerBottomInset }]}>
         {isOwner ? (
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => setCircleInviteVisible(true)}
           >
-            <Ionicons name="person-add-outline" size={16} color={colors.card} style={{ marginRight: 8 }} />
-            <Text style={styles.actionButtonText}>Invite Members</Text>
+            <Text style={styles.actionButtonText}>{t.common.inviteMembers}</Text>
           </TouchableOpacity>
         ) : (
           renderJoinButton()
@@ -789,7 +901,9 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         circleId={id}
         initialValues={{ name, description, visibility }}
       />
-    </View>
+      </View>
+      </KeyboardAvoidingView>
+    </ThemedBackground>
   );
 }
 
@@ -806,6 +920,10 @@ function MemberRow({
   currentUserName?: string | null;
   profileMap: Record<string, string>;
 }) {
+  const { t } = useLanguage();
+  const { bgOption } = useBackground();
+  const colors = useColors();
+  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const name =
     (member.user_id === currentUserId && currentUserName)
       ? currentUserName
@@ -823,22 +941,40 @@ function MemberRow({
       <Text style={styles.memberUserId} numberOfLines={1}>{name}</Text>
       {isOwner && (
         <View style={styles.roleBadge}>
-          <Text style={styles.roleBadgeText}>OWNER</Text>
+          <Text style={styles.roleBadgeText}>{t.circles.badgeOwner}</Text>
         </View>
       )}
       {!isOwner && member.role === "admin" && (
         <View style={styles.roleBadge}>
-          <Text style={styles.roleBadgeText}>ADMIN</Text>
+          <Text style={styles.roleBadgeText}>{t.circles.badgeAdmin}</Text>
         </View>
       )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.create({
   wrapper: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: isOnboarding ? "transparent" : colors.background,
+  },
+  headerCard: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: spacing.cardPadding,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: isOnboarding ? 0.14 : 0.06,
+        shadowRadius: 3,
+      },
+      android: { elevation: 2 },
+      default: {},
+    }),
   },
   backRow: {
     paddingHorizontal: spacing.pageHorizontal,
@@ -850,6 +986,12 @@ const styles = StyleSheet.create({
   backButton: {
     flexDirection: "row",
     alignItems: "center",
+    backgroundColor: isOnboarding ? "rgba(15,13,10,0.68)" : "transparent",
+    borderRadius: 999,
+    paddingHorizontal: isOnboarding ? 12 : 0,
+    paddingVertical: isOnboarding ? 8 : 0,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   backLabel: {
     ...typography.body,
@@ -901,20 +1043,21 @@ const styles = StyleSheet.create({
   },
   tabRow: {
     flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: spacing.sm,
   },
   tabList: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.md,
-  },
-  addEventButton: {
-    padding: 4,
+    flex: 1,
   },
   tab: {
     paddingBottom: 8,
     borderBottomWidth: 1.5,
     borderBottomColor: "transparent",
+    minWidth: 0,
+    flexShrink: 1,
   },
   tabActive: {
     borderBottomColor: colors.text,
@@ -923,6 +1066,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500" as const,
     color: colors.textMuted,
+    flexShrink: 1,
   },
   tabTextActive: {
     color: colors.text,
@@ -935,6 +1079,63 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.textMuted,
     paddingVertical: spacing.md,
+  },
+  membersPanel: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    paddingHorizontal: spacing.cardPadding,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    marginBottom: spacing.md,
+  },
+  descriptionPanel: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: spacing.cardPadding,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+  },
+  sectionTitle: {
+    ...typography.body,
+    color: colors.text,
+    fontWeight: "600" as const,
+    marginBottom: spacing.sm,
+  },
+  descriptionBody: {
+    ...typography.body,
+    color: colors.textMuted,
+    lineHeight: 22,
+  },
+  descriptionMetaList: {
+    marginTop: spacing.lg,
+    gap: spacing.sm,
+  },
+  descriptionMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+  },
+  descriptionMetaLabel: {
+    ...typography.bodySmall,
+    color: colors.textMuted,
+  },
+  descriptionMetaValue: {
+    ...typography.bodySmall,
+    color: colors.text,
+    flexShrink: 1,
+    textAlign: "right",
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: colors.divider,
+    marginVertical: spacing.lg,
+  },
+  ownerSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.sm,
   },
   memberRow: {
     flexDirection: "row",
@@ -972,6 +1173,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   roleBadgeText: {
     fontSize: 10,
@@ -982,8 +1185,8 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: spacing.pageHorizontal,
-    paddingBottom: spacing.md,
-    backgroundColor: colors.background,
+    paddingBottom: 16,
+    backgroundColor: isOnboarding ? "transparent" : colors.background,
   },
   footerDivider: {
     height: 1,
@@ -992,37 +1195,60 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flexDirection: "row",
-    backgroundColor: colors.text,
+    backgroundColor: isOnboarding ? "rgba(15,13,10,0.78)" : colors.text,
     borderRadius: 999,
     height: 54,
+    marginTop: spacing.lg,
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
     ...Platform.select({
       ios: {
-        shadowColor: "#2C2A26",
+        shadowColor: "#000000",
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowOpacity: isOnboarding ? 0.18 : 0.1,
+        shadowRadius: isOnboarding ? 16 : 4,
       },
-      android: { elevation: 2 },
+      android: { elevation: isOnboarding ? 4 : 2 },
       default: {},
     }),
   },
   actionButtonOutline: {
-    backgroundColor: colors.card,
+    backgroundColor: isOnboarding ? "rgba(15,13,10,0.78)" : colors.card,
     borderWidth: 1,
     borderColor: colors.cardBorder,
   },
   actionButtonText: {
-    color: colors.card,
+    color: isOnboarding ? colors.text : colors.background,
     fontSize: 16,
-    fontWeight: "500" as const,
+    fontFamily: "Lora_400Regular",
+  },
+  joinButton: {
+    backgroundColor: "#F5EFE3",
+    borderWidth: 1,
+    borderColor: "rgba(53,65,42,0.08)",
+  },
+  joinButtonText: {
+    color: "#35412A",
+    fontSize: 16,
+    fontFamily: "Lora_400Regular",
+  },
+  inviteActionButton: {
+    backgroundColor: "#F5EFE3",
+    borderWidth: 1,
+    borderColor: "rgba(53,65,42,0.08)",
+  },
+  inviteActionButtonText: {
+    color: "#35412A",
+    fontSize: 16,
+    fontFamily: "Lora_400Regular",
   },
   actionButtonTextOutline: {
     color: colors.text,
     fontSize: 16,
-    fontWeight: "500" as const,
+    fontFamily: "Lora_400Regular",
   },
   requestRow: {
     flexDirection: "row",
@@ -1075,6 +1301,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   invitedBadgeText: {
     fontSize: 10,
@@ -1086,7 +1314,31 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    gap: 12,
+    backgroundColor: isOnboarding ? "rgba(15,13,10,0.68)" : "transparent",
+    borderRadius: 999,
+    paddingHorizontal: isOnboarding ? 12 : 0,
+    paddingVertical: isOnboarding ? 8 : 0,
+    borderWidth: isOnboarding ? 1 : 0,
+    borderColor: isOnboarding ? colors.cardBorder : "transparent",
+  },
+  headerCardOuter: {
+    marginHorizontal: spacing.pageHorizontal,
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  feedContainer: {
+    flex: 1,
+    paddingHorizontal: spacing.pageHorizontal,
+  },
+  messagesPanel: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.cardPadding,
+    paddingVertical: spacing.cardPadding,
   },
   composeBox: {
     backgroundColor: colors.card,
@@ -1097,9 +1349,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     ...Platform.select({
       ios: {
-        shadowColor: "#2C2A26",
+        shadowColor: "#000000",
         shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
+        shadowOpacity: isOnboarding ? 0.12 : 0.05,
         shadowRadius: 2,
       },
       android: { elevation: 1 },
@@ -1124,22 +1376,24 @@ const styles = StyleSheet.create({
   },
   postButton: {
     alignSelf: "flex-end",
-    backgroundColor: colors.text,
-    paddingHorizontal: 16,
-    paddingVertical: 7,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 18,
+    paddingVertical: 9,
     borderRadius: 999,
-    marginTop: 6,
-    minWidth: 60,
+    marginTop: 10,
+    minWidth: 84,
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(27,36,23,0.12)",
   },
   postButtonText: {
-    color: colors.card,
-    fontSize: 13,
+    color: "#35412A",
+    fontSize: 14,
     fontWeight: "600" as const,
   },
   noteCard: {
     backgroundColor: colors.card,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     padding: spacing.cardPadding,
@@ -1169,4 +1423,4 @@ const styles = StyleSheet.create({
     color: colors.text,
     lineHeight: 21,
   },
-});
+}); }

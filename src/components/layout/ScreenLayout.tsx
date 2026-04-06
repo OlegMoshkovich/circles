@@ -4,9 +4,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
+import { useBackground } from "../../contexts/BackgroundContext";
+import { ThemedBackground } from "./ThemedBackground";
 
 type ScreenLayoutProps = {
-  header: React.ReactNode;
+  header?: React.ReactNode;
   children: React.ReactNode;
   stickyTop?: React.ReactNode;
   contentStyle?: ViewStyle;
@@ -15,15 +17,17 @@ type ScreenLayoutProps = {
   backgroundColor?: string;
 };
 
-export function ScreenLayout({ header, children, stickyTop, contentStyle, backgroundImage, backgroundBlurIntensity = 40, backgroundColor }: ScreenLayoutProps) {
+export function ScreenLayout({ header, children, stickyTop, contentStyle, backgroundImage, backgroundBlurIntensity = 55, backgroundColor }: ScreenLayoutProps) {
   const insets = useSafeAreaInsets();
   const resolvedBg = backgroundColor ?? colors.background;
+  const { bgOption } = useBackground();
+  const shouldUseThemedBackground = backgroundImage == null && bgOption === "onboarding";
 
   const inner = (
     <View
       style={[
         styles.wrapper,
-        !backgroundImage && { backgroundColor: resolvedBg },
+        !backgroundImage && !shouldUseThemedBackground && { backgroundColor: resolvedBg },
         {
           paddingTop: insets.top,
           paddingLeft: insets.left + spacing.pageHorizontal,
@@ -31,7 +35,7 @@ export function ScreenLayout({ header, children, stickyTop, contentStyle, backgr
         },
       ]}
     >
-      <View style={[styles.headerArea, !backgroundImage && { backgroundColor: resolvedBg }]}>{header}</View>
+      {header != null && <View style={[styles.headerArea, !backgroundImage && { backgroundColor: resolvedBg }]}>{header}</View>}
       {stickyTop != null && <View>{stickyTop}</View>}
       <ScrollView
         style={styles.scroll}
@@ -40,6 +44,7 @@ export function ScreenLayout({ header, children, stickyTop, contentStyle, backgr
       >
         {children}
       </ScrollView>
+      {/* <TabFocusOverlay /> */}
     </View>
   );
 
@@ -50,6 +55,10 @@ export function ScreenLayout({ header, children, stickyTop, contentStyle, backgr
         {inner}
       </ImageBackground>
     );
+  }
+
+  if (shouldUseThemedBackground) {
+    return <ThemedBackground backgroundBlurIntensity={0}>{inner}</ThemedBackground>;
   }
 
   return inner;

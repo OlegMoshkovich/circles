@@ -17,6 +17,10 @@ export type EventDetailParams = {
   maybe: number;
   rsvp?: "going" | "maybe";
   description: string;
+  image_url?: string | null;
+  max_participants?: number | null;
+  contact_info?: string | null;
+  price_info?: string | null;
   created_by?: string | null;
   circleName?: string | null;
   circle_id?: string | null;
