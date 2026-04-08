@@ -49,7 +49,6 @@ export default function CirclesScreen() {
   const [lastViewedMap, setLastViewedMap] = useState<Record<string, number>>({});
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [showDismissed, setShowDismissed] = useState(false);
-  const [hideCards, setHideCards] = useState(false);
 
   async function handleNearMe() {
     if (nearMe) {
@@ -248,18 +247,6 @@ export default function CirclesScreen() {
             rightElement={
               <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
                 <TouchableOpacity
-                  style={[styles.filterIconButton, hideCards && styles.filterIconButtonActive]}
-                  onPress={() => setHideCards((v) => !v)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name={hideCards ? "eye-off-outline" : "eye-outline"}
-                    size={17}
-                    color={hideCards ? colors.iconbBg : colors.textMuted}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
                   style={[styles.filterIconButton, (filter !== "all" || sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null) && styles.filterIconButtonActive]}
                   onPress={() => setShowFilterPanel((v) => !v)}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -390,7 +377,7 @@ export default function CirclesScreen() {
           )}
         </ScreenHeaderCard>}
       >
-        {!hideCards && (loading ? (
+        {loading ? (
           <View style={styles.loader}>
             <ActivityIndicator size="small" color={colors.textMuted} />
           </View>
@@ -503,7 +490,7 @@ export default function CirclesScreen() {
               }}
             />
           ))
-        ))}
+        )}
       </ScreenLayout>
 
       <CreateCircleModal
