@@ -23,7 +23,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       borderRadius: 16,
       paddingHorizontal: spacing.cardPadding,
       paddingTop: 0,
-      paddingBottom: spacing.cardPadding,
+      paddingBottom: 0,
       marginTop: 20,
       marginBottom: spacing.md,
       borderWidth: 1,

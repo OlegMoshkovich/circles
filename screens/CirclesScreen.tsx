@@ -242,75 +242,65 @@ export default function CirclesScreen() {
     <>
       <ScreenLayout
         backgroundColor={screenBgColor}
-      >
-        <ScreenHeaderCard>
+        stickyTop={<ScreenHeaderCard>
           <NavbarTitle
             title={t.nav.circles}
             rightElement={
-              <TouchableOpacity
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                style={styles.addButton}
-                onPress={() => setModalVisible(true)}
-              >
-                <Ionicons name="add" size={16} color={colors.textOnIconBg} />
-              </TouchableOpacity>
+              <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                <TouchableOpacity
+                  style={[styles.filterIconButton, hideCards && styles.filterIconButtonActive]}
+                  onPress={() => setHideCards((v) => !v)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={hideCards ? "eye-off-outline" : "eye-outline"}
+                    size={17}
+                    color={hideCards ? colors.iconbBg : colors.textMuted}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.filterIconButton, (filter !== "all" || sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null) && styles.filterIconButtonActive]}
+                  onPress={() => setShowFilterPanel((v) => !v)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="options-outline"
+                    size={17}
+                    color={(filter !== "all" || sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null) ? colors.iconbBg : colors.textMuted}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  style={styles.addButton}
+                  onPress={() => setModalVisible(true)}
+                >
+                  <Ionicons name="add" size={16} color={colors.textOnIconBg} />
+                </TouchableOpacity>
+              </View>
             }
           />
           {/* <TextBlock subtitle={t.circles.subtitle} /> */}
 
-          <View style={styles.filterRow}>
-            <View style={styles.toggle}>
-              <TouchableOpacity
-                style={[styles.toggleOption, filter === "all" && styles.toggleOptionActive]}
-                onPress={() => setFilter("all")}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.toggleLabel, filter === "all" && styles.toggleLabelActive]}>
-                  {t.circles.filterAll}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.toggleOption, filter === "mine" && styles.toggleOptionActive]}
-                onPress={() => setFilter("mine")}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.toggleLabel, filter === "mine" && styles.toggleLabelActive]}>
-                  {t.circles.filterMyCircles}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={{ flexDirection: "row", gap: 8 }}>
-            <TouchableOpacity
-                style={[styles.filterIconButton, hideCards && styles.filterIconButtonActive]}
-                onPress={() => setHideCards((v) => !v)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={hideCards ? "eye-off-outline" : "eye-outline"}
-                  size={17}
-                  color={hideCards ? colors.iconbBg : colors.textMuted}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.filterIconButton, (sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null) && styles.filterIconButtonActive]}
-                onPress={() => setShowFilterPanel((v) => !v)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name="options-outline"
-                  size={17}
-                  color={(sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null) ? colors.iconbBg : colors.textMuted}
-                />
-              </TouchableOpacity>
-              
-            </View>
-          </View>
-
           {showFilterPanel && (
             <View style={styles.filterPanel}>
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionLabel}>{t.circles.filterAll} / {t.circles.filterMyCircles}</Text>
+                <View style={styles.filterChipRow}>
+                  {(["all", "mine"] as Filter[]).map((opt) => (
+                    <TouchableOpacity
+                      key={opt}
+                      style={[styles.filterChip, filter === opt && styles.filterChipActive]}
+                      onPress={() => setFilter(opt)}
+                    >
+                      <Text style={[styles.filterChipText, filter === opt && styles.filterChipTextActive]}>
+                        {opt === "all" ? t.circles.filterAll : t.circles.filterMyCircles}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
               <View style={styles.filterSection}>
                 <Text style={styles.filterSectionLabel}>{t.common.sort}</Text>
                 <View style={styles.filterChipRow}>
@@ -398,7 +388,8 @@ export default function CirclesScreen() {
               </View>
             </View>
           )}
-        </ScreenHeaderCard>
+        </ScreenHeaderCard>}
+      >
         {!hideCards && (loading ? (
           <View style={styles.loader}>
             <ActivityIndicator size="small" color={colors.textMuted} />
@@ -541,7 +532,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
   filterRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     marginBottom: 12,
   },
   filterIconButton: {

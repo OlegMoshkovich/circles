@@ -47,9 +47,8 @@ function makeStyles(colors: Colors) {
       flexDirection: "row",
       alignItems: "center",
       gap: 10,
-      paddingTop: spacing.lg,
-      paddingBottom: spacing.sm,
-      marginBottom: spacing.sm,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.md,
     },
     title: {
       fontSize: 30,
