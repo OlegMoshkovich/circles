@@ -589,7 +589,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
               (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
             );
             return (
-              <>
+              <View style={[styles.tabContentCard, styles.feedCard, { flex: 1 }]}>
                 {(isOwner || isMember) && (
                   <View style={styles.composeBox}>
                     <View style={styles.composeRow}>
@@ -672,7 +672,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                     })
                   )}
                 </ScrollView>
-              </>
+              </View>
             );
           })()}
         </View>
@@ -694,7 +694,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                 );
 
                 return (
-                  <>
+                  <View style={styles.tabContentCard}>
                     {sortedEvents.length === 0 ? (
                       <Text style={styles.emptyText}>{t.circles.noCircleEvents}</Text>
                     ) : null}
@@ -732,7 +732,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                         }
                       />
                     ))}
-                  </>
+                  </View>
                 );
               })()}
             </>
@@ -1079,6 +1079,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     ...typography.bodySmall,
     color: colors.textMuted,
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.cardPadding,
   },
   membersPanel: {
     backgroundColor: colors.card,
@@ -1198,7 +1199,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     backgroundColor: isOnboarding ? "rgba(15,13,10,0.78)" : colors.text,
     borderRadius: 999,
     height: 54,
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
@@ -1341,22 +1342,9 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     paddingVertical: spacing.cardPadding,
   },
   composeBox: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
     padding: spacing.cardPadding,
-    marginBottom: spacing.md,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: isOnboarding ? 0.12 : 0.05,
-        shadowRadius: 2,
-      },
-      android: { elevation: 1 },
-      default: {},
-    }),
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorder,
   },
   composeRow: {
     flexDirection: "row",
@@ -1392,12 +1380,9 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     fontWeight: "600" as const,
   },
   noteCard: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
     padding: spacing.cardPadding,
-    marginBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorder,
   },
   noteHeader: {
     flexDirection: "row",
@@ -1405,22 +1390,46 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     marginBottom: spacing.sm,
   },
   noteHeaderText: {
-    marginLeft: spacing.sm,
     flex: 1,
+    marginLeft: spacing.sm,
+  },
+  noteHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
   },
   noteName: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: "600" as const,
     color: colors.text,
   },
   noteTime: {
     fontSize: 11,
     color: colors.textMuted,
-    marginTop: 1,
+    marginTop: 2,
   },
   noteContent: {
     ...typography.body,
     color: colors.text,
     lineHeight: 21,
+  },
+  tabContentCard: {
+    borderRadius: 16,
+    overflow: "hidden" as const,
+  },
+  feedCard: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: isOnboarding ? 0.14 : 0.06,
+        shadowRadius: 3,
+      },
+      android: { elevation: 2 },
+      default: {},
+    }),
   },
 }); }
