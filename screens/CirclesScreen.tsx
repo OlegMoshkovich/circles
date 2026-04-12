@@ -241,6 +241,7 @@ export default function CirclesScreen() {
     <>
       <ScreenLayout
         backgroundColor={screenBgColor}
+        contentStyle={loading ? styles.scrollContentLoader : undefined}
         stickyTop={<ScreenHeaderCard>
           <NavbarTitle
             title={t.nav.circles}
@@ -512,9 +513,14 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     alignItems: "center",
     justifyContent: "center",
   },
-  loader: {
-    paddingVertical: 12,
+  scrollContentLoader: {
+    flexGrow: 1,
+    justifyContent: "center",
     alignItems: "center",
+  },
+  loader: {
+    alignItems: "center",
+    justifyContent: "center",
   },
   filterRow: {
     flexDirection: "row",
