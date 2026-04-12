@@ -526,20 +526,16 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     width: 32,
     height: 32,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
     backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
     alignItems: "center",
     justifyContent: "center",
   },
   filterIconButtonActive: {
-    borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.iconbBg,
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : colors.iconbBg,
   },
   filterPanel: {
     backgroundColor: colors.card,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
     padding: 14,
     marginBottom: 14,
     gap: 12,
@@ -563,8 +559,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     paddingVertical: 5,
     paddingHorizontal: 12,
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
     backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
   },
   filterChipNearMe: {
@@ -573,7 +567,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
   },
   filterChipActive: {
     backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : colors.text,
-    borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.text,
   },
   filterChipText: {
     fontSize: 13,
@@ -589,8 +582,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     backgroundColor: isOnboarding ? colors.badgeBg : colors.cardBorder,
     padding: 3,
     alignSelf: "flex-start",
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   toggleOption: {
     paddingHorizontal: 14,

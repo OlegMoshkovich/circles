@@ -79,8 +79,6 @@ export function CircleCard({
         <Text style={styles.description} numberOfLines={2}>{description}</Text>
       ) : null}
 
-      <View style={styles.divider} />
-
       <View style={styles.footer}>
         <View style={styles.footerLeft}>
           <View style={styles.footerRow}>
@@ -154,8 +152,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       borderRadius: 16,
       padding: spacing.cardPadding,
       marginBottom: spacing.md,
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
       ...Platform.select({
         ios: {
           shadowColor: "#000000",
@@ -192,20 +188,14 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       borderRadius: 999,
       alignItems: "center",
       justifyContent: "center",
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
       backgroundColor: colors.badgeBg,
       marginLeft: spacing.sm,
-      
     },
     badge: {
       backgroundColor: colors.badgeBg,
       paddingHorizontal: 10,
       paddingVertical: 3,
       borderRadius: 999,
-
-      borderWidth: isOnboarding ? 1 : 0,
-      borderColor: isOnboarding ? colors.cardBorder : "transparent",
     },
     badgeText: {
       fontSize: 11,
@@ -220,15 +210,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       marginBottom: spacing.sm,
       fontFamily: "Lora_400Regular",
     },
-    divider: {
-      height: 1,
-      backgroundColor: colors.divider,
-      marginVertical: spacing.md,
-    },
     footer: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
+      marginTop: spacing.md,
     },
     footerLeft: {
       flexDirection: "column",
@@ -256,13 +242,9 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       paddingHorizontal: 10,
       paddingVertical: 4,
       borderRadius: 999,
-      borderWidth: isOnboarding ? 1 : 0,
-      borderColor: isOnboarding ? colors.cardBorder : "transparent",
     },
     statusBadgeMuted: {
-      backgroundColor: "transparent",
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
+      backgroundColor: colors.badgeBg,
     },
     statusBadgeText: {
       fontSize: 11,
@@ -275,8 +257,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       paddingHorizontal: 14,
       paddingVertical: 5,
       borderRadius: 999,
-      borderWidth: isOnboarding ? 1 : 0,
-      borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
     },
     joinButtonText: {
       fontSize: 12,

@@ -96,8 +96,6 @@ export function EventCard({
         </View>
       ) : null}
 
-      <View style={styles.divider} />
-
       <View style={styles.footer}>
         <Text style={styles.footerText}>
           <Text style={styles.footerCount}>{going}</Text>
@@ -124,8 +122,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       borderRadius: 16,
       padding: spacing.cardPadding,
       marginBottom: spacing.md,
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
       ...Platform.select({
         ios: {
           shadowColor: "#000000",
@@ -160,8 +156,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       paddingHorizontal: 10,
       paddingVertical: 4,
       borderRadius: 999,
-      borderWidth: isOnboarding ? 1 : 0,
-      borderColor: isOnboarding ? colors.cardBorder : "transparent",
     },
     badgeGoing: {
       backgroundColor: isOnboarding ? "rgba(255,255,255,0.12)" : colors.iconbBg,
@@ -200,15 +194,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       color: colors.text,
       fontFamily: "Lora_400Regular",
     },
-    divider: {
-      height: 1,
-      backgroundColor: colors.divider,
-      marginVertical: spacing.md,
-    },
     footer: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
+      marginTop: spacing.md,
     },
     footerText: {
       ...typography.bodySmall,
@@ -237,8 +227,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       borderRadius: 999,
       alignItems: "center",
       justifyContent: "center",
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
       backgroundColor: colors.badgeBg,
       marginLeft: spacing.sm,
     },

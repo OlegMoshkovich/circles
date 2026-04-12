@@ -537,8 +537,6 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       <View style={[styles.headerCard, styles.headerCardOuter]}>
         <Text style={styles.title}>{name}</Text>
 
-        <View style={styles.divider} />
-
         {/* Tabs */}
         <View style={styles.tabRow}>
           <View style={styles.tabList}>
@@ -811,8 +809,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
                 {isOwner && (
                   <>
-                    <View style={styles.sectionDivider} />
-                    <View style={styles.ownerSectionHeader}>
+                    <View style={[styles.ownerSectionHeader, styles.ownerSectionHeaderAfterMeta]}>
                       <Text style={styles.sectionTitle}>{t.circles.pendingRequestsLabel}</Text>
                       {requestCount > 0 && (
                         <View style={styles.tabBadge}>
@@ -963,8 +960,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     borderRadius: 16,
     padding: spacing.cardPadding,
     marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
     ...Platform.select({
       ios: {
         shadowColor: "#000000",
@@ -990,8 +985,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     borderRadius: 999,
     paddingHorizontal: isOnboarding ? 12 : 0,
     paddingVertical: isOnboarding ? 8 : 0,
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   backLabel: {
     ...typography.body,
@@ -1036,15 +1029,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     color: colors.textMuted,
     marginHorizontal: spacing.sm,
   },
-  divider: {
-    height: 1,
-    backgroundColor: colors.divider,
-    marginVertical: spacing.md,
-  },
   tabRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: spacing.sm,
+    marginTop: spacing.md,
   },
   tabList: {
     flexDirection: "row",
@@ -1085,16 +1074,12 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     backgroundColor: colors.card,
     borderRadius: 16,
     paddingHorizontal: spacing.cardPadding,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
     marginBottom: spacing.md,
   },
   descriptionPanel: {
     backgroundColor: colors.card,
     borderRadius: 16,
     padding: spacing.cardPadding,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
   },
   sectionTitle: {
     ...typography.body,
@@ -1127,23 +1112,19 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     flexShrink: 1,
     textAlign: "right",
   },
-  sectionDivider: {
-    height: 1,
-    backgroundColor: colors.divider,
-    marginVertical: spacing.lg,
-  },
   ownerSectionHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: spacing.sm,
   },
+  ownerSectionHeaderAfterMeta: {
+    marginTop: spacing.lg,
+  },
   memberRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   avatar: {
     width: 36,
@@ -1174,8 +1155,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   roleBadgeText: {
     fontSize: 10,
@@ -1203,8 +1182,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
     ...Platform.select({
       ios: {
         shadowColor: "#000000",
@@ -1218,8 +1195,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   actionButtonOutline: {
     backgroundColor: isOnboarding ? "rgba(15,13,10,0.78)" : colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
   },
   actionButtonText: {
     color: isOnboarding ? colors.text : colors.background,
@@ -1228,8 +1203,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   joinButton: {
     backgroundColor: "#F5EFE3",
-    borderWidth: 1,
-    borderColor: "rgba(53,65,42,0.08)",
   },
   joinButtonText: {
     color: "#35412A",
@@ -1238,8 +1211,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   inviteActionButton: {
     backgroundColor: "#F5EFE3",
-    borderWidth: 1,
-    borderColor: "rgba(53,65,42,0.08)",
   },
   inviteActionButtonText: {
     color: "#35412A",
@@ -1255,8 +1226,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   acceptButton: {
     backgroundColor: colors.text,
@@ -1302,8 +1271,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   invitedBadgeText: {
     fontSize: 10,
@@ -1320,8 +1287,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     borderRadius: 999,
     paddingHorizontal: isOnboarding ? 12 : 0,
     paddingVertical: isOnboarding ? 8 : 0,
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   headerCardOuter: {
     marginHorizontal: spacing.pageHorizontal,
@@ -1335,16 +1300,12 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   messagesPanel: {
     backgroundColor: colors.card,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
     marginBottom: spacing.md,
     paddingHorizontal: spacing.cardPadding,
     paddingVertical: spacing.cardPadding,
   },
   composeBox: {
     padding: spacing.cardPadding,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
   },
   composeRow: {
     flexDirection: "row",
@@ -1371,8 +1332,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     marginTop: 10,
     minWidth: 84,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(27,36,23,0.12)",
   },
   postButtonText: {
     color: "#35412A",
@@ -1381,8 +1340,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   noteCard: {
     padding: spacing.cardPadding,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.cardBorder,
+    paddingBottom: spacing.lg,
   },
   noteHeader: {
     flexDirection: "row",
@@ -1419,8 +1377,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   feedCard: {
     backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
     ...Platform.select({
       ios: {
         shadowColor: "#000000",

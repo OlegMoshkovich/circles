@@ -26,8 +26,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       paddingBottom: 0,
       marginTop: 20,
       marginBottom: spacing.md,
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
       ...Platform.select({
         ios: {
           shadowColor: "#000000",
