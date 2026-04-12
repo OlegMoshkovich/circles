@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -11,6 +11,7 @@ import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { TextBlock } from "../src/components/blocks/TextBlock";
 import { EventCard } from "../src/components/cards/EventCard";
 import { CreateEventModal, NewEventData } from "../src/components/modals/CreateEventModal";
+import { GradientRingLoader } from "../src/components/loaders/GradientRingLoader";
 import { Colors } from "../src/theme/colors";
 
 import { useUser } from "@clerk/clerk-expo";
@@ -292,7 +293,7 @@ export default function EventsScreen() {
       >
         {loading ? (
           <View style={styles.loader}>
-            <ActivityIndicator size="small" color={colors.textMuted} />
+            <GradientRingLoader size={40} strokeWidth={7} />
           </View>
         ) : showDismissed ? (
           events.filter((e) => dismissedIds.has(e.id)).length === 0 ? (

@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -13,6 +13,7 @@ import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { TextBlock } from "../src/components/blocks/TextBlock";
 import { CircleCard } from "../src/components/cards/CircleCard";
 import { CreateCircleModal, NewCircleData } from "../src/components/modals/CreateCircleModal";
+import { GradientRingLoader } from "../src/components/loaders/GradientRingLoader";
 import { Colors } from "../src/theme/colors";
 
 import { useLanguage } from "../src/i18n/LanguageContext";
@@ -380,7 +381,7 @@ export default function CirclesScreen() {
       >
         {loading ? (
           <View style={styles.loader}>
-            <ActivityIndicator size="small" color={colors.textMuted} />
+            <GradientRingLoader size={40} strokeWidth={7} />
           </View>
         ) : showDismissed ? (
           circles.filter((c) => dismissedIds.has(c.id)).length === 0 ? (

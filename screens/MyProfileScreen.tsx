@@ -414,8 +414,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     card: {
       backgroundColor: colors.card,
       borderRadius: 16,
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
       ...Platform.select({
         ios: {
           shadowColor: "#000000",
