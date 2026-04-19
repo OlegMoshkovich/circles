@@ -33,8 +33,9 @@ export type NewEventData = {
   max_participants: number | null;
   contact_info: string;
   price_info: string;
-  visibility: "public" | "circle";
+  visibility: "public" | "circle" | "friends" | "private";
   circle_id: string | null;
+  invited_user_ids: string[];
 };
 
 type Props = {
@@ -101,11 +102,14 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
   const [maxParticipants, setMaxParticipants] = useState("");
   const [contactInfo, setContactInfo] = useState("");
   const [priceInfo, setPriceInfo] = useState("");
-  const [eventVisibility, setEventVisibility] = useState<"public" | "circle">(
+  const [eventVisibility, setEventVisibility] = useState<"public" | "circle" | "friends" | "private">(
     defaultCircleId ? "circle" : "public"
   );
   const [selectedCircleId, setSelectedCircleId] = useState<string | null>(defaultCircleId ?? null);
   const [myCircles, setMyCircles] = useState<Circle[]>([]);
+  const [friendsSearch, setFriendsSearch] = useState("");
+  const [friendsSearchResults, setFriendsSearchResults] = useState<{ user_id: string; display_name: string }[]>([]);
+  const [selectedFriends, setSelectedFriends] = useState<{ user_id: string; display_name: string }[]>([]);
   const scrollRef = useRef<ScrollView>(null);
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
@@ -126,10 +130,31 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
       });
   }, [visible, user]);
 
+  useEffect(() => {
+    if (eventVisibility !== "friends" || !friendsSearch.trim()) {
+      setFriendsSearchResults([]);
+      return;
+    }
+    const timeout = setTimeout(async () => {
+      const { data } = await supabase
+        .from("user_profiles")
+        .select("user_id, display_name")
+        .ilike("display_name", `%${friendsSearch.trim()}%`)
+        .limit(8);
+      const selectedIds = new Set(selectedFriends.map((f) => f.user_id));
+      setFriendsSearchResults((data ?? []).filter((u: any) => !selectedIds.has(u.user_id)));
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [friendsSearch, eventVisibility, selectedFriends]);
+
   const canSave =
     !!title.trim() &&
     !!organizer.trim() &&
-    (eventVisibility === "public" || selectedCircleId !== null || !!defaultCircleId);
+    (eventVisibility === "public" ||
+      eventVisibility === "friends" ||
+      eventVisibility === "private" ||
+      selectedCircleId !== null ||
+      !!defaultCircleId);
 
   async function handleSave() {
     if (!canSave) return;
@@ -148,6 +173,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
       price_info: priceInfo.trim(),
       visibility: eventVisibility,
       circle_id: eventVisibility === "circle" ? selectedCircleId : null,
+      invited_user_ids: eventVisibility === "friends" ? selectedFriends.map((f) => f.user_id) : [],
       });
       if (didSave !== false) {
         resetForm();
@@ -179,6 +205,9 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
     setPriceInfo("");
     setEventVisibility(defaultCircleId ? "circle" : "public");
     setSelectedCircleId(defaultCircleId ?? null);
+    setFriendsSearch("");
+    setFriendsSearchResults([]);
+    setSelectedFriends([]);
   }
 
   function handlePickerChange(_: DateTimePickerEvent, date?: Date) {
@@ -330,21 +359,21 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                   <View style={styles.fieldContainer}>
                     <Text style={styles.fieldLabel}>Visibility</Text>
                     <View style={styles.toggleRow}>
-                      {(["public", "circle"] as const).map((opt) => (
+                      {(["public", "circle", "friends", "private"] as const).map((opt) => (
                         <TouchableOpacity
                           key={opt}
                           style={[styles.toggleButton, eventVisibility === opt && styles.toggleButtonActive]}
                           onPress={() => {
                             setEventVisibility(opt);
-                            if (opt === "public") {
-                              setSelectedCircleId(null);
-                            } else {
+                            if (opt !== "circle") setSelectedCircleId(null);
+                            if (opt !== "friends") { setFriendsSearch(""); setFriendsSearchResults([]); }
+                            if (opt === "circle" || opt === "friends") {
                               setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
                             }
                           }}
                         >
                           <Text style={[styles.toggleText, eventVisibility === opt && styles.toggleTextActive]}>
-                            {opt === "public" ? "Public" : "Circle"}
+                            {opt.charAt(0).toUpperCase() + opt.slice(1)}
                           </Text>
                         </TouchableOpacity>
                       ))}
@@ -352,6 +381,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                   </View>
                 )}
 
+                {/* Circle sub-picker */}
                 {!defaultCircleId && eventVisibility === "circle" && myCircles.length > 0 && (
                   <View style={styles.fieldContainer}>
                     <Text style={styles.fieldLabel}>Select Circle</Text>
@@ -371,10 +401,62 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                     ))}
                   </View>
                 )}
-
                 {!defaultCircleId && eventVisibility === "circle" && myCircles.length === 0 && (
                   <View style={styles.fieldContainer}>
                     <Text style={styles.noCirclesHint}>Join a circle first to post circle-only events.</Text>
+                  </View>
+                )}
+
+                {/* Friends sub-picker */}
+                {!defaultCircleId && eventVisibility === "friends" && (
+                  <View style={styles.fieldContainer}>
+                    <Text style={styles.fieldLabel}>Invite Friends</Text>
+                    {selectedFriends.length > 0 && (
+                      <View style={styles.selectedFriendsRow}>
+                        {selectedFriends.map((f) => (
+                          <TouchableOpacity
+                            key={f.user_id}
+                            style={styles.friendChip}
+                            onPress={() => setSelectedFriends((prev) => prev.filter((x) => x.user_id !== f.user_id))}
+                          >
+                            <Text style={styles.friendChipText}>{f.display_name ?? "User"}</Text>
+                            <Ionicons name="close" size={12} color={colors.textMuted} style={{ marginLeft: 4 }} />
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                    <View style={styles.locationInputRow}>
+                      <Ionicons name="search-outline" size={16} color={colors.textMuted} style={styles.locationIcon} />
+                      <TextInput
+                        value={friendsSearch}
+                        onChangeText={setFriendsSearch}
+                        placeholder="Search by name…"
+                        placeholderTextColor={colors.textMuted}
+                        style={styles.locationInput}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                      />
+                    </View>
+                    {friendsSearchResults.length > 0 && (
+                      <View style={styles.searchResultsList}>
+                        {friendsSearchResults.map((u) => (
+                          <TouchableOpacity
+                            key={u.user_id}
+                            style={styles.searchResultRow}
+                            onPress={() => {
+                              setSelectedFriends((prev) => [...prev, u]);
+                              setFriendsSearch("");
+                            }}
+                          >
+                            <Text style={styles.searchResultName}>{u.display_name ?? "User"}</Text>
+                            <Ionicons name="add" size={16} color={colors.textMuted} />
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
+                    {friendsSearch.trim().length > 0 && friendsSearchResults.length === 0 && (
+                      <Text style={styles.noCirclesHint}>No users found.</Text>
+                    )}
                   </View>
                 )}
               </ScrollView>
@@ -686,10 +768,10 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   saveButtonDisabled: { opacity: 0.35 },
   saveButtonText: { color: isOnboarding ? colors.text : colors.background, fontSize: 16, fontWeight: "600" },
   // Visibility
-  toggleRow: { flexDirection: "row", gap: 8 },
+  toggleRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   toggleButton: {
-    flex: 1,
     paddingVertical: 10,
+    paddingHorizontal: 16,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: colors.cardBorder,
@@ -722,6 +804,48 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   circleName: { fontSize: 15, color: colors.text, fontFamily: "Lora_400Regular" },
   circleNameActive: { color: isOnboarding ? colors.text : colors.card },
   noCirclesHint: { fontSize: 13, color: colors.textMuted, fontStyle: "italic" },
+  selectedFriendsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 12,
+  },
+  friendChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.text,
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.1)" : colors.text,
+  },
+  friendChipText: {
+    fontSize: 13,
+    fontFamily: "Lora_400Regular",
+    color: isOnboarding ? colors.text : colors.background,
+  },
+  searchResultsList: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  searchResultRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.cardBorder,
+  },
+  searchResultName: {
+    fontSize: 15,
+    fontFamily: "Lora_400Regular",
+    color: colors.text,
+  },
   readOnlyValue: { fontSize: 16, color: colors.textMuted, height: 24, textAlignVertical: "center", fontFamily: "Lora_400Regular" },
   pickerButtonPlaceholder: { color: colors.textMuted },
   optionalLabel: { fontSize: 10, fontWeight: "400" as const, letterSpacing: 0, textTransform: "none" as const, color: colors.textMuted },

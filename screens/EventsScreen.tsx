@@ -158,6 +158,7 @@ export default function EventsScreen() {
       price_info: event.price_info || null,
       visibility: event.visibility,
       circle_id: event.circle_id,
+      invited_user_ids: event.invited_user_ids.length > 0 ? event.invited_user_ids : null,
       created_by: user?.id ?? null,
     });
     if (!error) {

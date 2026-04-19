@@ -241,8 +241,9 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       max_participants: data.max_participants,
       contact_info: data.contact_info || null,
       price_info: data.price_info || null,
-      visibility: "circle",
+      visibility: data.visibility === "circle" ? "circle" : data.visibility,
       circle_id: id,
+      invited_user_ids: data.invited_user_ids?.length > 0 ? data.invited_user_ids : null,
       created_by: user?.id ?? null,
     }).select("id").single();
     if (!error) {

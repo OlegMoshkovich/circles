@@ -23,7 +23,8 @@ export type Event = {
   maybe: number;
   created_at: string;
   circle_id: string | null;
-  visibility: 'public' | 'circle';
+  visibility: 'public' | 'circle' | 'friends' | 'private';
+  invited_user_ids?: string[] | null;
   created_by: string | null;
 };
 
