@@ -244,6 +244,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       visibility: data.visibility === "circle" ? "circle" : data.visibility,
       circle_id: id,
       invited_user_ids: data.invited_user_ids?.length > 0 ? data.invited_user_ids : null,
+      is_activity: data.is_activity,
       created_by: user?.id ?? null,
     }).select("id").single();
     if (!error) {
@@ -709,6 +710,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                         going={event.going}
                         maybe={event.maybe}
                         maxParticipants={event.max_participants ?? null}
+                        isActivity={event.is_activity ?? false}
                         noteCount={eventNoteCountMap[event.id] ?? 0}
                         onPress={() =>
                           nav.navigate("EventDetail", {

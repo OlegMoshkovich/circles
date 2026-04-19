@@ -16,6 +16,7 @@ type EventCardProps = {
   going: number;
   maybe: number;
   maxParticipants?: number | null;
+  isActivity?: boolean | null;
   rsvp?: "going" | "maybe";
   isOwner?: boolean;
   circleName?: string | null;
@@ -35,6 +36,7 @@ export function EventCard({
   going,
   maybe,
   maxParticipants,
+  isActivity,
   rsvp,
   isOwner = false,
   circleName,
@@ -104,13 +106,21 @@ export function EventCard({
       ) : null}
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          <Text style={styles.footerCount}>{going}</Text>
-          <Text style={styles.footerLabel}> {t.events.goingLabel}</Text>
-          {"   "}
-          <Text style={styles.footerCount}>{maybe}</Text>
-          <Text style={styles.footerLabel}> {t.events.maybeLabel}</Text>
-        </Text>
+        <View style={styles.footerLeft}>
+          {isActivity && (
+            <View style={styles.activityBadge}>
+              <Ionicons name="body-outline" size={12} color={colors.textMuted} style={{ marginRight: 4 }} />
+              <Text style={styles.activityBadgeText}>Activity</Text>
+            </View>
+          )}
+          <Text style={styles.footerText}>
+            <Text style={styles.footerCount}>{going}</Text>
+            <Text style={styles.footerLabel}> {t.events.goingLabel}</Text>
+            {"   "}
+            <Text style={styles.footerCount}>{maybe}</Text>
+            <Text style={styles.footerLabel}> {t.events.maybeLabel}</Text>
+          </Text>
+        </View>
         <View style={styles.noteCountRow}>
           {noteCount > 0 && (
             <Text style={styles.noteCountText}>{noteCount}</Text>
@@ -214,6 +224,28 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       alignItems: "center",
       justifyContent: "space-between",
       marginTop: spacing.md,
+    },
+    footerLeft: {
+      flexDirection: "column",
+      gap: 6,
+    },
+    activityBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      alignSelf: "flex-start",
+      paddingVertical: 3,
+      paddingHorizontal: 8,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      backgroundColor: "transparent",
+    },
+    activityBadgeText: {
+      fontSize: 11,
+      fontWeight: "600" as const,
+      letterSpacing: 0.5,
+      textTransform: "uppercase" as const,
+      color: colors.textMuted,
     },
     footerText: {
       ...typography.bodySmall,

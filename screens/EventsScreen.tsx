@@ -159,6 +159,7 @@ export default function EventsScreen() {
       visibility: event.visibility,
       circle_id: event.circle_id,
       invited_user_ids: event.invited_user_ids.length > 0 ? event.invited_user_ids : null,
+      is_activity: event.is_activity,
       created_by: user?.id ?? null,
     });
     if (!error) {
@@ -313,6 +314,7 @@ export default function EventsScreen() {
                 going={event.going}
                 maybe={event.maybe}
                 maxParticipants={event.max_participants ?? null}
+                isActivity={event.is_activity ?? false}
                 rsvp={rsvpStatusMap[event.id]}
                 isOwner={!!user && event.created_by === user.id}
                 circleName={event.circles?.name ?? null}
@@ -370,6 +372,7 @@ export default function EventsScreen() {
               going={event.going}
               maybe={event.maybe}
               maxParticipants={event.max_participants ?? null}
+              isActivity={event.is_activity ?? false}
               rsvp={rsvpStatusMap[event.id]}
               isOwner={!!user && event.created_by === user.id}
               circleName={event.circles?.name ?? null}

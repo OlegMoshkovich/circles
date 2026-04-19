@@ -25,6 +25,7 @@ export type Event = {
   circle_id: string | null;
   visibility: 'public' | 'circle' | 'friends' | 'private';
   invited_user_ids?: string[] | null;
+  is_activity?: boolean | null;
   created_by: string | null;
 };
 

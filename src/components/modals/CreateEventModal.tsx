@@ -36,6 +36,7 @@ export type NewEventData = {
   visibility: "public" | "circle" | "friends" | "private";
   circle_id: string | null;
   invited_user_ids: string[];
+  is_activity: boolean;
 };
 
 type Props = {
@@ -110,6 +111,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
   const [friendsSearch, setFriendsSearch] = useState("");
   const [friendsSearchResults, setFriendsSearchResults] = useState<{ user_id: string; display_name: string }[]>([]);
   const [selectedFriends, setSelectedFriends] = useState<{ user_id: string; display_name: string }[]>([]);
+  const [isActivity, setIsActivity] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
@@ -174,6 +176,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
       visibility: eventVisibility,
       circle_id: eventVisibility === "circle" ? selectedCircleId : null,
       invited_user_ids: eventVisibility === "friends" ? selectedFriends.map((f) => f.user_id) : [],
+      is_activity: isActivity,
       });
       if (didSave !== false) {
         resetForm();
@@ -208,6 +211,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
     setFriendsSearch("");
     setFriendsSearchResults([]);
     setSelectedFriends([]);
+    setIsActivity(false);
   }
 
   function handlePickerChange(_: DateTimePickerEvent, date?: Date) {
@@ -247,6 +251,26 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
               </View>
 
               <ScrollView ref={scrollRef} style={{ flex: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                {/* Event / Activity toggle */}
+                <View style={styles.typeToggleRow}>
+                  <TouchableOpacity
+                    style={[styles.typeToggleBtn, !isActivity && styles.typeToggleBtnActive]}
+                    onPress={() => setIsActivity(false)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="calendar-outline" size={14} color={!isActivity ? colors.background : colors.textMuted} style={{ marginRight: 6 }} />
+                    <Text style={[styles.typeToggleText, !isActivity && styles.typeToggleTextActive]}>Event</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.typeToggleBtn, isActivity && styles.typeToggleBtnActive]}
+                    onPress={() => setIsActivity(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="body-outline" size={14} color={isActivity ? colors.background : colors.textMuted} style={{ marginRight: 6 }} />
+                    <Text style={[styles.typeToggleText, isActivity && styles.typeToggleTextActive]}>Activity</Text>
+                  </TouchableOpacity>
+                </View>
+
                 <Field label="Title" value={title} onChangeText={setTitle} placeholder="Morning Lake Swim" />
                 <View style={styles.fieldContainer}>
                   <Text style={styles.fieldLabel}>Organiser</Text>
@@ -767,6 +791,35 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   saveButtonDisabled: { opacity: 0.35 },
   saveButtonText: { color: isOnboarding ? colors.text : colors.background, fontSize: 16, fontWeight: "600" },
+  // Event/Activity type toggle
+  typeToggleRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 24,
+  },
+  typeToggleBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+  },
+  typeToggleBtnActive: {
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.18)" : colors.text,
+    borderColor: isOnboarding ? "rgba(239,237,225,0.4)" : colors.text,
+  },
+  typeToggleText: {
+    fontSize: 14,
+    fontFamily: "Lora_400Regular",
+    color: colors.textMuted,
+  },
+  typeToggleTextActive: {
+    color: isOnboarding ? colors.text : colors.background,
+  },
   // Visibility
   toggleRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   toggleButton: {
