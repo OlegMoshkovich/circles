@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth, useUser } from "@clerk/clerk-expo";
@@ -28,6 +28,12 @@ const LANGUAGES: { code: Language; flag: string; label: string }[] = [
   { code: "en", flag: "🇬🇧", label: "EN" },
 ];
 
+const ALL_INTERESTS = [
+  "Hiking", "Sports", "Food", "Culture", "Music", "Art",
+  "Family", "Nature", "Wellness", "Yoga", "Skiing", "Biking",
+  "Community", "Volunteering", "Business", "Entrepreneurs",
+];
+
 export default function MyProfileScreen() {
   const { signOut } = useAuth();
   const { user } = useUser();
@@ -40,6 +46,15 @@ export default function MyProfileScreen() {
   const [customHex, setCustomHex] = useState("");
   const [circleCount, setCircleCount] = useState(0);
   const [eventCount, setEventCount] = useState(0);
+  const [profileBio, setProfileBio] = useState<string | null>(null);
+  const [profileLocation, setProfileLocation] = useState<string | null>(null);
+  const [profileInterests, setProfileInterests] = useState<string[]>([]);
+  const [profileCircles, setProfileCircles] = useState<{ id: string; name: string }[]>([]);
+  const [circlesExpanded, setCirclesExpanded] = useState(false);
+  const [editingField, setEditingField] = useState<"bio" | "location" | "interests" | null>(null);
+  const [editText, setEditText] = useState("");
+  const [editInterests, setEditInterests] = useState<string[]>([]);
+  const editInputRef = useRef<TextInput>(null);
   const { bgOption, setBgOption, glassBackground, setGlassBackground } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
@@ -68,7 +83,7 @@ export default function MyProfileScreen() {
   const fetchProfileCounts = useCallback(async () => {
     if (!user) return;
 
-    const [circlesResult, eventsResult] = await Promise.all([
+    const [circlesResult, eventsResult, profileResult, circleNamesResult] = await Promise.all([
       supabase
         .from("circle_members")
         .select("*", { count: "exact", head: true })
@@ -78,10 +93,33 @@ export default function MyProfileScreen() {
         .from("event_rsvps")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id),
+      supabase
+        .from("user_profiles")
+        .select("bio, location, interests")
+        .eq("user_id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("circle_members")
+        .select("circle_id, circles(id, name)")
+        .eq("user_id", user.id)
+        .eq("status", "active"),
     ]);
 
     setCircleCount(circlesResult.count ?? 0);
     setEventCount(eventsResult.count ?? 0);
+
+    if (profileResult.data) {
+      setProfileBio(profileResult.data.bio ?? null);
+      setProfileLocation(profileResult.data.location ?? null);
+      setProfileInterests(profileResult.data.interests ?? []);
+    }
+
+    if (circleNamesResult.data) {
+      const circles = circleNamesResult.data
+        .map((row: any) => row.circles)
+        .filter(Boolean) as { id: string; name: string }[];
+      setProfileCircles(circles);
+    }
   }, [user]);
 
   useFocusEffect(useCallback(() => {
@@ -122,6 +160,37 @@ export default function MyProfileScreen() {
   async function handleDecline(notif: AppNotification) {
     await supabase.from("notifications").update({ read: true }).eq("id", notif.id);
     fetchNotifications();
+  }
+
+  function startEdit(field: "bio" | "location" | "interests") {
+    if (field === "interests") {
+      setEditInterests(profileInterests);
+    } else {
+      setEditText(field === "bio" ? (profileBio ?? "") : (profileLocation ?? ""));
+      setTimeout(() => editInputRef.current?.focus(), 50);
+    }
+    setEditingField(field);
+  }
+
+  async function saveField() {
+    if (!user || !editingField) return;
+    const update: Record<string, unknown> = { user_id: user.id, updated_at: new Date().toISOString() };
+    if (editingField === "bio") {
+      update.bio = editText.trim() || null;
+      setProfileBio(editText.trim() || null);
+    } else if (editingField === "location") {
+      update.location = editText.trim() || null;
+      setProfileLocation(editText.trim() || null);
+    } else if (editingField === "interests") {
+      update.interests = editInterests.length > 0 ? editInterests : null;
+      setProfileInterests(editInterests);
+    }
+    await supabase.from("user_profiles").upsert(update, { onConflict: "user_id" });
+    setEditingField(null);
+  }
+
+  function cancelEdit() {
+    setEditingField(null);
   }
 
   const name =
@@ -281,10 +350,32 @@ export default function MyProfileScreen() {
       {/* Neighbourhood card */}
       {/* <Text style={styles.sectionLabel}>{t.profile.neighbourhood}</Text> */}
       <View style={styles.card}>
-        <View style={styles.row}>
+        <TouchableOpacity style={styles.row} onPress={() => startEdit("location")} activeOpacity={0.7}>
           <Text style={styles.rowLabel}>{t.profile.location}</Text>
-          <Text style={styles.rowValue}>{t.profile.locationValue}</Text>
-        </View>
+          <Text style={[styles.rowValue, !profileLocation && styles.rowValuePlaceholder]}>
+            {profileLocation ?? "Add location"}
+          </Text>
+        </TouchableOpacity>
+        {editingField === "location" && (
+          <View style={styles.inlineEditRow}>
+            <TextInput
+              ref={editInputRef}
+              style={styles.inlineInput}
+              value={editText}
+              onChangeText={setEditText}
+              placeholder="Your neighbourhood or city"
+              placeholderTextColor={colors.textMuted}
+              returnKeyType="done"
+              onSubmitEditing={saveField}
+            />
+            <TouchableOpacity onPress={saveField} style={styles.inlineBtn}>
+              <Ionicons name="checkmark" size={16} color={colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={cancelEdit} style={styles.inlineBtn}>
+              <Ionicons name="close" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={styles.row}>
           <Text style={styles.rowLabel}>{t.profile.neighbours}</Text>
           <Text style={styles.rowValue}>{t.profile.neighboursValue}</Text>
@@ -298,6 +389,122 @@ export default function MyProfileScreen() {
           <Text style={styles.rowValue}>{eventCount}</Text>
         </View>
       </View>
+
+      {/* About card — always visible, editable */}
+      <View style={styles.sectionGap} />
+      <View style={styles.card}>
+        {/* Bio row */}
+        <TouchableOpacity style={styles.row} onPress={() => startEdit("bio")} activeOpacity={0.7}>
+          <Text style={styles.rowLabel}>Bio</Text>
+          <Text style={[styles.rowValue, !profileBio && styles.rowValuePlaceholder]} numberOfLines={2}>
+            {profileBio ?? "Add bio"}
+          </Text>
+        </TouchableOpacity>
+        {editingField === "bio" && (
+          <View style={styles.inlineEditBlock}>
+            <TextInput
+              ref={editInputRef}
+              style={[styles.inlineInput, styles.inlineInputMultiline]}
+              value={editText}
+              onChangeText={setEditText}
+              placeholder="A few words about yourself..."
+              placeholderTextColor={colors.textMuted}
+              multiline
+              numberOfLines={3}
+            />
+            <View style={styles.inlineEditActions}>
+              <TouchableOpacity onPress={saveField} style={styles.inlineSaveBtn}>
+                <Text style={styles.inlineSaveBtnText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={cancelEdit}>
+                <Text style={styles.inlineCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        <View style={styles.rowDivider} />
+
+        {/* Interests row */}
+        <TouchableOpacity style={styles.row} onPress={() => startEdit("interests")} activeOpacity={0.7}>
+          <Text style={styles.rowLabel}>Interests</Text>
+          {profileInterests.length > 0 ? (
+            <Text style={styles.rowValue}>{profileInterests.length} selected</Text>
+          ) : (
+            <Text style={styles.rowValuePlaceholder}>Add interests</Text>
+          )}
+        </TouchableOpacity>
+        {profileInterests.length > 0 && editingField !== "interests" && (
+          <View style={styles.chipRowInCard}>
+            {profileInterests.map((i) => (
+              <View key={i} style={styles.chip}><Text style={styles.chipText}>{i}</Text></View>
+            ))}
+          </View>
+        )}
+        {editingField === "interests" && (
+          <View style={styles.interestPicker}>
+            <View style={styles.chipRowInCard}>
+              {ALL_INTERESTS.map((i) => {
+                const selected = editInterests.includes(i);
+                return (
+                  <TouchableOpacity
+                    key={i}
+                    style={[styles.chip, selected && styles.chipSelected]}
+                    onPress={() =>
+                      setEditInterests((prev) =>
+                        selected ? prev.filter((x) => x !== i) : [...prev, i]
+                      )
+                    }
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{i}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <View style={styles.inlineEditActions}>
+              <TouchableOpacity onPress={saveField} style={styles.inlineSaveBtn}>
+                <Text style={styles.inlineSaveBtnText}>Save</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={cancelEdit}>
+                <Text style={styles.inlineCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </View>
+
+      {profileCircles.length > 0 ? (
+        <>
+          <View style={styles.sectionGap} />
+          <View style={styles.card}>
+            <TouchableOpacity
+              style={styles.row}
+              onPress={() => setCirclesExpanded((v) => !v)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.rowLabel}>Communities</Text>
+              <View style={styles.circlesHeaderRight}>
+                <Text style={styles.rowValue}>{profileCircles.length}</Text>
+                <Ionicons
+                  name={circlesExpanded ? "chevron-up" : "chevron-down"}
+                  size={14}
+                  color={colors.textMuted}
+                  style={{ marginLeft: 6 }}
+                />
+              </View>
+            </TouchableOpacity>
+            {circlesExpanded && profileCircles.map((circle, i) => (
+              <View key={circle.id}>
+                <View style={styles.rowDivider} />
+                <View style={styles.row}>
+                  <Text style={styles.rowLabel}>{circle.name}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </>
+      ) : null}
 
       <View style={styles.sectionGap} />
 
@@ -394,6 +601,102 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     email: {
       ...typography.bodySmall,
       color: colors.textMuted,
+    },
+    rowValuePlaceholder: {
+      ...typography.body,
+      color: colors.textMuted,
+      fontFamily: "Lora_400Regular",
+      opacity: 0.5,
+    },
+    inlineEditRow: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      paddingHorizontal: spacing.cardPadding,
+      paddingBottom: 12,
+      gap: 8,
+    },
+    inlineEditBlock: {
+      paddingHorizontal: spacing.cardPadding,
+      paddingBottom: 12,
+    },
+    inlineInput: {
+      flex: 1,
+      color: colors.text,
+      fontFamily: "Lora_400Regular",
+      fontSize: 15,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.divider,
+      paddingVertical: 4,
+    },
+    inlineInputMultiline: {
+      height: 64,
+      borderWidth: 1,
+      borderColor: colors.divider,
+      borderRadius: 8,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      textAlignVertical: "top" as const,
+      marginBottom: 10,
+    },
+    inlineBtn: {
+      width: 30,
+      height: 30,
+      alignItems: "center" as const,
+      justifyContent: "center" as const,
+    },
+    inlineEditActions: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 16,
+    },
+    inlineSaveBtn: {
+      paddingHorizontal: 16,
+      paddingVertical: 7,
+      borderRadius: 999,
+      backgroundColor: colors.text,
+    },
+    inlineSaveBtnText: {
+      color: colors.background,
+      fontSize: 13,
+      fontWeight: "600" as const,
+    },
+    inlineCancelText: {
+      color: colors.textMuted,
+      fontSize: 13,
+    },
+    chipRowInCard: {
+      flexDirection: "row" as const,
+      flexWrap: "wrap" as const,
+      gap: spacing.sm,
+      paddingHorizontal: spacing.cardPadding,
+      paddingBottom: 14,
+    },
+    interestPicker: {
+      paddingBottom: 4,
+    },
+    chip: {
+      paddingVertical: 6,
+      paddingHorizontal: 14,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      backgroundColor: "transparent",
+    },
+    chipSelected: {
+      backgroundColor: colors.text,
+      borderColor: colors.text,
+    },
+    chipText: {
+      fontSize: 13,
+      color: colors.text,
+      fontFamily: "Lora_400Regular",
+    },
+    chipTextSelected: {
+      color: colors.background,
+    },
+    circlesHeaderRight: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
     },
     divider: {
       height: 1,

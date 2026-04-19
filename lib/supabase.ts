@@ -44,6 +44,10 @@ export type Circle = {
 export type UserProfile = {
   user_id: string;
   display_name: string | null;
+  bio: string | null;
+  location: string | null;
+  interests: string[] | null;
+  user_type: string | null;
   updated_at: string;
 };
 

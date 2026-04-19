@@ -50,7 +50,7 @@ function makeInitialData(displayName: string): OnboardingData {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 6;
 
 const THEME_OPTIONS: {
   key: BgOption;
@@ -566,36 +566,7 @@ function CircleSuggestionsStep({
   );
 }
 
-// ─── Step 6: Notifications ────────────────────────────────────────────────────
-
-function NotificationsStep({ onDone, onSkip }: { onDone: () => void; onSkip: () => void }) {
-  return (
-    <View style={styles.formStep}>
-      <View style={styles.panel}>
-        <StepHeader title="Stay in the loop" onBack={undefined} />
-        <View style={styles.notifIconBox}>
-          <Ionicons name="notifications-outline" size={44} color="rgba(239,237,225,0.75)" />
-        </View>
-        <Text style={styles.notifTitle}>Never miss an event</Text>
-        <Text style={styles.notifBody}>
-          We'll notify you when events start, when you're invited to activities, and when your circles are active.
-        </Text>
-        {(["Event reminders", "Circle invitations", "Activity updates"] as const).map((item) => (
-          <View key={item} style={styles.notifBullet}>
-            <Ionicons name="checkmark-circle-outline" size={16} color="rgba(239,237,225,0.6)" style={{ marginRight: 10 }} />
-            <Text style={styles.notifBulletText}>{item}</Text>
-          </View>
-        ))}
-        <TouchableOpacity style={styles.skipLink} onPress={onSkip}>
-          <Text style={styles.skipLinkText}>Maybe later</Text>
-        </TouchableOpacity>
-        <GlassButton label="Enable Notifications" onPress={onDone} />
-      </View>
-    </View>
-  );
-}
-
-// ─── Step 7: Theme Picker ────────────────────────────────────────────────────
+// ─── Step 6: Theme Picker ────────────────────────────────────────────────────
 
 function ThemeStep({
   selectedTheme,
@@ -715,12 +686,18 @@ export default function OnboardingScreen({ onComplete }: Props) {
     if (!user || saving) return;
     setSaving(true);
     try {
-      if (data.displayName.trim()) {
-        await supabase.from("user_profiles").upsert(
-          { user_id: user.id, display_name: data.displayName.trim(), updated_at: new Date().toISOString() },
-          { onConflict: "user_id" }
-        );
-      }
+      await supabase.from("user_profiles").upsert(
+        {
+          user_id: user.id,
+          display_name: data.displayName.trim() || null,
+          bio: data.bio.trim() || null,
+          location: data.location || null,
+          interests: data.interests.length > 0 ? data.interests : null,
+          user_type: data.userType || null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
+      );
       if (data.joinedCircleIds.length > 0) {
         const rows = data.joinedCircleIds.map((circleId) => ({
           circle_id: circleId,
@@ -750,7 +727,6 @@ export default function OnboardingScreen({ onComplete }: Props) {
     <LocationStep onUpdate={update} onNext={onNext} onBack={onBack} onSkip={onSkip} />,
     <ProfileStep data={data} onUpdate={update} onNext={onNext} onBack={onBack} />,
     <CircleSuggestionsStep data={data} onUpdate={update} onNext={onNext} onBack={onBack} onSkip={onSkip} />,
-    <NotificationsStep onDone={onNext} onSkip={onNext} />,
     <ThemeStep
       selectedTheme={pickerTheme}
       onSelectTheme={setBgOption}
