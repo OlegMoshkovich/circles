@@ -311,6 +311,7 @@ export default function EventsScreen() {
                 location={event.location}
                 going={event.going}
                 maybe={event.maybe}
+                maxParticipants={event.max_participants ?? null}
                 rsvp={rsvpStatusMap[event.id]}
                 isOwner={!!user && event.created_by === user.id}
                 circleName={event.circles?.name ?? null}
@@ -367,6 +368,7 @@ export default function EventsScreen() {
               location={event.location}
               going={event.going}
               maybe={event.maybe}
+              maxParticipants={event.max_participants ?? null}
               rsvp={rsvpStatusMap[event.id]}
               isOwner={!!user && event.created_by === user.id}
               circleName={event.circles?.name ?? null}

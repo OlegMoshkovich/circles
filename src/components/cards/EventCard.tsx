@@ -15,6 +15,7 @@ type EventCardProps = {
   location: string;
   going: number;
   maybe: number;
+  maxParticipants?: number | null;
   rsvp?: "going" | "maybe";
   isOwner?: boolean;
   circleName?: string | null;
@@ -33,6 +34,7 @@ export function EventCard({
   location,
   going,
   maybe,
+  maxParticipants,
   rsvp,
   isOwner = false,
   circleName,
@@ -42,6 +44,7 @@ export function EventCard({
   onActionPress,
   actionIcon,
 }: EventCardProps) {
+  const isFilled = maxParticipants != null && going >= maxParticipants;
   const { t } = useLanguage();
   const { bgOption } = useBackground();
   const colors = useColors();
@@ -67,6 +70,10 @@ export function EventCard({
               <Text style={[styles.badgeText, rsvp === "going" ? styles.badgeTextGoing : styles.badgeTextMaybe]}>
                 {rsvp === "going" ? t.events.badgeGoing : t.events.badgeMaybe}
               </Text>
+            </View>
+          ) : isFilled ? (
+            <View style={[styles.badge, styles.badgeFilled]}>
+              <Text style={[styles.badgeText, styles.badgeTextFilled]}>Filled</Text>
             </View>
           ) : null}
           {actionIcon && onActionPress ? (
@@ -162,6 +169,14 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     },
     badgeMaybe: {
       backgroundColor: colors.badgeBg,
+    },
+    badgeFilled: {
+      backgroundColor: "rgba(255,255,255,0.08)",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.15)",
+    },
+    badgeTextFilled: {
+      color: colors.textMuted,
     },
     badgeText: {
       fontSize: 11,

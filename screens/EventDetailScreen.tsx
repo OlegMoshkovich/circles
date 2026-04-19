@@ -439,29 +439,40 @@ export default function EventDetailScreen({ route, navigation }: Props) {
             {/* <Ionicons name="person-add-outline" size={16} color={styles.inviteButtonText.color} style={styles.rsvpIcon} /> */}
             <Text style={styles.inviteButtonText}>{t.common.inviteMembers}</Text>
           </TouchableOpacity>
-        ) : (
-          <View style={styles.rsvpButtons}>
-            <TouchableOpacity
-              style={[styles.rsvpButton, rsvp === "going" ? styles.rsvpButtonActive : styles.rsvpButtonOutline]}
-              onPress={() => handleRsvp("going")}
-              disabled={submitting}
-            >
-              <Text style={[styles.rsvpButtonText, rsvp === "going" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline]}>
-                {t.events.rsvpGoing}
-              </Text>
-            </TouchableOpacity>
+        ) : (() => {
+          const isFilled = maxParticipants != null && going >= maxParticipants && rsvp !== "going";
+          return (
+            <View style={styles.rsvpButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.rsvpButton,
+                  rsvp === "going" ? styles.rsvpButtonActive : styles.rsvpButtonOutline,
+                  isFilled && styles.rsvpButtonDisabled,
+                ]}
+                onPress={() => handleRsvp("going")}
+                disabled={submitting || isFilled}
+              >
+                <Text style={[
+                  styles.rsvpButtonText,
+                  rsvp === "going" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline,
+                  isFilled && styles.rsvpButtonTextDisabled,
+                ]}>
+                  {isFilled ? "Filled" : t.events.rsvpGoing}
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.rsvpButton, rsvp === "maybe" ? styles.rsvpButtonActive : styles.rsvpButtonOutline]}
-              onPress={() => handleRsvp("maybe")}
-              disabled={submitting}
-            >
-              <Text style={[styles.rsvpButtonText, rsvp === "maybe" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline]}>
-                {t.events.rsvpMaybe}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+              <TouchableOpacity
+                style={[styles.rsvpButton, rsvp === "maybe" ? styles.rsvpButtonActive : styles.rsvpButtonOutline]}
+                onPress={() => handleRsvp("maybe")}
+                disabled={submitting}
+              >
+                <Text style={[styles.rsvpButtonText, rsvp === "maybe" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline]}>
+                  {t.events.rsvpMaybe}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })()}
       </View>}
 
       <InviteModal
@@ -737,6 +748,12 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   rsvpButtonTextActive: {
     color: colors.background,
+  },
+  rsvpButtonDisabled: {
+    opacity: 0.4,
+  },
+  rsvpButtonTextDisabled: {
+    color: colors.textMuted,
   },
   headerActions: {
     flexDirection: "row",

@@ -707,6 +707,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                         location={event.location}
                         going={event.going}
                         maybe={event.maybe}
+                        maxParticipants={event.max_participants ?? null}
                         noteCount={eventNoteCountMap[event.id] ?? 0}
                         onPress={() =>
                           nav.navigate("EventDetail", {
