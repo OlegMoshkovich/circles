@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Share, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -172,6 +172,28 @@ export default function EventsScreen() {
     return false;
   }
 
+  async function handleShareEvent(event: EventWithCircle) {
+    const shareUrl = "https://valmia.ch";
+    const lines = [
+      event.title,
+      `${event.date_label} · ${event.time_label}`,
+      event.location,
+      event.circles?.name ? `${t.nav.circles}: ${event.circles.name}` : null,
+      event.description?.trim() ? event.description.trim() : null,
+      shareUrl,
+    ].filter(Boolean);
+
+    try {
+      await Share.share({
+        title: event.title,
+        message: lines.join("\n"),
+        url: shareUrl,
+      });
+    } catch {
+      Alert.alert("Error", "Could not open share menu.");
+    }
+  }
+
   const displayedEvents = events
     .filter((e) => rsvpFilter === "all" || rsvpStatusMap[e.id] === rsvpFilter)
     .sort((a, b) => {
@@ -320,6 +342,7 @@ export default function EventsScreen() {
                 circleName={event.circles?.name ?? null}
                 noteCount={noteCountMap[event.id] ?? 0}
                 hasNewActivity={false}
+                onSharePress={() => handleShareEvent(event)}
                 actionIcon="refresh"
                 onActionPress={() => {
                   setDismissedIds((prev) => { const next = new Set(prev); next.delete(event.id); return next; });
@@ -378,6 +401,7 @@ export default function EventsScreen() {
               circleName={event.circles?.name ?? null}
               noteCount={noteCountMap[event.id] ?? 0}
               hasNewActivity={(activityMap[event.id] ?? 0) > (lastViewedMap[event.id] ?? 0)}
+              onSharePress={() => handleShareEvent(event)}
               actionIcon={!!user && event.created_by === user.id ? undefined : "close"}
               onActionPress={
                 !!user && event.created_by === user.id

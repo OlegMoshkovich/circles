@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -289,6 +290,28 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       setNoteText("");
     }
     setPostingNote(false);
+  }
+
+  async function handleShareEvent(event: Event) {
+    const shareUrl = "https://valmia.ch";
+    const lines = [
+      event.title,
+      `${event.date_label} · ${event.time_label}`,
+      event.location,
+      name ? `${t.nav.circles}: ${name}` : null,
+      event.description?.trim() ? event.description.trim() : null,
+      shareUrl,
+    ].filter(Boolean);
+
+    try {
+      await Share.share({
+        title: event.title,
+        message: lines.join("\n"),
+        url: shareUrl,
+      });
+    } catch {
+      Alert.alert("Error", "Could not open share menu.");
+    }
   }
 
   // Load members
@@ -712,6 +735,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                         maxParticipants={event.max_participants ?? null}
                         isActivity={event.is_activity ?? false}
                         noteCount={eventNoteCountMap[event.id] ?? 0}
+                        onSharePress={() => handleShareEvent(event)}
                         onPress={() =>
                           nav.navigate("EventDetail", {
                             id: event.id,

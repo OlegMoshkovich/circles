@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -82,6 +83,28 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const [notes, setNotes] = useState<EventNote[]>([]);
   const [noteText, setNoteText] = useState("");
   const [postingNote, setPostingNote] = useState(false);
+
+  async function handleShare() {
+    const shareUrl = "https://valmia.ch";
+    const lines = [
+      title,
+      `${date} · ${time}`,
+      location,
+      circleName ? `${t.nav.circles}: ${circleName}` : null,
+      description.trim().length > 0 ? description.trim() : null,
+      shareUrl,
+    ].filter(Boolean);
+
+    try {
+      await Share.share({
+        title,
+        message: lines.join("\n"),
+        url: shareUrl,
+      });
+    } catch {
+      Alert.alert("Error", "Could not open share menu.");
+    }
+  }
 
   // Load fresh counts + this user's RSVP on every mount
   useEffect(() => {
@@ -234,6 +257,13 @@ export default function EventDetailScreen({ route, navigation }: Props) {
           <Text style={styles.backLabel}>{t.common.back}</Text>
         </TouchableOpacity>
         <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={handleShare}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={styles.headerAction}
+          >
+            <Ionicons name="share-outline" size={22} color={colors.text} />
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setShowChat((v) => !v)}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}

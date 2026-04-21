@@ -23,6 +23,7 @@ type EventCardProps = {
   noteCount?: number;
   hasNewActivity?: boolean;
   onPress?: () => void;
+  onSharePress?: () => void;
   onActionPress?: () => void;
   actionIcon?: keyof typeof Ionicons.glyphMap;
 };
@@ -43,6 +44,7 @@ export function EventCard({
   noteCount = 0,
   hasNewActivity = false,
   onPress,
+  onSharePress,
   onActionPress,
   actionIcon,
 }: EventCardProps) {
@@ -122,6 +124,11 @@ export function EventCard({
           </Text>
         </View>
         <View style={styles.noteCountRow}>
+          {onSharePress ? (
+            <TouchableOpacity onPress={onSharePress} style={styles.shareAction} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name="share-outline" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+          ) : null}
           {noteCount > 0 && (
             <Text style={styles.noteCountText}>{noteCount}</Text>
           )}
@@ -281,6 +288,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       flexDirection: "row",
       alignItems: "center",
       gap: 4,
+    },
+    shareAction: {
+      marginRight: spacing.sm,
+      alignItems: "center",
+      justifyContent: "center",
     },
     noteCountText: {
       fontSize: 12,
