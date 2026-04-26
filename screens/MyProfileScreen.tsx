@@ -283,7 +283,6 @@ async function handleAccept(notif: AppNotification) {
           </View>
         )}
 
-        <View style={styles.rowDivider} />
         <TouchableOpacity style={styles.row} onPress={() => startEdit("location")} activeOpacity={0.7}>
           <Text style={styles.rowLabel}>{t.profile.location}</Text>
           <Text style={[styles.rowValue, !profileLocation && styles.rowValuePlaceholder]}>
@@ -311,12 +310,10 @@ async function handleAccept(notif: AppNotification) {
           </View>
         )}
 
-        <View style={styles.rowDivider} />
         <View style={styles.row}>
           <Text style={styles.rowLabel}>{t.nav.circles}</Text>
           <Text style={styles.rowValue}>{circleCount}</Text>
         </View>
-        <View style={styles.rowDivider} />
         <View style={styles.row}>
           <Text style={styles.rowLabel}>{t.nav.events}</Text>
           <Text style={styles.rowValue}>{eventCount}</Text>
@@ -355,8 +352,6 @@ async function handleAccept(notif: AppNotification) {
             </View>
           </View>
         )}
-
-        <View style={styles.rowDivider} />
 
         {/* Interests row */}
         <TouchableOpacity style={styles.row} onPress={() => startEdit("interests")} activeOpacity={0.7}>
@@ -428,11 +423,8 @@ async function handleAccept(notif: AppNotification) {
               </View>
             </TouchableOpacity>
             {circlesExpanded && profileCircles.map((circle, i) => (
-              <View key={circle.id}>
-                <View style={styles.rowDivider} />
-                <View style={styles.row}>
-                  <Text style={styles.rowLabel}>{circle.name}</Text>
-                </View>
+              <View key={circle.id} style={styles.row}>
+                <Text style={styles.rowLabel}>{circle.name}</Text>
               </View>
             ))}
           </View>

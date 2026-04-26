@@ -36,7 +36,7 @@ export default function CirclesScreen() {
   const [sortBy, setSortBy] = useState<SortBy>("newest");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [locationFilter, setLocationFilter] = useState<string | null>(null);
-  const [roleFilter, setRoleFilter] = useState<"owner" | "active" | "join" | null>(null);
+  const [roleFilter, setRoleFilter] = useState<"owner" | "active" | "join" | null>("active");
   const [nearMe, setNearMe] = useState(false);
   const [nearMeCity, setNearMeCity] = useState<string | null>(null);
   const [nearMeLoading, setNearMeLoading] = useState(false);
