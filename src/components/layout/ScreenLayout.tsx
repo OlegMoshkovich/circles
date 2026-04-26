@@ -43,7 +43,7 @@ export function ScreenLayout({ header, children, stickyTop, contentStyle, backgr
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 80 }, contentStyle]}
         showsVerticalScrollIndicator={false}
-        refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}
+        refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" colors={["#FFFFFF"]} /> : undefined}
       >
         {children}
       </ScrollView>
