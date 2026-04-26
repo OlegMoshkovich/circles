@@ -451,6 +451,7 @@ export default function EventsScreen() {
                   created_by: event.created_by,
                   circleName: event.circles?.name ?? null,
                   circle_id: event.circle_id,
+                  hasNewActivity: !!lastViewedMap[event.id] && (activityMap[event.id] ?? 0) > lastViewedMap[event.id],
                 });
               }}
             />

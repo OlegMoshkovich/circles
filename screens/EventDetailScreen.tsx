@@ -32,7 +32,7 @@ import { ThemedBackground } from "../src/components/layout/ThemedBackground";
 type Props = NativeStackScreenProps<RootStackParamList, "EventDetail">;
 
 export default function EventDetailScreen({ route, navigation }: Props) {
-  const { id, created_by, circleName, circle_id } = route.params;
+  const { id, created_by, circleName, circle_id, hasNewActivity: initialHasNewActivity } = route.params;
   const insets = useSafeAreaInsets();
   const footerBottomInset = 0;
   const { user } = useUser();
@@ -45,6 +45,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const [inviteVisible, setInviteVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [hasNewActivity, setHasNewActivity] = useState(!!initialHasNewActivity);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
 
   // Mutable local copies of editable fields
@@ -267,15 +268,20 @@ export default function EventDetailScreen({ route, navigation }: Props) {
             <Ionicons name="share-outline" size={22} color={colors.text} />
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => setShowChat((v) => !v)}
+            onPress={() => { setShowChat((v) => !v); setHasNewActivity(false); }}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             style={styles.headerAction}
           >
-            <Ionicons
-              name={showChat ? "document-text-outline" : "chatbubble-outline"}
-              size={22}
-              color={colors.text}
-            />
+            <View style={{ position: "relative" }}>
+              <Ionicons
+                name={showChat ? "document-text-outline" : "chatbubble-outline"}
+                size={22}
+                color={colors.text}
+              />
+              {hasNewActivity && !showChat && (
+                <View style={styles.chatDot} />
+              )}
+            </View>
           </TouchableOpacity>
           {isCreator && (
             <>
@@ -835,6 +841,15 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   headerAction: {},
+  chatDot: {
+    position: "absolute",
+    top: -2,
+    right: -3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#FF4D00",
+  },
   chatContainer: {
     flex: 1,
     paddingHorizontal: spacing.pageHorizontal,

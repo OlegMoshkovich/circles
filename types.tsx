@@ -24,6 +24,7 @@ export type EventDetailParams = {
   created_by?: string | null;
   circleName?: string | null;
   circle_id?: string | null;
+  hasNewActivity?: boolean;
 };
 
 export type PromptDetailParams = {
