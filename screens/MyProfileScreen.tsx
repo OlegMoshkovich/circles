@@ -735,11 +735,12 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       gap: spacing.sm,
     },
     flagButton: {
+      flex: 1,
       flexDirection: "row",
       alignItems: "center",
+      justifyContent: "center",
       gap: 6,
       paddingVertical: 7,
-      paddingHorizontal: 12,
       borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.cardBorder,
