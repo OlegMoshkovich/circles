@@ -21,7 +21,7 @@ import { supabase, Event } from "../lib/supabase";
 
 type EventWithCircle = Event & { circles?: { name: string } | null };
 type Filter = "all" | "circles";
-type SortBy = "newest" | "popular" | "activity" | "new_activity";
+type SortBy = "newest" | "recent" | "popular" | "activity" | "new_activity";
 type RsvpFilter = "all" | "going" | "maybe";
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -194,6 +194,15 @@ export default function EventsScreen() {
     }
   }
 
+  function parseEventDate(label: string): number {
+    const stripped = label.replace(/^\w+,\s*/, "");
+    const year = new Date().getFullYear();
+    const d = new Date(`${stripped} ${year}`);
+    if (isNaN(d.getTime())) return 0;
+    if (d.getTime() < Date.now() - 180 * 24 * 60 * 60 * 1000) d.setFullYear(year + 1);
+    return d.getTime();
+  }
+
   const displayedEvents = events
     .filter((e) => rsvpFilter === "all" || rsvpStatusMap[e.id] === rsvpFilter)
     .sort((a, b) => {
@@ -202,6 +211,7 @@ export default function EventsScreen() {
         const bNew = (activityMap[b.id] ?? 0) > (lastViewedMap[b.id] ?? 0) ? 1 : 0;
         return bNew - aNew;
       }
+      if (sortBy === "recent") return parseEventDate(a.date_label) - parseEventDate(b.date_label);
       if (sortBy === "popular") return (b.going + b.maybe) - (a.going + a.maybe);
       if (sortBy === "activity") return (noteCountMap[b.id] ?? 0) - (noteCountMap[a.id] ?? 0);
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -269,14 +279,14 @@ export default function EventsScreen() {
               <View style={styles.filterSection}>
                 <Text style={styles.filterSectionLabel}>{t.common.sort}</Text>
                 <View style={styles.filterChipRow}>
-                  {(["newest", "popular", "activity", "new_activity"] as SortBy[]).map((opt) => (
+                  {(["newest", "recent", "popular", "activity", "new_activity"] as SortBy[]).map((opt) => (
                     <TouchableOpacity
                       key={opt}
                       style={[styles.filterChip, sortBy === opt && styles.filterChipActive]}
                       onPress={() => setSortBy(opt)}
                     >
                       <Text style={[styles.filterChipText, sortBy === opt && styles.filterChipTextActive]}>
-                        {opt === "newest" ? t.events.sortNewest : opt === "popular" ? t.events.sortPopular : opt === "activity" ? t.events.sortActive : t.events.sortNewActivity}
+                        {opt === "newest" ? t.events.sortNewest : opt === "recent" ? t.events.sortRecent : opt === "popular" ? t.events.sortPopular : opt === "activity" ? t.events.sortActive : t.events.sortNewActivity}
                       </Text>
                     </TouchableOpacity>
                   ))}

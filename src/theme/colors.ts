@@ -40,7 +40,7 @@ export const onboardingColors = {
 /**
  * Glassmorphism palette — semi-transparent cards over a muted green base
  */
-export function createGlassColors(background: GlassBackgroundColor = GLASS_BACKGROUND_OPTIONS[1]) {
+export function createGlassColors(background: GlassBackgroundColor = GLASS_BACKGROUND_OPTIONS[0]) {
   return {
   background,
   card: "rgba(255, 255, 255, 0.14)",

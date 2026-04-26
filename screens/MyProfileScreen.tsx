@@ -5,12 +5,10 @@ import { useAuth, useUser } from "@clerk/clerk-expo";
 import { useFocusEffect } from "@react-navigation/native";
 import { ScreenLayout } from "../src/components/layout/ScreenLayout";
 import { ScreenHeaderCard } from "../src/components/layout/ScreenHeaderCard";
-import { NavbarTitle } from "../src/components/layout/NavbarTitle";
-import { Colors, GLASS_BACKGROUND_OPTIONS } from "../src/theme/colors";
+import { Colors } from "../src/theme/colors";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { useLanguage, Language } from "../src/i18n/LanguageContext";
-import { OnboardingRestartContext } from "../App";
 import { supabase, AppNotification } from "../lib/supabase";
 import { useNotificationContext } from "../src/contexts/NotificationContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
@@ -37,13 +35,9 @@ const ALL_INTERESTS = [
 export default function MyProfileScreen() {
   const { signOut } = useAuth();
   const { user } = useUser();
-  const { restart: restartOnboarding } = React.useContext(OnboardingRestartContext);
-  const { language, setLanguage, t } = useLanguage();
+const { language, setLanguage, t } = useLanguage();
   const { setUnreadCount } = useNotificationContext();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [showGlassPalette, setShowGlassPalette] = useState(false);
-  const [showCustomHex, setShowCustomHex] = useState(false);
-  const [customHex, setCustomHex] = useState("");
   const [circleCount, setCircleCount] = useState(0);
   const [eventCount, setEventCount] = useState(0);
   const [profileBio, setProfileBio] = useState<string | null>(null);
@@ -55,7 +49,7 @@ export default function MyProfileScreen() {
   const [editText, setEditText] = useState("");
   const [editInterests, setEditInterests] = useState<string[]>([]);
   const editInputRef = useRef<TextInput>(null);
-  const { bgOption, setBgOption, glassBackground, setGlassBackground } = useBackground();
+  const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const headerCardStyle = React.useMemo(
@@ -127,13 +121,7 @@ export default function MyProfileScreen() {
     fetchProfileCounts();
   }, [fetchNotifications, fetchProfileCounts]));
 
-  React.useEffect(() => {
-    if (bgOption !== "glass") {
-      setShowGlassPalette(false);
-    }
-  }, [bgOption]);
-
-  async function handleAccept(notif: AppNotification) {
+async function handleAccept(notif: AppNotification) {
     if (!user) return;
 
     if (notif.type === "circle_invitation" && notif.data?.circle_id) {
@@ -220,120 +208,6 @@ export default function MyProfileScreen() {
   return (
     <ScreenLayout backgroundColor={screenBgColor}>
       <ScreenHeaderCard style={headerCardStyle}>
-        <NavbarTitle
-          title={t.nav.profile}
-          rightElement={
-            <View style={styles.headerButtons}>
-              <TouchableOpacity
-                onPress={restartOnboarding}
-                style={styles.iconButton}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              >
-                <Ionicons name="play-outline" size={16} color={colors.textOnIconBg} />
-              </TouchableOpacity>
-              {/* Theme Toggle Button */}
-              <View style={styles.paletteAnchor}>
-                <TouchableOpacity
-                  onPress={() => {
-                    setShowGlassPalette(false);
-                    setBgOption((prev) => {
-                      if (prev === "glass") return "onboarding";
-                      return "glass";
-                    });
-                  }}
-                  onLongPress={() => {
-                    if (bgOption === "glass") {
-                      setShowGlassPalette((prev) => !prev);
-                    }
-                  }}
-                  delayLongPress={220}
-                  style={styles.iconButton}
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                >
-                  {bgOption === "onboarding" && (
-                    <Ionicons name="images-outline" size={16} color={colors.textOnIconBg} />
-                  )}
-                  {bgOption === "glass" && (
-                    <Ionicons name="moon-outline" size={16} color={colors.textOnIconBg} />
-                  )}
-                  {bgOption !== "onboarding" && bgOption !== "glass" && (
-                    <Ionicons name="images-outline" size={16} color={colors.textOnIconBg} />
-                  )}
-                </TouchableOpacity>
-                {bgOption === "glass" && showGlassPalette ? (
-                  <View style={styles.glassPalette}>
-                    {GLASS_BACKGROUND_OPTIONS.map((color) => (
-                      <TouchableOpacity
-                        key={color}
-                        onPress={() => {
-                          setGlassBackground(color);
-                          setShowCustomHex(false);
-                          setShowGlassPalette(false);
-                        }}
-                        style={[
-                          styles.glassPaletteSwatchButton,
-                          glassBackground === color && styles.glassPaletteSwatchButtonSelected,
-                        ]}
-                        activeOpacity={0.85}
-                      >
-                        <View style={[styles.glassPaletteSwatch, { backgroundColor: color }]} />
-                      </TouchableOpacity>
-                    ))}
-                    {/* Custom color button */}
-                    <TouchableOpacity
-                      onPress={() => setShowCustomHex((prev) => !prev)}
-                      style={[
-                        styles.glassPaletteSwatchButton,
-                        showCustomHex && styles.glassPaletteSwatchButtonSelected,
-                      ]}
-                      activeOpacity={0.85}
-                    >
-                      <View style={styles.glassPaletteCustomSwatch}>
-                        <Text style={styles.glassPaletteCustomPlus}>+</Text>
-                      </View>
-                    </TouchableOpacity>
-                    {showCustomHex ? (
-                      <View style={styles.hexInputRow}>
-                        <Text style={styles.hexHash}>#</Text>
-                        <TextInput
-                          value={customHex}
-                          onChangeText={(v) => setCustomHex(v.replace(/[^0-9A-Fa-f]/g, "").slice(0, 6))}
-                          placeholder="3D5A3E"
-                          placeholderTextColor="rgba(255,255,255,0.35)"
-                          style={styles.hexInput}
-                          maxLength={6}
-                          autoCapitalize="characters"
-                          autoCorrect={false}
-                        />
-                        <TouchableOpacity
-                          onPress={() => {
-                            const hex = `#${customHex}`;
-                            if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
-                              setGlassBackground(hex);
-                              setShowCustomHex(false);
-                              setShowGlassPalette(false);
-                            }
-                          }}
-                          style={styles.hexConfirm}
-                          activeOpacity={0.8}
-                        >
-                          <Text style={styles.hexConfirmText}>✓</Text>
-                        </TouchableOpacity>
-                      </View>
-                    ) : null}
-                  </View>
-                ) : null}
-              </View>
-              <TouchableOpacity
-                onPress={() => handleSignOut(signOut)}
-                style={styles.iconButton}
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              >
-                <Ionicons name="log-out-outline" size={16} color={colors.textOnIconBg} />
-              </TouchableOpacity>
-            </View>
-          }
-        />
         <View style={styles.avatarSection}>
           <View style={styles.avatar}>
             {photoUrl ? (
@@ -342,8 +216,17 @@ export default function MyProfileScreen() {
               <Text style={styles.avatarInitials}>{initials}</Text>
             )}
           </View>
-          <Text style={styles.name}>{name}</Text>
-          {email.length > 0 && <Text style={styles.email}>{email}</Text>}
+          <View style={styles.avatarInfo}>
+            <Text style={styles.name}>{name}</Text>
+            {email.length > 0 && <Text style={styles.email}>{email}</Text>}
+          </View>
+          <TouchableOpacity
+            onPress={() => handleSignOut(signOut)}
+            style={styles.iconButton}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons name="log-out-outline" size={16} color={colors.textOnIconBg} />
+          </TouchableOpacity>
         </View>
 
       </ScreenHeaderCard>
@@ -376,10 +259,7 @@ export default function MyProfileScreen() {
             </TouchableOpacity>
           </View>
         )}
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>{t.profile.neighbours}</Text>
-          <Text style={styles.rowValue}>{t.profile.neighboursValue}</Text>
-        </View>
+
         <View style={styles.row}>
           <Text style={styles.rowLabel}>{t.nav.circles}</Text>
           <Text style={styles.rowValue}>{circleCount}</Text>
@@ -567,23 +447,28 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       marginTop: spacing.md,
     },
     avatarSection: {
+      flexDirection: "row",
       alignItems: "center",
-      paddingVertical: spacing.md,
+      paddingVertical: spacing.lg,
+      gap: spacing.md,
+    },
+    avatarInfo: {
+      flex: 1,
+      justifyContent: "center",
     },
     avatar: {
-      width: 72,
-      height: 72,
+      width: 60,
+      height: 60,
       borderRadius: 36,
       backgroundColor: colors.badgeBg,
       alignItems: "center",
       justifyContent: "center",
-      marginBottom: spacing.sm,
       borderWidth: 1,
       borderColor: colors.cardBorder,
     },
     avatarImage: {
-      width: 72,
-      height: 72,
+      width: 60,
+      height: 60,
       borderRadius: 36,
     },
     avatarInitials: {
@@ -596,7 +481,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       fontWeight: "400" as const,
       fontFamily: "Lora_400Regular",
       color: colors.text,
-      marginBottom: spacing.xs,
     },
     email: {
       ...typography.bodySmall,
