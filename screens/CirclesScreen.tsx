@@ -23,7 +23,6 @@ import { supabase, Circle } from "../lib/supabase";
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type MemberStatusMap = Record<string, "owner" | "active" | "requested">;
 type PendingRequestsMap = Record<string, number>;
-type Filter = "all" | "mine";
 type SortBy = "newest" | "members" | "new_activity";
 
 const PRESET_CATEGORIES = ["Culture", "Friends", "Nature", "Sport", "Food", "Travel"];
@@ -33,7 +32,6 @@ export default function CirclesScreen() {
   const { t } = useLanguage();
   const { user } = useUser();
   const [modalVisible, setModalVisible] = useState(false);
-  const [filter, setFilter] = useState<Filter>("all");
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("newest");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -252,7 +250,7 @@ export default function CirclesScreen() {
             rightElement={
               <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
                 <TouchableOpacity
-                  style={[styles.filterIconButton, (filter !== "all" || sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null) && styles.filterIconButtonActive]}
+                  style={[styles.filterIconButton, (sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null) && styles.filterIconButtonActive]}
                   onPress={() => setShowFilterPanel((v) => !v)}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   activeOpacity={0.7}
@@ -260,7 +258,7 @@ export default function CirclesScreen() {
                   <Ionicons
                     name="options-outline"
                     size={17}
-                    color={(filter !== "all" || sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null) ? colors.iconbBg : colors.textMuted}
+                    color={(sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null) ? colors.iconbBg : colors.textMuted}
                   />
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -278,16 +276,28 @@ export default function CirclesScreen() {
           {showFilterPanel && (
             <View style={styles.filterPanel}>
               <View style={styles.filterSection}>
-                <Text style={styles.filterSectionLabel}>{t.circles.filterAll} / {t.circles.filterMyCircles}</Text>
+                <Text style={styles.filterSectionLabel}>{t.circles.typeLabel}</Text>
                 <View style={styles.filterChipRow}>
-                  {(["all", "mine"] as Filter[]).map((opt) => (
+                  <TouchableOpacity
+                    style={[styles.filterChip, roleFilter === null && styles.filterChipActive]}
+                    onPress={() => setRoleFilter(null)}
+                  >
+                    <Text style={[styles.filterChipText, roleFilter === null && styles.filterChipTextActive]}>
+                      {t.circles.filterAll}
+                    </Text>
+                  </TouchableOpacity>
+                  {([
+                    { value: "owner", label: t.circles.typeOwner },
+                    { value: "active", label: t.circles.typeMember },
+                    { value: "join",   label: t.circles.typeJoin },
+                  ] as { value: "owner" | "active" | "join"; label: string }[]).map(({ value, label }) => (
                     <TouchableOpacity
-                      key={opt}
-                      style={[styles.filterChip, filter === opt && styles.filterChipActive]}
-                      onPress={() => setFilter(opt)}
+                      key={value}
+                      style={[styles.filterChip, roleFilter === value && styles.filterChipActive]}
+                      onPress={() => setRoleFilter(roleFilter === value ? null : value)}
                     >
-                      <Text style={[styles.filterChipText, filter === opt && styles.filterChipTextActive]}>
-                        {opt === "all" ? t.circles.filterAll : t.circles.filterMyCircles}
+                      <Text style={[styles.filterChipText, roleFilter === value && styles.filterChipTextActive]}>
+                        {label}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -304,26 +314,6 @@ export default function CirclesScreen() {
                     >
                       <Text style={[styles.filterChipText, sortBy === opt && styles.filterChipTextActive]}>
                         {opt === "newest" ? t.circles.sortNewest : opt === "members" ? t.circles.sortMembers : t.circles.sortNewActivity}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-              <View style={styles.filterSection}>
-                <Text style={styles.filterSectionLabel}>{t.circles.typeLabel}</Text>
-                <View style={styles.filterChipRow}>
-                  {([
-                    { value: "owner", label: t.circles.typeOwner },
-                    { value: "active", label: t.circles.typeMember },
-                    { value: "join",   label: t.circles.typeJoin },
-                  ] as { value: "owner" | "active" | "join"; label: string }[]).map(({ value, label }) => (
-                    <TouchableOpacity
-                      key={value}
-                      style={[styles.filterChip, roleFilter === value && styles.filterChipActive]}
-                      onPress={() => setRoleFilter(roleFilter === value ? null : value)}
-                    >
-                      <Text style={[styles.filterChipText, roleFilter === value && styles.filterChipTextActive]}>
-                        {label}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -431,7 +421,6 @@ export default function CirclesScreen() {
           circles
             .filter((circle) => {
               if (dismissedIds.has(circle.id)) return false;
-              if (filter === "mine" && memberStatusMap[circle.id] !== "owner" && memberStatusMap[circle.id] !== "active") return false;
               if (roleFilter === "owner" && memberStatusMap[circle.id] !== "owner") return false;
               if (roleFilter === "active" && memberStatusMap[circle.id] !== "active") return false;
               if (roleFilter === "join" && memberStatusMap[circle.id] != null) return false;
