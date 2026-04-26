@@ -659,7 +659,6 @@ type Props = { onComplete: () => void };
 
 export default function OnboardingScreen({ onComplete }: Props) {
   const { user } = useUser();
-  const { bgOption, setBgOption } = useBackground();
   const [step, setStep] = useState(0);
   const [data, setData] = useState<OnboardingData>(() =>
     makeInitialData(user?.fullName ?? user?.firstName ?? "")
@@ -727,41 +726,27 @@ export default function OnboardingScreen({ onComplete }: Props) {
     }
   }
 
-  const pickerTheme = bgOption === "solid" ? "glass" : bgOption;
-
   const steps = [
     <WelcomeStep onNext={onNext} />,
     <UserTypeStep data={data} onUpdate={update} onNext={onNext} onBack={onBack} />,
     <InterestsStep data={data} onUpdate={update} onNext={onNext} onBack={onBack} />,
     <LocationStep onUpdate={update} onNext={onNext} onBack={onBack} onSkip={onSkip} />,
     <ProfileStep data={data} onUpdate={update} onNext={onNext} onBack={onBack} />,
-    <CircleSuggestionsStep data={data} onUpdate={update} onNext={onNext} onBack={onBack} onSkip={onSkip} />,
-    <ThemeStep
-      selectedTheme={pickerTheme}
-      onSelectTheme={setBgOption}
-      onDone={handleComplete}
-      onBack={onBack}
-    />,
+    <CircleSuggestionsStep data={data} onUpdate={update} onNext={handleComplete} onBack={onBack} onSkip={handleComplete} />,
   ];
 
-  const showingThemeStep = step === steps.length - 1;
-  const previewColors = getThemePreviewColors(pickerTheme);
-  const darkThemePreview = isDarkPreviewTheme(pickerTheme);
   const content = (
     <SafeAreaView
-      style={[
-        styles.safeArea,
-        showingThemeStep && pickerTheme !== "onboarding" ? { backgroundColor: previewColors.background } : null,
-      ]}
+      style={styles.safeArea}
       edges={["top", "left", "right"]}
     >
-      {step > 0 && !showingThemeStep && (
+      {step > 0 && (
         <ProgressBar step={step} total={TOTAL_STEPS} />
       )}
       <Animated.View style={[{ flex: 1 }, { opacity: fadeAnim }]}>
         {saving ? (
           <View style={styles.savingOverlay}>
-            <ActivityIndicator color={darkThemePreview ? previewColors.text : "#2C2A26"} size="large" />
+            <ActivityIndicator color="#2C2A26" size="large" />
           </View>
         ) : (
           steps[step]
@@ -769,15 +754,6 @@ export default function OnboardingScreen({ onComplete }: Props) {
       </Animated.View>
     </SafeAreaView>
   );
-
-  if (showingThemeStep && pickerTheme !== "onboarding") {
-    return (
-      <View style={{ flex: 1, backgroundColor: previewColors.background }}>
-        <StatusBar barStyle={pickerTheme === "light" ? "dark-content" : "light-content"} />
-        {content}
-      </View>
-    );
-  }
 
   return (
     <ImageBackground source={require("../assets/Background.webp")} style={{ flex: 1 }} resizeMode="cover">
