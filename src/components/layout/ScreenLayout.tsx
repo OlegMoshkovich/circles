@@ -6,7 +6,6 @@ import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { useBackground } from "../../contexts/BackgroundContext";
 import { ThemedBackground } from "./ThemedBackground";
-import { GradientRingLoader } from "../loaders/GradientRingLoader";
 
 type ScreenLayoutProps = {
   header?: React.ReactNode;
@@ -44,20 +43,8 @@ export function ScreenLayout({ header, children, stickyTop, contentStyle, backgr
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 80 }, contentStyle]}
         showsVerticalScrollIndicator={false}
-        refreshControl={onRefresh ? (
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="transparent"
-            colors={["transparent"]}
-          />
-        ) : undefined}
+        refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}
       >
-        {refreshing && (
-          <View style={styles.refreshSpinner}>
-            <GradientRingLoader size={28} strokeWidth={6} />
-          </View>
-        )}
         {children}
       </ScrollView>
       {/* <TabFocusOverlay /> */}
@@ -92,8 +79,4 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {},
-  refreshSpinner: {
-    alignItems: "center",
-    paddingVertical: 12,
-  },
 });
