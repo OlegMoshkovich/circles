@@ -54,7 +54,7 @@ const { language, setLanguage, t } = useLanguage();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const headerCardStyle = React.useMemo(
     () => ({
-      marginBottom: spacing.lg,
+      marginBottom: spacing.md,
       ...(bgOption === "onboarding" ? { borderRadius: 16, paddingTop: 0 } : null),
     }),
     [bgOption]
@@ -596,7 +596,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       marginBottom: spacing.sm,
     },
     sectionGap: {
-      height: spacing.lg,
+      height: spacing.md,
     },
     card: {
       backgroundColor: colors.card,
