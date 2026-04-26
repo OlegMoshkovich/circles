@@ -282,8 +282,8 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     },
     avatarText: {
       fontSize: 12,
-      fontWeight: "600" as const,
-      color: isOnboarding ? colors.background : colors.textMuted,
+      fontFamily: "Lora_400Regular",
+      color: colors.text,
     },
     memberName: {
       flex: 1,

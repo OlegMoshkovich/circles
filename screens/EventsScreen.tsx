@@ -413,7 +413,7 @@ export default function EventsScreen() {
               isOwner={!!user && event.created_by === user.id}
               circleName={event.circles?.name ?? null}
               noteCount={noteCountMap[event.id] ?? 0}
-              hasNewActivity={(activityMap[event.id] ?? 0) > (lastViewedMap[event.id] ?? 0)}
+              hasNewActivity={!!lastViewedMap[event.id] && (activityMap[event.id] ?? 0) > lastViewedMap[event.id]}
               onSharePress={() => handleShareEvent(event)}
               actionIcon={!!user && event.created_by === user.id ? undefined : "close"}
               onActionPress={

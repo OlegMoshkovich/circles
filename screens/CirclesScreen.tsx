@@ -452,7 +452,7 @@ export default function CirclesScreen() {
               organizer={circle.organizer}
               pendingRequests={pendingRequestsMap[circle.id] ?? 0}
               hasNewActivity={
-                (activityMap[circle.id] ?? 0) > (lastViewedMap[circle.id] ?? 0)
+                !!lastViewedMap[circle.id] && (activityMap[circle.id] ?? 0) > lastViewedMap[circle.id]
               }
               actionIcon={memberStatusMap[circle.id] === "owner" ? undefined : "close"}
               onActionPress={

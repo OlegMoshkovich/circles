@@ -161,7 +161,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         event_id: id,
         user_id: user.id,
         display_name: user.fullName ?? user.firstName ?? user.username ?? null,
-        avatar_url: (user.externalAccounts?.find((a: any) => a.provider === "oauth_google" || a.provider === "google") as any)?.imageUrl ?? user.imageUrl ?? null,
+        avatar_url: (user.externalAccounts?.find((a: any) => a.provider === "oauth_google" || a.provider === "google") as any)?.imageUrl ?? null,
         content: noteText.trim(),
       })
       .select()
@@ -920,8 +920,8 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   avatarText: {
     fontSize: 13,
-    fontWeight: "600" as const,
-    color: colors.textMuted,
+    fontFamily: "Lora_400Regular",
+    color: colors.text,
   },
   noteHeaderText: {
     flex: 1,
