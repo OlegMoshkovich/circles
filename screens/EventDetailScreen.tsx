@@ -26,6 +26,7 @@ import { typography } from "../src/theme/typography";
 import { supabase, EventNote } from "../lib/supabase";
 import { InviteModal } from "../src/components/modals/InviteModal";
 import { EditEventModal, EditEventData } from "../src/components/modals/EditEventModal";
+import { PublicProfileModal } from "../src/components/modals/PublicProfileModal";
 import { ThemedBackground } from "../src/components/layout/ThemedBackground";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EventDetail">;
@@ -44,6 +45,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const [inviteVisible, setInviteVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
 
   // Mutable local copies of editable fields
   const [title, setTitle] = useState(route.params.title);
@@ -308,7 +310,15 @@ export default function EventDetailScreen({ route, navigation }: Props) {
           ) : null}
           <Text style={styles.title}>{title}</Text>
           <View style={styles.organizerRow}>
-            <Text style={styles.organizer}>{t.events.hostedBy} {organizer}</Text>
+            <Text style={styles.organizer}>
+              {t.events.hostedBy}{" "}
+              <Text
+                style={styles.organizerLink}
+                onPress={() => created_by ? setProfileModalVisible(true) : undefined}
+              >
+                {organizer}
+              </Text>
+            </Text>
             {circleName ? (
               <View style={styles.circlePill}>
                 <Ionicons name="people-outline" size={11} color={colors.textMuted} style={{ marginRight: 4 }} />
@@ -514,6 +524,15 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         circleName={circleName ?? ""}
       />
 
+      {created_by ? (
+        <PublicProfileModal
+          visible={profileModalVisible}
+          onClose={() => setProfileModalVisible(false)}
+          userId={created_by}
+          displayName={organizer}
+        />
+      ) : null}
+
       <EditEventModal
         visible={editVisible}
         onClose={() => setEditVisible(false)}
@@ -623,6 +642,10 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     ...typography.bodySmall,
     color: colors.textMuted,
     flex: 1,
+  },
+  organizerLink: {
+    textDecorationLine: "underline" as const,
+    color: colors.textMuted,
   },
   circlePill: {
     flexDirection: "row",

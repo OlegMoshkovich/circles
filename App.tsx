@@ -59,8 +59,9 @@ function ProfileSync() {
     if (!user) return;
     const displayName = user.fullName ?? user.firstName ?? null;
     if (!displayName) return;
+    const avatarUrl = (user.externalAccounts?.find((a: any) => a.provider === "oauth_google" || a.provider === "google") as any)?.imageUrl ?? user.imageUrl ?? null;
     supabase.from("user_profiles").upsert(
-      { user_id: user.id, display_name: displayName, updated_at: new Date().toISOString() },
+      { user_id: user.id, display_name: displayName, avatar_url: avatarUrl, updated_at: new Date().toISOString() },
       { onConflict: "user_id" }
     ).then(() => {});
   }, [user?.id]);

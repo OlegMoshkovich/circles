@@ -50,6 +50,7 @@ export type UserProfile = {
   location: string | null;
   interests: string[] | null;
   user_type: string | null;
+  avatar_url: string | null;
   updated_at: string;
 };
 

@@ -29,6 +29,7 @@ import { supabase, CircleMember, CircleNote, Event, UserProfile } from "../lib/s
 import { CircleInviteModal } from "../src/components/modals/CircleInviteModal";
 import { EditCircleModal, EditCircleData } from "../src/components/modals/EditCircleModal";
 import { CreateEventModal, NewEventData } from "../src/components/modals/CreateEventModal";
+import { PublicProfileModal } from "../src/components/modals/PublicProfileModal";
 import { EventCard } from "../src/components/cards/EventCard";
 import { ThemedBackground } from "../src/components/layout/ThemedBackground";
 
@@ -85,6 +86,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [circleInviteVisible, setCircleInviteVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [createEventVisible, setCreateEventVisible] = useState(false);
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [didAutoSelectInitialTab, setDidAutoSelectInitialTab] = useState(false);
 
   // Load current user's membership status
@@ -824,10 +826,14 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                     <Text style={styles.descriptionMetaValue}>{visibilityLabel[visibility]}</Text>
                   </View>
                   {organizer ? (
-                    <View style={styles.descriptionMetaRow}>
+                    <TouchableOpacity
+                      style={styles.descriptionMetaRow}
+                      onPress={() => setProfileModalVisible(true)}
+                      activeOpacity={0.7}
+                    >
                       <Text style={styles.descriptionMetaLabel}>{t.circles.organizer}</Text>
-                      <Text style={styles.descriptionMetaValue}>{organizer}</Text>
-                    </View>
+                      <Text style={[styles.descriptionMetaValue, styles.descriptionMetaLink]}>{organizer}</Text>
+                    </TouchableOpacity>
                   ) : null}
                   <View style={styles.descriptionMetaRow}>
                     <Text style={styles.descriptionMetaLabel}>{t.circles.members}</Text>
@@ -906,6 +912,13 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         onClose={() => setCircleInviteVisible(false)}
         circleId={id}
         circleName={name}
+      />
+
+      <PublicProfileModal
+        visible={profileModalVisible}
+        onClose={() => setProfileModalVisible(false)}
+        userId={owner_id}
+        displayName={organizer ?? name}
       />
 
       <CreateEventModal
@@ -1139,6 +1152,10 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     color: colors.text,
     flexShrink: 1,
     textAlign: "right",
+  },
+  descriptionMetaLink: {
+    textDecorationLine: "underline" as const,
+    color: colors.text,
   },
   ownerSectionHeader: {
     flexDirection: "row",
