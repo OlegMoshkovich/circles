@@ -1,11 +1,12 @@
 import React from "react";
-import { ImageBackground, ImageSourcePropType, ScrollView, StyleSheet, View, ViewStyle } from "react-native";
+import { ImageBackground, ImageSourcePropType, RefreshControl, ScrollView, StyleSheet, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { useBackground } from "../../contexts/BackgroundContext";
 import { ThemedBackground } from "./ThemedBackground";
+import { GradientRingLoader } from "../loaders/GradientRingLoader";
 
 type ScreenLayoutProps = {
   header?: React.ReactNode;
@@ -15,9 +16,11 @@ type ScreenLayoutProps = {
   backgroundImage?: ImageSourcePropType;
   backgroundBlurIntensity?: number;
   backgroundColor?: string;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 };
 
-export function ScreenLayout({ header, children, stickyTop, contentStyle, backgroundImage, backgroundBlurIntensity = 55, backgroundColor }: ScreenLayoutProps) {
+export function ScreenLayout({ header, children, stickyTop, contentStyle, backgroundImage, backgroundBlurIntensity = 55, backgroundColor, onRefresh, refreshing = false }: ScreenLayoutProps) {
   const insets = useSafeAreaInsets();
   const resolvedBg = backgroundColor ?? colors.background;
   const { bgOption } = useBackground();
@@ -41,6 +44,7 @@ export function ScreenLayout({ header, children, stickyTop, contentStyle, backgr
         style={styles.scroll}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 80 }, contentStyle]}
         showsVerticalScrollIndicator={false}
+        refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}
       >
         {children}
       </ScrollView>

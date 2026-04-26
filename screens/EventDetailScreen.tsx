@@ -481,23 +481,30 @@ export default function EventDetailScreen({ route, navigation }: Props) {
           </TouchableOpacity>
         ) : (() => {
           const isFilled = maxParticipants != null && going >= maxParticipants && rsvp !== "going";
+          if (isFilled) {
+            return (
+              <View style={[styles.rsvpButtons]}>
+                <View style={[styles.rsvpButton, styles.rsvpButtonFull, { flex: 1 }]}>
+                  <Text style={[styles.rsvpButtonText, styles.rsvpButtonTextFull]}>Event is Full</Text>
+                </View>
+              </View>
+            );
+          }
           return (
             <View style={styles.rsvpButtons}>
               <TouchableOpacity
                 style={[
                   styles.rsvpButton,
                   rsvp === "going" ? styles.rsvpButtonActive : styles.rsvpButtonOutline,
-                  isFilled && styles.rsvpButtonDisabled,
                 ]}
                 onPress={() => handleRsvp("going")}
-                disabled={submitting || isFilled}
+                disabled={submitting}
               >
                 <Text style={[
                   styles.rsvpButtonText,
                   rsvp === "going" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline,
-                  isFilled && styles.rsvpButtonTextDisabled,
                 ]}>
-                  {isFilled ? "Filled" : t.events.rsvpGoing}
+                  {t.events.rsvpGoing}
                 </Text>
               </TouchableOpacity>
 
@@ -806,6 +813,14 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     opacity: 0.4,
   },
   rsvpButtonTextDisabled: {
+    color: colors.textMuted,
+  },
+  rsvpButtonFull: {
+    backgroundColor: colors.badgeBg,
+    borderColor: colors.cardBorder,
+    opacity: 0.7,
+  },
+  rsvpButtonTextFull: {
     color: colors.textMuted,
   },
   headerActions: {

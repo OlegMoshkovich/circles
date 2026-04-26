@@ -38,18 +38,19 @@ export default function EventsScreen() {
   const [rsvpStatusMap, setRsvpStatusMap] = useState<Record<string, "going" | "maybe">>({});
   const [noteCountMap, setNoteCountMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [activityMap, setActivityMap] = useState<Record<string, number>>({});
   const [lastViewedMap, setLastViewedMap] = useState<Record<string, number>>({});
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [showDismissed, setShowDismissed] = useState(false);
 
-  const fetchEvents = useCallback(async () => {
+  const fetchEvents = useCallback(async (silent = false) => {
     if (!user) {
       setEvents([]);
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!silent) setLoading(true);
 
     if (user) {
       const { data: dismissedData } = await supabase
@@ -229,6 +230,8 @@ export default function EventsScreen() {
       <ScreenLayout
         backgroundColor={screenBgColor}
         contentStyle={loading ? styles.scrollContentLoader : undefined}
+        onRefresh={async () => { setRefreshing(true); await fetchEvents(true); setRefreshing(false); }}
+        refreshing={refreshing}
         stickyTop={<ScreenHeaderCard>
           <NavbarTitle
             title={t.nav.events}

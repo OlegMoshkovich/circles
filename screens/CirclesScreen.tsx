@@ -46,6 +46,7 @@ export default function CirclesScreen() {
   const [memberStatusMap, setMemberStatusMap] = useState<MemberStatusMap>({});
   const [pendingRequestsMap, setPendingRequestsMap] = useState<PendingRequestsMap>({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [activityMap, setActivityMap] = useState<Record<string, number>>({});
   const [lastViewedMap, setLastViewedMap] = useState<Record<string, number>>({});
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
@@ -72,8 +73,8 @@ export default function CirclesScreen() {
     }
   }
 
-  const fetchCircles = useCallback(async () => {
-    setLoading(true);
+  const fetchCircles = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
 
     if (user) {
       const { data: dismissedData } = await supabase
@@ -243,6 +244,8 @@ export default function CirclesScreen() {
       <ScreenLayout
         backgroundColor={screenBgColor}
         contentStyle={loading ? styles.scrollContentLoader : undefined}
+        onRefresh={async () => { setRefreshing(true); await fetchCircles(true); setRefreshing(false); }}
+        refreshing={refreshing}
         stickyTop={<ScreenHeaderCard>
           <NavbarTitle
             title={t.nav.circles}
