@@ -811,7 +811,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       paddingVertical: 7,
       borderRadius: 16,
       borderWidth: 1,
-      borderColor: colors.cardBorder,
+      borderColor: "transparent",
       backgroundColor: colors.card,
     },
     flagButtonSelected: {
