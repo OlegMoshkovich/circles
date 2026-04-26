@@ -705,9 +705,18 @@ export default function OnboardingScreen({ onComplete }: Props) {
           display_name: data.displayName.trim() || null,
           role: "member" as const,
           status: "active" as const,
-          joined_at: new Date().toISOString(),
         }));
-        await supabase.from("circle_members").upsert(rows, { onConflict: "circle_id,user_id" });
+        const { error: upsertError } = await supabase.from("circle_members").upsert(rows, { onConflict: "circle_id,user_id" });
+        if (upsertError) {
+          // Fallback without display_name in case that column doesn't exist yet
+          const baseRows = data.joinedCircleIds.map((circleId) => ({
+            circle_id: circleId,
+            user_id: user.id,
+            role: "member" as const,
+            status: "active" as const,
+          }));
+          await supabase.from("circle_members").upsert(baseRows, { onConflict: "circle_id,user_id" });
+        }
       }
       await AsyncStorage.setItem(`onboarding_v1_${user.id}`, "1");
     } catch {
