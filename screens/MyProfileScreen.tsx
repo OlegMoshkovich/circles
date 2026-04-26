@@ -45,7 +45,8 @@ const { language, setLanguage, t } = useLanguage();
   const [profileInterests, setProfileInterests] = useState<string[]>([]);
   const [profileCircles, setProfileCircles] = useState<{ id: string; name: string }[]>([]);
   const [circlesExpanded, setCirclesExpanded] = useState(false);
-  const [editingField, setEditingField] = useState<"bio" | "location" | "interests" | null>(null);
+  const [profileUserType, setProfileUserType] = useState<"local" | "visitor" | null>(null);
+  const [editingField, setEditingField] = useState<"bio" | "location" | "interests" | "userType" | null>(null);
   const [editText, setEditText] = useState("");
   const [editInterests, setEditInterests] = useState<string[]>([]);
   const editInputRef = useRef<TextInput>(null);
@@ -89,7 +90,7 @@ const { language, setLanguage, t } = useLanguage();
         .eq("user_id", user.id),
       supabase
         .from("user_profiles")
-        .select("bio, location, interests")
+        .select("bio, location, interests, user_type")
         .eq("user_id", user.id)
         .maybeSingle(),
       supabase
@@ -106,6 +107,7 @@ const { language, setLanguage, t } = useLanguage();
       setProfileBio(profileResult.data.bio ?? null);
       setProfileLocation(profileResult.data.location ?? null);
       setProfileInterests(profileResult.data.interests ?? []);
+      setProfileUserType(profileResult.data.user_type ?? null);
     }
 
     if (circleNamesResult.data) {
@@ -160,7 +162,7 @@ async function handleAccept(notif: AppNotification) {
     setEditingField(field);
   }
 
-  async function saveField() {
+  async function saveField(userTypeValue?: "local" | "visitor") {
     if (!user || !editingField) return;
     const update: Record<string, unknown> = { user_id: user.id, updated_at: new Date().toISOString() };
     if (editingField === "bio") {
@@ -172,6 +174,9 @@ async function handleAccept(notif: AppNotification) {
     } else if (editingField === "interests") {
       update.interests = editInterests.length > 0 ? editInterests : null;
       setProfileInterests(editInterests);
+    } else if (editingField === "userType" && userTypeValue) {
+      update.user_type = userTypeValue;
+      setProfileUserType(userTypeValue);
     }
     await supabase.from("user_profiles").upsert(update, { onConflict: "user_id" });
     setEditingField(null);
@@ -189,7 +194,7 @@ async function handleAccept(notif: AppNotification) {
       const url = (account as any).imageUrl || (account as any).avatarUrl;
       if (url) return url as string;
     }
-    return user?.imageUrl || null;
+    return null;
   })();
   const initials =
     [user?.firstName?.[0], user?.lastName?.[0]]
@@ -233,6 +238,52 @@ async function handleAccept(notif: AppNotification) {
       {/* Neighbourhood card */}
       {/* <Text style={styles.sectionLabel}>{t.profile.neighbourhood}</Text> */}
       <View style={styles.card}>
+        <TouchableOpacity style={styles.row} onPress={() => startEdit("userType")} activeOpacity={0.7}>
+          <Text style={styles.rowLabel}>Type</Text>
+          <View style={styles.userTypeValue}>
+            {profileUserType ? (
+              <Ionicons
+                name={profileUserType === "local" ? "home-outline" : "airplane-outline"}
+                size={14}
+                color={colors.textMuted}
+                style={{ marginRight: 5 }}
+              />
+            ) : null}
+            <Text style={[styles.rowValue, !profileUserType && styles.rowValuePlaceholder]}>
+              {profileUserType === "local" ? "Local" : profileUserType === "visitor" ? "Visitor" : "Add"}
+            </Text>
+          </View>
+        </TouchableOpacity>
+        {editingField === "userType" && (
+          <View style={styles.userTypePicker}>
+            {([
+              { key: "local" as const, label: "Local", icon: "home-outline" as const, desc: "I live here year-round" },
+              { key: "visitor" as const, label: "Visitor", icon: "airplane-outline" as const, desc: "I'm visiting for a while" },
+            ]).map((opt) => {
+              const sel = profileUserType === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[styles.userTypeOption, sel && styles.userTypeOptionSel]}
+                  onPress={() => saveField(opt.key)}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons name={opt.icon} size={18} color={sel ? colors.text : colors.textMuted} style={{ marginRight: 10 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.rowLabel, sel && { color: colors.text }]}>{opt.label}</Text>
+                    <Text style={styles.rowValue}>{opt.desc}</Text>
+                  </View>
+                  {sel && <Ionicons name="checkmark-circle" size={18} color={colors.text} />}
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity onPress={cancelEdit} style={{ paddingHorizontal: 16, paddingBottom: 10 }}>
+              <Text style={styles.inlineCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View style={styles.rowDivider} />
         <TouchableOpacity style={styles.row} onPress={() => startEdit("location")} activeOpacity={0.7}>
           <Text style={styles.rowLabel}>{t.profile.location}</Text>
           <Text style={[styles.rowValue, !profileLocation && styles.rowValuePlaceholder]}>
@@ -260,10 +311,12 @@ async function handleAccept(notif: AppNotification) {
           </View>
         )}
 
+        <View style={styles.rowDivider} />
         <View style={styles.row}>
           <Text style={styles.rowLabel}>{t.nav.circles}</Text>
           <Text style={styles.rowValue}>{circleCount}</Text>
         </View>
+        <View style={styles.rowDivider} />
         <View style={styles.row}>
           <Text style={styles.rowLabel}>{t.nav.events}</Text>
           <Text style={styles.rowValue}>{eventCount}</Text>
@@ -577,6 +630,29 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     },
     chipTextSelected: {
       color: colors.background,
+    },
+    userTypeValue: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+    },
+    userTypePicker: {
+      paddingHorizontal: spacing.cardPadding,
+      paddingBottom: 4,
+      gap: 6,
+    },
+    userTypeOption: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      padding: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      backgroundColor: "transparent",
+      marginBottom: 6,
+    },
+    userTypeOptionSel: {
+      borderColor: colors.text,
+      backgroundColor: colors.badgeBg,
     },
     circlesHeaderRight: {
       flexDirection: "row" as const,

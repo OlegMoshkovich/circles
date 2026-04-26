@@ -90,7 +90,7 @@ const RootNavigator = () => {
             <Stack.Screen
               name="VerifyCode"
               component={VerifyCodeScreen}
-              options={{ title: "Sign Up" }}
+              options={{ headerShown: false }}
             />
           </>
         )}
