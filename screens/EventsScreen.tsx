@@ -197,12 +197,37 @@ export default function EventsScreen() {
   }
 
   function parseEventDateTime(dateLabel: string, timeLabel: string): number {
-    const stripped = dateLabel.replace(/^\w+,\s*/, "");
-    const year = new Date().getFullYear();
-    const d = new Date(`${stripped} ${year} ${timeLabel}`);
-    if (isNaN(d.getTime())) return 0;
-    if (d.getTime() < Date.now() - 180 * 24 * 60 * 60 * 1000) d.setFullYear(year + 1);
-    return d.getTime();
+    const monthMap: Record<string, number> = {
+      jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+      jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+    };
+
+    const dateMatch = dateLabel.trim().match(/^(?:\w{3},\s*)?([A-Za-z]{3})\s+(\d{1,2})$/);
+    if (!dateMatch) return 0;
+    const monthIdx = monthMap[dateMatch[1].toLowerCase()];
+    const day = parseInt(dateMatch[2], 10);
+    if (monthIdx == null || Number.isNaN(day)) return 0;
+
+    const timeMatch = timeLabel.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+    if (!timeMatch) return 0;
+    let hour = parseInt(timeMatch[1], 10);
+    const minute = parseInt(timeMatch[2], 10);
+    const ampm = (timeMatch[3] ?? "").toUpperCase();
+    if (Number.isNaN(hour) || Number.isNaN(minute)) return 0;
+    if (ampm === "AM" && hour === 12) hour = 0;
+    if (ampm === "PM" && hour < 12) hour += 12;
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const eventDate = new Date(year, monthIdx, day, hour, minute, 0, 0);
+
+    // Events are seasonally recurring in this UI; if a parsed date is far behind,
+    // treat it as the upcoming year's instance.
+    if (eventDate.getTime() < now.getTime() - 180 * 24 * 60 * 60 * 1000) {
+      eventDate.setFullYear(year + 1);
+    }
+
+    return eventDate.getTime();
   }
 
   function isEventPast(event: EventWithCircle): boolean {
