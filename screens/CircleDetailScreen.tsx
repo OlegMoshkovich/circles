@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ActivityIndicator,
   Alert,
@@ -74,6 +75,8 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [profileMap, setProfileMap] = useState<Record<string, string>>({});
   const [events, setEvents] = useState<Event[]>([]);
   const [eventNoteCountMap, setEventNoteCountMap] = useState<Record<string, number>>({});
+  const [lastViewedEventsAt, setLastViewedEventsAt] = useState<number>(0);
+  const lastViewedKey = `lastViewed_circle_events_${id}`;
   const [notes, setNotes] = useState<CircleNote[]>([]);
   const [noteText, setNoteText] = useState("");
   const [postingNote, setPostingNote] = useState(false);
