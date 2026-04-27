@@ -16,14 +16,14 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useUser } from "@clerk/clerk-expo";
+import { useAuth, useUser } from "@clerk/clerk-expo";
 import { RootStackParamList } from "../types";
 import { Colors } from "../src/theme/colors";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { useLanguage } from "../src/i18n/LanguageContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
-import { supabase, EventNote } from "../lib/supabase";
+import { supabase, getAuthClient, EventNote } from "../lib/supabase";
 import { InviteModal } from "../src/components/modals/InviteModal";
 import { EditEventModal, EditEventData } from "../src/components/modals/EditEventModal";
 import { PublicProfileModal } from "../src/components/modals/PublicProfileModal";
@@ -36,6 +36,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const footerBottomInset = 0;
   const { user } = useUser();
+  const { getToken } = useAuth();
 
   const { t } = useLanguage();
   const { bgOption } = useBackground();
@@ -70,8 +71,24 @@ export default function EventDetailScreen({ route, navigation }: Props) {
           text: t.common.delete,
           style: "destructive",
           onPress: async () => {
-            const { error } = await supabase.from("events").delete().eq("id", id);
-            if (!error) navigation.goBack();
+            let token: string | null = null;
+            try { token = await getToken({ template: "supabase" }); } catch (_) {}
+            const client = token ? getAuthClient(token) : supabase;
+            // Delete child records first to avoid FK constraint failures
+            await client.from("event_rsvps").delete().eq("event_id", id);
+            await client.from("event_notes").delete().eq("event_id", id);
+            const { data: deleted, error } = await client
+              .from("events")
+              .delete()
+              .eq("id", id)
+              .select("id");
+            if (error) {
+              Alert.alert("Error", error.message);
+            } else if (!deleted || deleted.length === 0) {
+              Alert.alert("Permission denied", "Your Supabase RLS policy is blocking this delete.\n\nRun in Supabase SQL Editor:\n\nCREATE POLICY \"del_events\" ON events FOR DELETE USING (true);\nCREATE POLICY \"del_rsvps\" ON event_rsvps FOR DELETE USING (true);\nCREATE POLICY \"del_notes\" ON event_notes FOR DELETE USING (true);");
+            } else {
+              navigation.goBack();
+            }
           },
         },
       ]

@@ -44,7 +44,9 @@ const { language, setLanguage, t } = useLanguage();
   const [profileLocation, setProfileLocation] = useState<string | null>(null);
   const [profileInterests, setProfileInterests] = useState<string[]>([]);
   const [profileCircles, setProfileCircles] = useState<{ id: string; name: string }[]>([]);
+  const [profileEvents, setProfileEvents] = useState<{ id: string; title: string; date_label: string; time_label: string }[]>([]);
   const [circlesExpanded, setCirclesExpanded] = useState(false);
+  const [eventsExpanded, setEventsExpanded] = useState(false);
   const [profileUserType, setProfileUserType] = useState<"local" | "visitor" | null>(null);
   const [editingField, setEditingField] = useState<"bio" | "location" | "interests" | "userType" | null>(null);
   const [editText, setEditText] = useState("");
@@ -86,7 +88,7 @@ const { language, setLanguage, t } = useLanguage();
         .eq("status", "active"),
       supabase
         .from("event_rsvps")
-        .select("*", { count: "exact", head: true })
+        .select("event_id, events(id, title, date_label, time_label)")
         .eq("user_id", user.id),
       supabase
         .from("user_profiles")
@@ -101,7 +103,14 @@ const { language, setLanguage, t } = useLanguage();
     ]);
 
     setCircleCount(circlesResult.count ?? 0);
-    setEventCount(eventsResult.count ?? 0);
+
+    if (eventsResult.data) {
+      const evts = eventsResult.data
+        .map((row: any) => row.events)
+        .filter(Boolean) as { id: string; title: string; date_label: string; time_label: string }[];
+      setProfileEvents(evts);
+      setEventCount(evts.length);
+    }
 
     if (profileResult.data) {
       setProfileBio(profileResult.data.bio ?? null);
@@ -210,31 +219,33 @@ async function handleAccept(notif: AppNotification) {
 
   const screenBgColor = colors.background;
 
-  return (
-    <ScreenLayout backgroundColor={screenBgColor}>
-      <ScreenHeaderCard style={headerCardStyle}>
-        <View style={styles.avatarSection}>
-          <View style={styles.avatar}>
-            {photoUrl ? (
-              <Image source={{ uri: photoUrl }} style={styles.avatarImage} />
-            ) : (
-              <Text style={styles.avatarInitials}>{initials}</Text>
-            )}
-          </View>
-          <View style={styles.avatarInfo}>
-            <Text style={styles.name}>{name}</Text>
-            {email.length > 0 && <Text style={styles.email}>{email}</Text>}
-          </View>
-          <TouchableOpacity
-            onPress={() => handleSignOut(signOut)}
-            style={styles.iconButton}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Ionicons name="log-out-outline" size={16} color={colors.textOnIconBg} />
-          </TouchableOpacity>
+  const stickyHeader = (
+    <ScreenHeaderCard style={headerCardStyle}>
+      <View style={styles.avatarSection}>
+        <View style={styles.avatar}>
+          {photoUrl ? (
+            <Image source={{ uri: photoUrl }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarInitials}>{initials}</Text>
+          )}
         </View>
+        <View style={styles.avatarInfo}>
+          <Text style={styles.name}>{name}</Text>
+          {email.length > 0 && <Text style={styles.email}>{email}</Text>}
+        </View>
+        <TouchableOpacity
+          onPress={() => handleSignOut(signOut)}
+          style={styles.iconButton}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Ionicons name="log-out-outline" size={16} color={colors.textOnIconBg} />
+        </TouchableOpacity>
+      </View>
+    </ScreenHeaderCard>
+  );
 
-      </ScreenHeaderCard>
+  return (
+    <ScreenLayout backgroundColor={screenBgColor} stickyTop={stickyHeader}>
       {/* Neighbourhood card */}
       {/* <Text style={styles.sectionLabel}>{t.profile.neighbourhood}</Text> */}
       <View style={styles.card}>
@@ -310,14 +321,6 @@ async function handleAccept(notif: AppNotification) {
           </View>
         )}
 
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>{t.nav.circles}</Text>
-          <Text style={styles.rowValue}>{circleCount}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>{t.nav.events}</Text>
-          <Text style={styles.rowValue}>{eventCount}</Text>
-        </View>
       </View>
 
       {/* About card — always visible, editable */}
@@ -422,9 +425,39 @@ async function handleAccept(notif: AppNotification) {
                 />
               </View>
             </TouchableOpacity>
-            {circlesExpanded && profileCircles.map((circle, i) => (
+            {circlesExpanded && profileCircles.map((circle) => (
               <View key={circle.id} style={styles.row}>
                 <Text style={styles.rowLabel}>{circle.name}</Text>
+              </View>
+            ))}
+          </View>
+        </>
+      ) : null}
+
+      {profileEvents.length > 0 ? (
+        <>
+          <View style={styles.sectionGap} />
+          <View style={styles.card}>
+            <TouchableOpacity
+              style={styles.row}
+              onPress={() => setEventsExpanded((v) => !v)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.rowLabel}>{t.nav.events}</Text>
+              <View style={styles.circlesHeaderRight}>
+                <Text style={styles.rowValue}>{profileEvents.length}</Text>
+                <Ionicons
+                  name={eventsExpanded ? "chevron-up" : "chevron-down"}
+                  size={14}
+                  color={colors.textMuted}
+                  style={{ marginLeft: 6 }}
+                />
+              </View>
+            </TouchableOpacity>
+            {eventsExpanded && profileEvents.map((event) => (
+              <View key={event.id} style={styles.row}>
+                <Text style={styles.rowLabel}>{event.title}</Text>
+                <Text style={styles.rowValue}>{event.date_label}</Text>
               </View>
             ))}
           </View>

@@ -6,6 +6,15 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+/** Returns a Supabase client authenticated with a Clerk JWT.
+ *  Requires a "supabase" JWT template configured in Clerk Dashboard. */
+export function getAuthClient(token: string) {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false },
+  });
+}
+
 export type Event = {
   id: string;
   title: string;

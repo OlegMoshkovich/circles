@@ -20,9 +20,10 @@ import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { supabase, Event } from "../lib/supabase";
 
 type EventWithCircle = Event & { circles?: { name: string } | null };
-type Filter = "all" | "circles";
+type Filter = "all" | "circles" | "hosting";
 type SortBy = "newest" | "recent" | "popular" | "activity" | "new_activity";
 type RsvpFilter = "all" | "going" | "maybe";
+type ContentType = "all" | "events" | "activity";
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function EventsScreen() {
@@ -31,6 +32,7 @@ export default function EventsScreen() {
   const { user } = useUser();
   const [modalVisible, setModalVisible] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
+  const [contentType, setContentType] = useState<ContentType>("all");
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("newest");
   const [rsvpFilter, setRsvpFilter] = useState<RsvpFilter>("all");
@@ -92,6 +94,8 @@ export default function EventsScreen() {
         return;
       }
       query = query.in("circle_id", circleIds);
+    } else if (filter === "hosting") {
+      query = query.eq("created_by", user.id);
     } else {
       // All: public events + events in user's circles
       if (circleIds.length > 0) {
@@ -146,7 +150,7 @@ export default function EventsScreen() {
   );
 
   async function handleSave(event: NewEventData) {
-    const { error } = await supabase.from("events").insert({
+    const { data: inserted, error } = await supabase.from("events").insert({
       title: event.title,
       organizer: event.organizer,
       date_label: event.date,
@@ -163,14 +167,19 @@ export default function EventsScreen() {
       invited_user_ids: event.invited_user_ids.length > 0 ? event.invited_user_ids : null,
       is_activity: event.is_activity,
       created_by: user?.id ?? null,
-    });
-    if (!error) {
+    }).select("id").single();
+    if (!error && inserted && user) {
+      await supabase.from("event_rsvps").insert({
+        event_id: inserted.id,
+        user_id: user.id,
+        status: "going",
+      });
       setModalVisible(false);
       await fetchEvents();
       return true;
     }
     console.error("Failed to create event", error);
-    Alert.alert("Could not create event", error.message);
+    Alert.alert("Could not create event", error?.message ?? "Unknown error");
     return false;
   }
 
@@ -239,6 +248,11 @@ export default function EventsScreen() {
 
   const displayedEvents = visibleEvents
     .filter((e) => rsvpFilter === "all" || rsvpStatusMap[e.id] === rsvpFilter)
+    .filter((e) => {
+      if (contentType === "events") return !e.is_activity;
+      if (contentType === "activity") return !!e.is_activity;
+      return true;
+    })
     .sort((a, b) => {
       if (sortBy === "new_activity") {
         const aNew = (activityMap[a.id] ?? 0) > (lastViewedMap[a.id] ?? 0) ? 1 : 0;
@@ -251,7 +265,7 @@ export default function EventsScreen() {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
-  const filterActive = sortBy !== "newest" || rsvpFilter !== "all" || showDismissed || showPastEvents;
+  const filterActive = sortBy !== "newest" || rsvpFilter !== "all" || showDismissed || showPastEvents || contentType !== "all";
 
   const { bgOption } = useBackground();
   const colors = useColors();
@@ -299,14 +313,14 @@ export default function EventsScreen() {
               <View style={styles.filterSection}>
                 <Text style={styles.filterSectionLabel}>{t.events.filterAll} / {t.events.filterMyCircles}</Text>
                 <View style={styles.filterChipRow}>
-                  {(["all", "circles"] as Filter[]).map((opt) => (
+                  {(["all", "circles", "hosting"] as Filter[]).map((opt) => (
                     <TouchableOpacity
                       key={opt}
                       style={[styles.filterChip, filter === opt && styles.filterChipActive]}
                       onPress={() => setFilter(opt)}
                     >
                       <Text style={[styles.filterChipText, filter === opt && styles.filterChipTextActive]}>
-                        {opt === "all" ? t.events.filterAll : t.events.filterMyCircles}
+                        {opt === "all" ? t.events.filterAll : opt === "circles" ? t.events.filterMyCircles : t.events.filterHosting}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -323,6 +337,22 @@ export default function EventsScreen() {
                     >
                       <Text style={[styles.filterChipText, sortBy === opt && styles.filterChipTextActive]}>
                         {opt === "newest" ? t.events.sortNewest : opt === "recent" ? t.events.sortRecent : opt === "popular" ? t.events.sortPopular : opt === "activity" ? t.events.sortActive : t.events.sortNewActivity}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionLabel}>{t.events.contentTypeLabel}</Text>
+                <View style={styles.filterChipRow}>
+                  {(["all", "events", "activity"] as ContentType[]).map((opt) => (
+                    <TouchableOpacity
+                      key={opt}
+                      style={[styles.filterChip, contentType === opt && styles.filterChipActive]}
+                      onPress={() => setContentType(opt)}
+                    >
+                      <Text style={[styles.filterChipText, contentType === opt && styles.filterChipTextActive]}>
+                        {opt === "all" ? t.events.contentTypeAll : opt === "events" ? t.events.contentTypeEvents : t.events.contentTypeActivity}
                       </Text>
                     </TouchableOpacity>
                   ))}
