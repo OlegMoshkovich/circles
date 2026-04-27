@@ -43,7 +43,7 @@ export type Circle = {
   name: string;
   description: string | null;
   image_url: string | null;
-  visibility: 'public' | 'private';
+  visibility: 'public' | 'private' | 'request';
   category: string | null;
   location: string | null;
   organizer: string | null;

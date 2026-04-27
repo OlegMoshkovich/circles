@@ -40,7 +40,7 @@ export type CircleDetailParams = {
   id: string;
   name: string;
   description: string | null;
-  visibility: 'public' | 'private';
+  visibility: 'public' | 'private' | 'request';
   owner_id: string;
   member_count: number;
   organizer?: string | null;

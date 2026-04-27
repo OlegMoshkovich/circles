@@ -13,7 +13,7 @@ type CircleCardProps = {
   name: string;
   description: string | null;
   category: string | null;
-  visibility: "public" | "private";
+  visibility: "public" | "private" | "request";
   memberCount: number;
   memberStatus: MemberStatus;
   location?: string | null;

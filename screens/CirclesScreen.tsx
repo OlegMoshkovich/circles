@@ -83,7 +83,7 @@ export default function CirclesScreen() {
       if (dismissedData) setDismissedIds(new Set(dismissedData.map((r: any) => r.item_id)));
     }
 
-    const [circlesResult, membershipsResult] = await Promise.all([
+    const [circlesResult, membershipsResult, invitationsResult] = await Promise.all([
       supabase
         .from("circles")
         .select("*, circle_members(count)")
@@ -94,6 +94,14 @@ export default function CirclesScreen() {
             .select("circle_id, role, status")
             .eq("user_id", user.id)
         : Promise.resolve({ data: [], error: null }),
+      user
+        ? supabase
+            .from("notifications")
+            .select("data")
+            .eq("user_id", user.id)
+            .eq("type", "circle_invitation")
+            .eq("read", false)
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
     // Build membership map first so we can filter private circles
@@ -102,8 +110,17 @@ export default function CirclesScreen() {
       for (const m of membershipsResult.data as any[]) {
         map[m.circle_id] = m.role === "owner" ? "owner" : m.status;
       }
-      setMemberStatusMap(map);
     }
+    // Add invited status from pending notifications
+    if (!invitationsResult.error && invitationsResult.data) {
+      for (const n of invitationsResult.data as any[]) {
+        const circleId = n.data?.circle_id;
+        if (circleId && !map[circleId]) {
+          map[circleId] = "invited";
+        }
+      }
+    }
+    setMemberStatusMap(map);
 
     if (!circlesResult.error && circlesResult.data) {
       const mapped = circlesResult.data

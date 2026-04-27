@@ -86,6 +86,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [pendingInviteId, setPendingInviteId] = useState<string | null>(null);
   const [circleInviteVisible, setCircleInviteVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [createEventVisible, setCreateEventVisible] = useState(false);
@@ -102,6 +103,20 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }) => setMembership(data));
+  }, [id, user]);
+
+  // Load pending invite notification for current user
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("notifications")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("type", "circle_invitation")
+      .eq("read", false)
+      .filter("data->>circle_id", "eq", id)
+      .maybeSingle()
+      .then(({ data }) => setPendingInviteId(data?.id ?? null));
   }, [id, user]);
 
   // Load fresh member count
@@ -413,7 +428,8 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     if (!user || submitting) return;
     setSubmitting(true);
 
-    const newStatus = visibility === "request" ? "requested" : "active";
+    // If accepting an invitation, always join as active regardless of visibility
+    const newStatus = pendingInviteId ? "active" : (visibility === "request" ? "requested" : "active");
 
     const basePayload = {
       circle_id: id,
@@ -443,6 +459,13 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       setMembership(data);
       if (newStatus === "active") setMemberCount((c) => c + 1);
     }
+
+    // Mark the invitation notification as read
+    if (pendingInviteId) {
+      await supabase.from("notifications").update({ read: true }).eq("id", pendingInviteId);
+      setPendingInviteId(null);
+    }
+
     setSubmitting(false);
   }
 
@@ -508,6 +531,18 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         <View style={[styles.actionButton, styles.actionButtonOutline]}>
           <Text style={styles.actionButtonTextOutline}>{t.circles.requested}</Text>
         </View>
+      );
+    }
+
+    if (pendingInviteId) {
+      return (
+        <TouchableOpacity
+          style={[styles.actionButton, styles.joinButton]}
+          onPress={handleJoin}
+          disabled={submitting}
+        >
+          <Text style={styles.joinButtonText}>{t.circles.acceptInvitation}</Text>
+        </TouchableOpacity>
       );
     }
 

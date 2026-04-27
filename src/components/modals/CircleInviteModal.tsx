@@ -42,17 +42,18 @@ export function CircleInviteModal({ visible, onClose, circleId, circleName }: Pr
     setSelected(new Set());
     setAlreadyInvited(new Set());
 
-    // Fetch all known users, existing members, and pending invitations in parallel
+    // Fetch all known users from multiple sources, existing members, and pending invitations
     Promise.all([
       supabase.from("user_profiles").select("user_id, display_name"),
-      supabase.from("circle_members").select("user_id").eq("circle_id", circleId),
+      supabase.from("circle_members").select("user_id, display_name").eq("circle_id", circleId),
+      supabase.from("circle_members").select("user_id, display_name").neq("circle_id", circleId),
       supabase
         .from("notifications")
         .select("data")
         .eq("type", "circle_invitation")
         .filter("data->>circle_id", "eq", circleId)
         .eq("read", false),
-    ]).then(([profilesResult, membersResult, notifsResult]) => {
+    ]).then(([profilesResult, membersResult, allCircleMembersResult, notifsResult]) => {
       const existingMemberIds = new Set(
         (membersResult.data ?? []).map((m: any) => m.user_id)
       );
@@ -65,19 +66,19 @@ export function CircleInviteModal({ visible, onClose, circleId, circleName }: Pr
       setAlreadyInvited(invitedIds);
       setSelected(new Set(invitedIds));
 
-      // Deduplicate by user_id in case of stale duplicate profile rows
-      const seen = new Set<string>();
-      const list = (profilesResult.data ?? [] as UserProfile[])
-        .filter((p: any) => {
-          if (existingMemberIds.has(p.user_id) || p.user_id === user.id) return false;
-          if (seen.has(p.user_id)) return false;
-          seen.add(p.user_id);
-          return true;
-        })
-        .map((p: any) => ({
-          user_id: p.user_id,
-          name: p.display_name ?? p.user_id,
-        }));
+      // Build a merged user map: user_profiles takes priority, circle_members as fallback
+      const userMap = new Map<string, string>();
+      for (const m of (allCircleMembersResult.data ?? []) as any[]) {
+        if (m.user_id && m.display_name) userMap.set(m.user_id, m.display_name);
+      }
+      for (const p of (profilesResult.data ?? []) as any[]) {
+        if (p.user_id && p.display_name) userMap.set(p.user_id, p.display_name);
+      }
+
+      const list = Array.from(userMap.entries())
+        .filter(([userId]) => !existingMemberIds.has(userId) && userId !== user.id)
+        .map(([userId, name]) => ({ user_id: userId, name }));
+
       setCandidates(list);
       setLoading(false);
     });

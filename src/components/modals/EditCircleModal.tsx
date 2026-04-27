@@ -20,7 +20,7 @@ import { supabase } from "../../../lib/supabase";
 export type EditCircleData = {
   name: string;
   description: string;
-  visibility: "public" | "private";
+  visibility: "public" | "private" | "request";
 };
 
 type Props = {
