@@ -97,11 +97,11 @@ export default function EventsScreen() {
     } else if (filter === "hosting") {
       query = query.eq("created_by", user.id);
     } else {
-      // All: public events + events in user's circles
+      // All: public events + events in user's circles + own events (any visibility)
       if (circleIds.length > 0) {
-        query = query.or(`visibility.eq.public,circle_id.in.(${circleIds.join(",")})`);
+        query = query.or(`visibility.eq.public,circle_id.in.(${circleIds.join(",")}),created_by.eq.${user.id}`);
       } else {
-        query = query.eq("visibility", "public");
+        query = query.or(`visibility.eq.public,created_by.eq.${user.id}`);
       }
     }
 

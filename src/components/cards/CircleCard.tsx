@@ -7,13 +7,13 @@ import { spacing } from "../../theme/spacing";
 import { typography } from "../../theme/typography";
 import { useLanguage } from "../../i18n/LanguageContext";
 
-type MemberStatus = "owner" | "active" | "requested" | null;
+type MemberStatus = "owner" | "active" | "requested" | "invited" | null;
 
 type CircleCardProps = {
   name: string;
   description: string | null;
   category: string | null;
-  visibility: "public" | "request" | "private";
+  visibility: "public" | "private";
   memberCount: number;
   memberStatus: MemberStatus;
   location?: string | null;
@@ -27,7 +27,6 @@ type CircleCardProps = {
 
 const VISIBILITY_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
   public: "globe-outline",
-  request: "lock-open-outline",
   private: "lock-closed-outline",
 };
 
@@ -123,11 +122,14 @@ export function CircleCard({
               <Text style={styles.statusBadgeText}>{t.circles.requested}</Text>
             </View>
           )}
+          {memberStatus === "invited" && (
+            <View style={[styles.statusBadge, styles.statusBadgeInvited]}>
+              <Text style={styles.statusBadgeText}>{t.circles.badgeInvited}</Text>
+            </View>
+          )}
           {memberStatus === null && visibility !== "private" && (
             <View style={styles.joinButton}>
-              <Text style={styles.joinButtonText}>
-                {visibility === "request" ? t.circles.request : t.circles.typeJoin}
-              </Text>
+              <Text style={styles.joinButtonText}>{t.circles.typeJoin}</Text>
             </View>
           )}
         </View>
@@ -245,6 +247,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     },
     statusBadgeMuted: {
       backgroundColor: colors.badgeBg,
+    },
+    statusBadgeInvited: {
+      backgroundColor: colors.iconbBg + "33",
+      borderWidth: 1,
+      borderColor: colors.iconbBg + "66",
     },
     statusBadgeText: {
       fontSize: 11,

@@ -21,7 +21,7 @@ import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { supabase, Circle } from "../lib/supabase";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-type MemberStatusMap = Record<string, "owner" | "active" | "requested">;
+type MemberStatusMap = Record<string, "owner" | "active" | "requested" | "invited">;
 type PendingRequestsMap = Record<string, number>;
 type SortBy = "newest" | "members" | "new_activity";
 
@@ -36,7 +36,7 @@ export default function CirclesScreen() {
   const [sortBy, setSortBy] = useState<SortBy>("newest");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [locationFilter, setLocationFilter] = useState<string | null>(null);
-  const [roleFilter, setRoleFilter] = useState<"owner" | "active" | "join" | null>("active");
+  const [roleFilter, setRoleFilter] = useState<"owner" | "active" | "invited" | null>("active");
   const [nearMe, setNearMe] = useState(false);
   const [nearMeCity, setNearMeCity] = useState<string | null>(null);
   const [nearMeLoading, setNearMeLoading] = useState(false);
@@ -289,8 +289,8 @@ export default function CirclesScreen() {
                   {([
                     { value: "owner", label: t.circles.typeOwner },
                     { value: "active", label: t.circles.typeMember },
-                    { value: "join",   label: t.circles.typeJoin },
-                  ] as { value: "owner" | "active" | "join"; label: string }[]).map(({ value, label }) => (
+                    { value: "invited", label: t.circles.badgeInvited },
+                  ] as { value: "owner" | "active" | "invited"; label: string }[]).map(({ value, label }) => (
                     <TouchableOpacity
                       key={value}
                       style={[styles.filterChip, roleFilter === value && styles.filterChipActive]}
@@ -423,7 +423,7 @@ export default function CirclesScreen() {
               if (dismissedIds.has(circle.id)) return false;
               if (roleFilter === "owner" && memberStatusMap[circle.id] !== "owner") return false;
               if (roleFilter === "active" && memberStatusMap[circle.id] !== "active") return false;
-              if (roleFilter === "join" && memberStatusMap[circle.id] != null) return false;
+              if (roleFilter === "invited" && memberStatusMap[circle.id] !== "invited") return false;
               if (categoryFilter !== null && circle.category !== categoryFilter) return false;
               if (locationFilter !== null && circle.location !== locationFilter) return false;
               if (nearMe && nearMeCity && !(circle.location ?? "").toLowerCase().includes(nearMeCity.toLowerCase())) return false;
