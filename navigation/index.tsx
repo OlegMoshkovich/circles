@@ -10,6 +10,7 @@ import * as React from "react";
 import SignUpScreen from "../screens/SignUpScreen";
 import SignInScreen from "../screens/SignInScreen";
 import VerifyCodeScreen from "../screens/VerifyCodeScreen";
+import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
 import MyProfileScreen from "../screens/MyProfileScreen";
 import EventDetailScreen from "../screens/EventDetailScreen";
 import PromptDetailScreen from "../screens/PromptDetailScreen";
@@ -90,6 +91,11 @@ const RootNavigator = () => {
             <Stack.Screen
               name="VerifyCode"
               component={VerifyCodeScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="ForgotPassword"
+              component={ForgotPasswordScreen}
               options={{ headerShown: false }}
             />
           </>

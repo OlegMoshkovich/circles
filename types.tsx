@@ -53,6 +53,7 @@ export type RootStackParamList = {
   SignIn: undefined;
   MyProfile: undefined;
   VerifyCode: undefined;
+  ForgotPassword: { email?: string };
   EventDetail: EventDetailParams;
   PromptDetail: PromptDetailParams;
   CircleDetail: CircleDetailParams;

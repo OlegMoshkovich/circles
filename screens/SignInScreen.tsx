@@ -8,6 +8,9 @@ import {
   StatusBar,
   ImageBackground,
   Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from "react-native";
 import { useSignIn } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,23 +23,25 @@ import Svg, { Path } from "react-native-svg";
 export default function SignInScreen({
   navigation,
 }: RootStackScreenProps<"SignIn">) {
-  const { signIn, setSession, isLoaded } = useSignIn();
+  const { signIn, setActive, isLoaded } = useSignIn();
 
   const [emailAddress, setEmailAddress] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [rememberMe, setRememberMe] = React.useState(false);
+  const [error, setError] = React.useState("");
 
   const onSignInPress = async () => {
     if (!isLoaded) return;
+    setError("");
     try {
       const completeSignIn = await signIn.create({
         identifier: emailAddress,
         password,
       });
-      await setSession(completeSignIn.createdSessionId);
+      await setActive({ session: completeSignIn.createdSessionId });
     } catch (err: any) {
-      log("Error:> " + err?.status || "");
-      log("Error:> " + err?.errors ? JSON.stringify(err.errors) : err);
+      const message = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || "Something went wrong";
+      setError(message);
     }
   };
 
@@ -47,10 +52,18 @@ export default function SignInScreen({
       source={require("../assets/Background.webp")}
       style={styles.container}
       imageStyle={styles.backgroundImage}
-       
       resizeMode="cover"
     >
       <BlurView intensity={0} tint="light" style={StyleSheet.absoluteFill} />
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       <StatusBar barStyle="dark-content" />
 
       <View style={styles.logoContainer}>
@@ -100,7 +113,7 @@ export default function SignInScreen({
             secureTextEntry={true}
             onChangeText={setPassword}
           />
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword", { email: emailAddress })}>
             <Text style={styles.forgotText}>Forgot?</Text>
           </TouchableOpacity>
         </View>
@@ -121,12 +134,14 @@ export default function SignInScreen({
           textStyle={styles.oauthButtonText}
         />
 
-        <TouchableOpacity style={styles.primaryButton} disabled>
+        <TouchableOpacity style={styles.primaryButton} onPress={onSignInPress}>
           <BlurView intensity={28} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(255,255,255,0.15)" }]} />
           <View style={[StyleSheet.absoluteFill, { borderRadius: 50, borderWidth: 1, borderColor: "rgba(255,255,255,0.35)" }]} />
-<Text style={styles.primaryButtonText}>Log In</Text>
+          <Text style={styles.primaryButtonText}>Log In</Text>
         </TouchableOpacity>
+
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
       </View>
 
       <View style={styles.footer}>
@@ -135,6 +150,8 @@ export default function SignInScreen({
           <Text style={styles.signUpText}>Sign Up</Text>
         </TouchableOpacity>
       </View>
+      </ScrollView>
+      </KeyboardAvoidingView>
     </ImageBackground>
   );
 }
@@ -142,12 +159,19 @@ export default function SignInScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: "flex-end",
     paddingBottom: 48,
   },
   backgroundImage: {
     top: -280,
-    left: -200
+    left: -200,
   },
   logoContainer: {
     alignItems: "center",
@@ -217,6 +241,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     overflow: "hidden",
   },
+  errorText: {
+    color: "#ff6b6b",
+    fontSize: 13,
+    marginTop: 12,
+    lineHeight: 18,
+    textAlign: "center",
+  },
   oauthButtonText: {
     color: "#fff",
     fontSize: 16,
@@ -228,7 +259,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    opacity: 0.65,
   },
   primaryButtonText: {
     color: "#efede1",

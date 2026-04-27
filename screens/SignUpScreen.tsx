@@ -7,6 +7,9 @@ import {
   StyleSheet,
   StatusBar,
   ImageBackground,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from "react-native";
 import { useSignUp } from "@clerk/clerk-expo";
 import { log } from "../logger";
@@ -49,6 +52,15 @@ export default function SignUpScreen({
     >
       <BlurView intensity={0} tint="light" style={StyleSheet.absoluteFill} />
       <StatusBar barStyle="dark-content" />
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
 
       <View style={styles.logoContainer}>
         <Svg width={26} height={40} viewBox="0 0 132 175" fill="none">
@@ -136,6 +148,8 @@ export default function SignUpScreen({
           <Text style={styles.signInText}>Sign In</Text>
         </TouchableOpacity>
       </View>
+      </ScrollView>
+      </KeyboardAvoidingView>
     </ImageBackground>
   );
 }
@@ -143,6 +157,13 @@ export default function SignUpScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: "flex-end",
     paddingBottom: 48,
   },

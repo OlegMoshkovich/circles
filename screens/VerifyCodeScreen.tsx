@@ -17,14 +17,14 @@ import Svg, { Path } from "react-native-svg";
 export default function VerifyCodeScreen({
   navigation,
 }: RootStackScreenProps<"VerifyCode">) {
-  const { isLoaded, signUp, setSession } = useSignUp();
+  const { isLoaded, signUp, setActive } = useSignUp();
   const [code, setCode] = React.useState("");
 
   const onPress = async () => {
     if (!isLoaded) return;
     try {
       const completeSignUp = await signUp.attemptEmailAddressVerification({ code });
-      await setSession(completeSignUp.createdSessionId);
+      await setActive({ session: completeSignUp.createdSessionId });
     } catch (err: any) {
       log("Error:> " + err?.status || "");
       log("Error:> " + err?.errors ? JSON.stringify(err.errors) : err);
