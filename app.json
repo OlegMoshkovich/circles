@@ -22,7 +22,7 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "associatedDomains": [
         "applinks:clerk.helping.lemming-64.lclstage.dev",
         "applinks:clerk.helping.lemming-64.lclstage.dev"
