@@ -43,6 +43,7 @@ export default function EventsScreen() {
   const [lastViewedMap, setLastViewedMap] = useState<Record<string, number>>({});
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [showDismissed, setShowDismissed] = useState(false);
+  const [showPastEvents, setShowPastEvents] = useState(false);
 
   const fetchEvents = useCallback(async (silent = false) => {
     if (!user) {
@@ -195,16 +196,23 @@ export default function EventsScreen() {
     }
   }
 
-  function parseEventDate(label: string): number {
-    const stripped = label.replace(/^\w+,\s*/, "");
+  function parseEventDateTime(dateLabel: string, timeLabel: string): number {
+    const stripped = dateLabel.replace(/^\w+,\s*/, "");
     const year = new Date().getFullYear();
-    const d = new Date(`${stripped} ${year}`);
+    const d = new Date(`${stripped} ${year} ${timeLabel}`);
     if (isNaN(d.getTime())) return 0;
     if (d.getTime() < Date.now() - 180 * 24 * 60 * 60 * 1000) d.setFullYear(year + 1);
     return d.getTime();
   }
 
-  const displayedEvents = events
+  function isEventPast(event: EventWithCircle): boolean {
+    const ts = parseEventDateTime(event.date_label, event.time_label);
+    return ts > 0 && ts < Date.now();
+  }
+
+  const visibleEvents = events.filter((e) => showPastEvents || !isEventPast(e));
+
+  const displayedEvents = visibleEvents
     .filter((e) => rsvpFilter === "all" || rsvpStatusMap[e.id] === rsvpFilter)
     .sort((a, b) => {
       if (sortBy === "new_activity") {
@@ -212,13 +220,13 @@ export default function EventsScreen() {
         const bNew = (activityMap[b.id] ?? 0) > (lastViewedMap[b.id] ?? 0) ? 1 : 0;
         return bNew - aNew;
       }
-      if (sortBy === "recent") return parseEventDate(a.date_label) - parseEventDate(b.date_label);
+      if (sortBy === "recent") return parseEventDateTime(a.date_label, a.time_label) - parseEventDateTime(b.date_label, b.time_label);
       if (sortBy === "popular") return (b.going + b.maybe) - (a.going + a.maybe);
       if (sortBy === "activity") return (noteCountMap[b.id] ?? 0) - (noteCountMap[a.id] ?? 0);
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
-  const filterActive = sortBy !== "newest" || rsvpFilter !== "all";
+  const filterActive = sortBy !== "newest" || rsvpFilter !== "all" || showDismissed || showPastEvents;
 
   const { bgOption } = useBackground();
   const colors = useColors();
@@ -322,6 +330,14 @@ export default function EventsScreen() {
                       {t.common.dismissed}
                     </Text>
                   </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.filterChip, showPastEvents && styles.filterChipActive]}
+                    onPress={() => setShowPastEvents((v) => !v)}
+                  >
+                    <Text style={[styles.filterChipText, showPastEvents && styles.filterChipTextActive]}>
+                      Past events
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </View>
@@ -333,12 +349,12 @@ export default function EventsScreen() {
             <GradientRingLoader size={40} strokeWidth={7} />
           </View>
         ) : showDismissed ? (
-          events.filter((e) => dismissedIds.has(e.id)).length === 0 ? (
+          visibleEvents.filter((e) => dismissedIds.has(e.id)).length === 0 ? (
             <View style={styles.empty}>
               <Text style={styles.emptyText}>{t.events.noDismissed}</Text>
             </View>
           ) : (
-            events.filter((e) => dismissedIds.has(e.id)).map((event) => (
+            visibleEvents.filter((e) => dismissedIds.has(e.id)).map((event) => (
               <EventCard
                 key={event.id}
                 title={event.title}

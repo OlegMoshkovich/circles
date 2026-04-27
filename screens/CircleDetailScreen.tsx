@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ActivityIndicator,
@@ -75,7 +75,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [profileMap, setProfileMap] = useState<Record<string, string>>({});
   const [events, setEvents] = useState<Event[]>([]);
   const [eventNoteCountMap, setEventNoteCountMap] = useState<Record<string, number>>({});
-  const [lastViewedEventsAt, setLastViewedEventsAt] = useState<number>(0);
+  const [prevViewedEventsAt, setPrevViewedEventsAt] = useState<number>(0);
   const lastViewedKey = `lastViewed_circle_events_${id}`;
   const [notes, setNotes] = useState<CircleNote[]>([]);
   const [noteText, setNoteText] = useState("");
@@ -226,6 +226,15 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     if (activeTab !== "events" && activeTab !== "feed") return;
     loadFeed();
   }, [activeTab, loadFeed]);
+
+  // Track last-viewed timestamp for new event dots
+  // Read previous visit time on mount, then update to now when events tab is viewed
+  useEffect(() => {
+    AsyncStorage.getItem(lastViewedKey).then((val) => {
+      setPrevViewedEventsAt(val ? parseInt(val, 10) : 0);
+      AsyncStorage.setItem(lastViewedKey, Date.now().toString());
+    });
+  }, [lastViewedKey]);
 
   useFocusEffect(
     useCallback(() => {
@@ -727,7 +736,12 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                       <Text style={styles.emptyText}>{t.circles.noCircleEvents}</Text>
                     ) : null}
 
-                    {sortedEvents.map((event) => (
+                    {sortedEvents.map((event) => {
+                      const eventCreatedAt = event.created_at ? new Date(event.created_at).getTime() : 0;
+                      const isNewEvent = prevViewedEventsAt > 0
+                        ? eventCreatedAt > prevViewedEventsAt && event.created_by !== user?.id
+                        : false;
+                      return (
                       <EventCard
                         key={`event-${event.id}`}
                         title={event.title}
@@ -740,6 +754,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                         maxParticipants={event.max_participants ?? null}
                         isActivity={event.is_activity ?? false}
                         noteCount={eventNoteCountMap[event.id] ?? 0}
+                        hasNewActivity={isNewEvent}
                         onSharePress={() => handleShareEvent(event)}
                         onPress={() =>
                           nav.navigate("EventDetail", {
@@ -762,7 +777,8 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                           })
                         }
                       />
-                    ))}
+                    );
+                    })}
                   </View>
                 );
               })()}
