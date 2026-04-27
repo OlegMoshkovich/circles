@@ -511,7 +511,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                       display={pickerMode === "date" ? "inline" : "spinner"}
                       onChange={handlePickerChange}
                       style={styles.picker}
-                      themeVariant="light"
+                      themeVariant="dark"
                       accentColor={colors.iconbBg}
                       textColor={colors.text}
                     />
@@ -740,7 +740,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   pickerOverlayDone: {
     fontSize: 17,
     fontFamily: "Lora_400Regular",
-    color: colors.iconbBg,
+    color: colors.text,
   },
   picker: { width: "100%" },
   // Location
