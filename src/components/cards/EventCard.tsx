@@ -28,6 +28,18 @@ type EventCardProps = {
   actionIcon?: keyof typeof Ionicons.glyphMap;
 };
 
+function formatDateWithYear(date: string): string {
+  const trimmed = date.trim();
+  if (!trimmed) return trimmed;
+
+  // Keep explicit year formats as-is (e.g. 31.3.26, 31.03.2026, Mar 29 2026).
+  if (/\b\d{4}\b/.test(trimmed) || /^\d{1,2}\.\d{1,2}\.\d{2,4}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  return `${trimmed} ${new Date().getFullYear()}`;
+}
+
 export function EventCard({
   title,
   organizer,
@@ -53,6 +65,7 @@ export function EventCard({
   const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
+  const dateWithYear = formatDateWithYear(date);
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
@@ -92,7 +105,7 @@ export function EventCard({
 
       <View style={styles.metaRow}>
         <Ionicons name="calendar-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
-        <Text style={styles.metaText}>{date} · {time}</Text>
+        <Text style={styles.metaText}>{dateWithYear} · {time}</Text>
       </View>
 
       <View style={styles.metaRow}>

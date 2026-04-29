@@ -12,6 +12,7 @@ import SignInScreen from "../screens/SignInScreen";
 import VerifyCodeScreen from "../screens/VerifyCodeScreen";
 import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
 import MyProfileScreen from "../screens/MyProfileScreen";
+import DeleteAccountScreen from "../screens/DeleteAccountScreen";
 import EventDetailScreen from "../screens/EventDetailScreen";
 import PromptDetailScreen from "../screens/PromptDetailScreen";
 import CircleDetailScreen from "../screens/CircleDetailScreen";
@@ -59,6 +60,11 @@ const RootNavigator = () => {
               name="MyProfile"
               component={MyProfileScreen}
               options={{ title: "MyProfile" }}
+            />
+            <Stack.Screen
+              name="DeleteAccount"
+              component={DeleteAccountScreen}
+              options={{ title: "Delete Account" }}
             />
             <Stack.Screen
               name="EventDetail"

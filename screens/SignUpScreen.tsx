@@ -14,7 +14,6 @@ import {
 import { useSignUp } from "@clerk/clerk-expo";
 import { log } from "../logger";
 import { RootStackScreenProps } from "../types";
-import { OAuthButtons } from "../components/OAuth";
 import { BlurView } from "expo-blur";
 import Svg, { Path } from "react-native-svg";
 
@@ -129,11 +128,6 @@ export default function SignUpScreen({
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <OAuthButtons
-          buttonStyle={styles.oauthButton}
-          textStyle={styles.oauthButtonText}
-        />
-
         <TouchableOpacity style={styles.primaryButton} onPress={onSignUpPress}>
           <BlurView intensity={28} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(255,255,255,0.15)" }]} />
@@ -208,19 +202,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 16,
     lineHeight: 18,
-  },
-  oauthButton: {
-    borderRadius: 50,
-    height: 54,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 12,
-    overflow: "hidden",
-  },
-  oauthButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "400",
   },
   primaryButton: {
     borderRadius: 50,

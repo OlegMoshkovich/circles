@@ -39,7 +39,7 @@ export function BackgroundProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     AsyncStorage.getItem(BG_STORAGE_KEY).then((val) => {
-      if (val === "green") {
+      if (val === "green" || val === "solid") {
         setBgOptionState("glass");
         void AsyncStorage.setItem(BG_STORAGE_KEY, "glass");
         return;

@@ -1,22 +1,30 @@
 import React, { useCallback, useRef, useState } from "react";
-import { Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth, useUser } from "@clerk/clerk-expo";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { ScreenLayout } from "../src/components/layout/ScreenLayout";
 import { ScreenHeaderCard } from "../src/components/layout/ScreenHeaderCard";
 import { Colors } from "../src/theme/colors";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { useLanguage, Language } from "../src/i18n/LanguageContext";
-import { supabase, AppNotification } from "../lib/supabase";
+import { supabase, AppNotification, getAuthClient } from "../lib/supabase";
 import { useNotificationContext } from "../src/contexts/NotificationContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
+import { DeleteConfirmationModal } from "../src/components/modals/DeleteConfirmationModal";
 
 async function handleSignOut(signOut: () => Promise<void>) {
   try {
     await signOut();
   } catch (_) {}
+}
+
+function getErrorMessage(e: unknown) {
+  if (!e) return "Something went wrong";
+  if (typeof e === "string") return e;
+  const anyErr = e as any;
+  return anyErr?.message || anyErr?.errors?.[0]?.longMessage || "Something went wrong";
 }
 
 const LANGUAGES: { code: Language; flag: string; label: string }[] = [
@@ -33,8 +41,9 @@ const ALL_INTERESTS = [
 ];
 
 export default function MyProfileScreen() {
-  const { signOut } = useAuth();
+  const { signOut, getToken } = useAuth();
   const { user } = useUser();
+  const navigation = useNavigation<any>();
 const { language, setLanguage, t } = useLanguage();
   const { setUnreadCount } = useNotificationContext();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -52,6 +61,11 @@ const { language, setLanguage, t } = useLanguage();
   const [editText, setEditText] = useState("");
   const [editInterests, setEditInterests] = useState<string[]>([]);
   const editInputRef = useRef<TextInput>(null);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deleteConfirming, setDeleteConfirming] = useState(false);
+  const [deleteTyped, setDeleteTyped] = useState("");
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
@@ -195,6 +209,91 @@ async function handleAccept(notif: AppNotification) {
     setEditingField(null);
   }
 
+  async function handleDeleteAccount() {
+    if (!user) return;
+    setDeleteError(null);
+    if (deleteTyped.trim().toUpperCase() !== "DELETE") {
+      setDeleteError('Please type "DELETE" to confirm.');
+      return;
+    }
+
+    setDeleteSubmitting(true);
+    try {
+      const userId = user.id;
+      let client = supabase;
+      try {
+        const token = await getToken({ template: "supabase" });
+        if (token) client = getAuthClient(token);
+      } catch (_) {}
+
+      const runDelete = async (query: any) => {
+        const { error } = await query;
+        if (error) throw error;
+      };
+
+      const { data: ownedCircles, error: ownedCirclesError } = await client
+        .from("circles")
+        .select("id")
+        .eq("owner_id", userId);
+      if (ownedCirclesError) throw ownedCirclesError;
+      const ownedCircleIds = (ownedCircles ?? []).map((c: any) => c.id);
+
+      const { data: createdEvents, error: createdEventsError } = await client
+        .from("events")
+        .select("id")
+        .eq("created_by", userId);
+      if (createdEventsError) throw createdEventsError;
+
+      let ownedCircleEventIds: string[] = [];
+      if (ownedCircleIds.length > 0) {
+        const { data, error } = await client
+          .from("events")
+          .select("id")
+          .in("circle_id", ownedCircleIds);
+        if (error) throw error;
+        ownedCircleEventIds = (data ?? []).map((e: any) => e.id);
+      }
+
+      const allEventIds = Array.from(
+        new Set([...(createdEvents ?? []).map((e: any) => e.id), ...ownedCircleEventIds])
+      );
+
+      await runDelete(client.from("notifications").delete().eq("user_id", userId));
+      await runDelete(client.from("dismissed_items").delete().eq("user_id", userId));
+      await runDelete(client.from("event_rsvps").delete().eq("user_id", userId));
+      await runDelete(client.from("event_notes").delete().eq("user_id", userId));
+      await runDelete(client.from("circle_notes").delete().eq("user_id", userId));
+      await runDelete(client.from("circle_members").delete().eq("user_id", userId));
+      await runDelete(client.from("user_profiles").delete().eq("user_id", userId));
+
+      if (allEventIds.length > 0) {
+        await runDelete(client.from("dismissed_items").delete().eq("item_type", "event").in("item_id", allEventIds));
+        await runDelete(client.from("event_rsvps").delete().in("event_id", allEventIds));
+        await runDelete(client.from("event_notes").delete().in("event_id", allEventIds));
+        await runDelete(client.from("events").delete().in("id", allEventIds));
+      }
+
+      if (ownedCircleIds.length > 0) {
+        await runDelete(client.from("dismissed_items").delete().eq("item_type", "circle").in("item_id", ownedCircleIds));
+        await runDelete(client.from("circle_notes").delete().in("circle_id", ownedCircleIds));
+        await runDelete(client.from("circle_members").delete().in("circle_id", ownedCircleIds));
+        await runDelete(client.from("circles").delete().in("id", ownedCircleIds));
+      }
+
+      await user.delete();
+      try {
+        await signOut();
+      } catch (_) {}
+
+      setDeleteModalVisible(false);
+      // Auth flow will switch to the signed-out stack automatically.
+    } catch (e) {
+      setDeleteError(getErrorMessage(e));
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  }
+
   const name =
     [user?.firstName, user?.lastName].filter(Boolean).join(" ") || "Member";
   const email = user?.primaryEmailAddress?.emailAddress ?? "";
@@ -245,6 +344,7 @@ async function handleAccept(notif: AppNotification) {
   );
 
   return (
+    <>
     <ScreenLayout backgroundColor={screenBgColor} stickyTop={stickyHeader}>
       {/* Neighbourhood card */}
       {/* <Text style={styles.sectionLabel}>{t.profile.neighbourhood}</Text> */}
@@ -489,6 +589,27 @@ async function handleAccept(notif: AppNotification) {
 
       <View style={styles.sectionGap} />
 
+      <View
+        style={[
+          styles.card,
+          {
+            borderWidth: 1,
+            borderColor: "rgba(255,107,107,0.35)",
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => setDeleteModalVisible(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.rowLabel, { color: "#ff6b6b" }]}>Delete account</Text>
+          <Ionicons name="trash-outline" size={16} color="#ff6b6b" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.sectionGap} />
+
       {notifications.length > 0 ? (
         <>
           {notifications.map((notif) => (
@@ -514,6 +635,76 @@ async function handleAccept(notif: AppNotification) {
       ) : null}
 
     </ScreenLayout>
+    <DeleteConfirmationModal
+      visible={deleteModalVisible}
+      onClose={() => {
+        setDeleteModalVisible(false);
+        setDeleteConfirming(false);
+        setDeleteTyped("");
+        setDeleteError(null);
+      }}
+      title="Delete account"
+    >
+      <Text style={styles.deleteModalBody}>
+        This permanently deletes your account and data. Type <Text style={styles.deleteInlineCode}>DELETE</Text> to confirm.
+      </Text>
+      {!deleteConfirming ? (
+        <View style={styles.deleteActionsRow}>
+          <TouchableOpacity
+            style={styles.deleteDangerButton}
+            onPress={() => setDeleteConfirming(true)}
+            disabled={deleteSubmitting}
+          >
+            <Text style={styles.deleteDangerButtonText}>Delete Account</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.deleteCancelButton}
+            onPress={() => {
+              setDeleteModalVisible(false);
+              setDeleteConfirming(false);
+              setDeleteTyped("");
+              setDeleteError(null);
+            }}
+            disabled={deleteSubmitting}
+          >
+            <Text style={styles.deleteCancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          <TextInput
+            value={deleteTyped}
+            onChangeText={setDeleteTyped}
+            placeholder="DELETE"
+            placeholderTextColor={colors.textMuted}
+            style={styles.deleteInput}
+            autoCapitalize="characters"
+          />
+          {deleteError ? <Text style={styles.deleteErrorText}>{deleteError}</Text> : null}
+          <View style={styles.deleteActionsRow}>
+            <TouchableOpacity
+              style={styles.deleteConfirmButton}
+              onPress={handleDeleteAccount}
+              disabled={deleteSubmitting}
+            >
+              {deleteSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.deleteConfirmButtonText}>Confirm deletion</Text>}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteCancelButton}
+              onPress={() => {
+                setDeleteConfirming(false);
+                setDeleteTyped("");
+                setDeleteError(null);
+              }}
+              disabled={deleteSubmitting}
+            >
+              <Text style={styles.deleteCancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+    </DeleteConfirmationModal>
+    </>
   );
 }
 
@@ -945,6 +1136,86 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     bgSwatchSelected: {
       borderColor: colors.text,
       borderWidth: 2.5,
+    },
+    deleteModalBody: {
+      ...typography.bodySmall,
+      fontSize: 18,
+      lineHeight: 26,
+      color: colors.textMuted,
+      fontFamily: "Lora_400Regular",
+      marginBottom: 14,
+    },
+    deleteInlineCode: {
+      color: "#ff6b6b",
+      fontWeight: "700" as const,
+    },
+    deleteDangerButton: {
+      flex: 1,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: "rgba(255,107,107,0.45)",
+      backgroundColor: "rgba(255,107,107,0.15)",
+      paddingVertical: 14,
+      alignItems: "center" as const,
+    },
+    deleteDangerButtonText: {
+      color: "#ff6b6b",
+      ...typography.body,
+      fontSize: 18,
+      fontFamily: "Lora_400Regular",
+    },
+    deleteInput: {
+      borderWidth: 1,
+      borderColor: colors.divider,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      color: colors.text,
+      marginTop: 2,
+      fontSize: 18,
+      fontFamily: "Lora_400Regular",
+    },
+    deleteErrorText: {
+      color: "#ff6b6b",
+      fontSize: 13,
+      marginTop: 10,
+    },
+    deleteActionsRow: {
+      flexDirection: "row" as const,
+      gap: 12,
+      marginTop: 14,
+    },
+    deleteConfirmButton: {
+      flex: 1,
+      borderRadius: 999,
+      paddingVertical: 12,
+      alignItems: "center" as const,
+      backgroundColor: "#ff6b6b",
+      borderWidth: 1,
+      borderColor: "#ff6b6b",
+    },
+    deleteConfirmButtonText: {
+      color: "#fff",
+      ...typography.bodySmall,
+      fontSize: 17,
+      fontFamily: "Lora_400Regular",
+    },
+    deleteCancelButton: {
+      flex: 1,
+      borderRadius: 999,
+      paddingVertical: 12,
+      justifyContent: "center" as const,
+      alignItems: "center" as const,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      backgroundColor: "transparent",
+    },
+    deleteCancelButtonText: {
+      color: colors.textMuted,
+      ...typography.bodySmall,
+      fontSize: 17,
+      fontFamily: "Lora_400Regular",
+      textAlign: "center" as const,
     },
   });
 }

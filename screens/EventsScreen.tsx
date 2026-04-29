@@ -206,37 +206,73 @@ export default function EventsScreen() {
   }
 
   function parseEventDateTime(dateLabel: string, timeLabel: string): number {
+    const now = new Date();
     const monthMap: Record<string, number> = {
       jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
       jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
     };
 
-    const dateMatch = dateLabel.trim().match(/^(?:\w{3},\s*)?([A-Za-z]{3})\s+(\d{1,2})$/);
-    if (!dateMatch) return 0;
-    const monthIdx = monthMap[dateMatch[1].toLowerCase()];
-    const day = parseInt(dateMatch[2], 10);
-    if (monthIdx == null || Number.isNaN(day)) return 0;
+    const cleanedDate = dateLabel.trim().replace(/\s*[•·]\s*.*/, "");
+    const cleanedTime = timeLabel.trim();
 
-    const timeMatch = timeLabel.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
-    if (!timeMatch) return 0;
-    let hour = parseInt(timeMatch[1], 10);
-    const minute = parseInt(timeMatch[2], 10);
-    const ampm = (timeMatch[3] ?? "").toUpperCase();
-    if (Number.isNaN(hour) || Number.isNaN(minute)) return 0;
-    if (ampm === "AM" && hour === 12) hour = 0;
-    if (ampm === "PM" && hour < 12) hour += 12;
-
-    const now = new Date();
-    const year = now.getFullYear();
-    const eventDate = new Date(year, monthIdx, day, hour, minute, 0, 0);
-
-    // Events are seasonally recurring in this UI; if a parsed date is far behind,
-    // treat it as the upcoming year's instance.
-    if (eventDate.getTime() < now.getTime() - 180 * 24 * 60 * 60 * 1000) {
-      eventDate.setFullYear(year + 1);
+    let hour = 0;
+    let minute = 0;
+    const ampmMatch = cleanedTime.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+    if (ampmMatch) {
+      hour = parseInt(ampmMatch[1], 10);
+      minute = ampmMatch[2] ? parseInt(ampmMatch[2], 10) : 0;
+      const ampm = (ampmMatch[3] ?? "").toUpperCase();
+      if (ampm === "AM" && hour === 12) hour = 0;
+      if (ampm === "PM" && hour < 12) hour += 12;
     }
 
-    return eventDate.getTime();
+    // Format: "Mar 29" / "Tue, Mar 29"
+    const monthDayMatch = cleanedDate.match(/^(?:\w{3},\s*)?([A-Za-z]{3})\s+(\d{1,2})(?:\s+(\d{2,4}))?$/);
+    if (monthDayMatch) {
+      const monthIdx = monthMap[monthDayMatch[1].toLowerCase()];
+      const day = parseInt(monthDayMatch[2], 10);
+      if (monthIdx != null && !Number.isNaN(day)) {
+        const rawYear = monthDayMatch[3];
+        const parsedYear = rawYear ? parseInt(rawYear, 10) : now.getFullYear();
+        const year = rawYear ? (rawYear.length === 2 ? 2000 + parsedYear : parsedYear) : parsedYear;
+        const eventDate = new Date(year, monthIdx, day, hour, minute, 0, 0);
+        if (!rawYear && eventDate.getTime() < now.getTime() - 180 * 24 * 60 * 60 * 1000) {
+          eventDate.setFullYear(now.getFullYear() + 1);
+        }
+        return eventDate.getTime();
+      }
+    }
+
+    // Format: "Mar23" / "Mar23 2026" / "Tue, Mar23"
+    const compactMonthDayMatch = cleanedDate.match(/^(?:\w{3},\s*)?([A-Za-z]{3})\s?(\d{1,2})(?:\s+(\d{2,4}))?$/);
+    if (compactMonthDayMatch) {
+      const monthIdx = monthMap[compactMonthDayMatch[1].toLowerCase()];
+      const day = parseInt(compactMonthDayMatch[2], 10);
+      if (monthIdx != null && !Number.isNaN(day)) {
+        const rawYear = compactMonthDayMatch[3];
+        const parsedYear = rawYear ? parseInt(rawYear, 10) : now.getFullYear();
+        const year = rawYear ? (rawYear.length === 2 ? 2000 + parsedYear : parsedYear) : parsedYear;
+        const eventDate = new Date(year, monthIdx, day, hour, minute, 0, 0);
+        if (!rawYear && eventDate.getTime() < now.getTime() - 180 * 24 * 60 * 60 * 1000) {
+          eventDate.setFullYear(now.getFullYear() + 1);
+        }
+        return eventDate.getTime();
+      }
+    }
+
+    // Format: "31.3.26" / "31.03.2026"
+    const numericMatch = cleanedDate.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/);
+    if (numericMatch) {
+      const day = parseInt(numericMatch[1], 10);
+      const month = parseInt(numericMatch[2], 10) - 1;
+      const yy = parseInt(numericMatch[3], 10);
+      const year = numericMatch[3].length === 2 ? 2000 + yy : yy;
+      const eventDate = new Date(year, month, day, hour, minute, 0, 0);
+      if (!Number.isNaN(eventDate.getTime())) return eventDate.getTime();
+    }
+
+    const parsed = Date.parse(`${cleanedDate} ${cleanedTime}`.trim());
+    return Number.isNaN(parsed) ? 0 : parsed;
   }
 
   function isEventPast(event: EventWithCircle): boolean {

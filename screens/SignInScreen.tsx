@@ -241,6 +241,24 @@ export default function SignInScreen({
         <OAuthButtons
           buttonStyle={styles.oauthButton}
           textStyle={styles.oauthButtonText}
+          strategy="oauth_google"
+          buttonText="Continue with Google"
+          iconName="logo-google"
+          onError={(message) => {
+            setError(message);
+            setDebugInfo(`OAuth failed (google): ${message}`);
+          }}
+        />
+        <OAuthButtons
+          buttonStyle={styles.oauthButton}
+          textStyle={styles.oauthButtonText}
+          strategy="oauth_apple"
+          buttonText="Continue with Apple"
+          iconName="logo-apple"
+          onError={(message) => {
+            setError(message);
+            setDebugInfo(`OAuth failed (apple): ${message}`);
+          }}
         />
 
         <TouchableOpacity style={styles.primaryButton} onPress={onSignInPress} disabled={submitting}>
