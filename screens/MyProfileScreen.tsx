@@ -1,5 +1,15 @@
-import React, { useCallback, useRef, useState } from "react";
-import { ActivityIndicator, Image, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import React, { useCallback, useContext, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -13,6 +23,7 @@ import { supabase, AppNotification, getAuthClient } from "../lib/supabase";
 import { useNotificationContext } from "../src/contexts/NotificationContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { DeleteConfirmationModal } from "../src/components/modals/DeleteConfirmationModal";
+import { OnboardingRestartContext } from "../src/contexts/OnboardingRestartContext";
 
 async function handleSignOut(signOut: () => Promise<void>) {
   try {
@@ -43,6 +54,7 @@ const ALL_INTERESTS = [
 export default function MyProfileScreen() {
   const { signOut, getToken } = useAuth();
   const { user } = useUser();
+  const { restart: restartOnboarding } = useContext(OnboardingRestartContext);
   const navigation = useNavigation<any>();
 const { language, setLanguage, t } = useLanguage();
   const { setUnreadCount } = useNotificationContext();
@@ -586,6 +598,34 @@ async function handleAccept(notif: AppNotification) {
           );
         })}
       </View>
+
+      {__DEV__ ? (
+        <>
+          <View style={styles.sectionGap} />
+          <View style={styles.card}>
+            <TouchableOpacity
+              style={styles.row}
+              onPress={() => {
+                Alert.alert(
+                  "Replay onboarding?",
+                  "You’ll go through welcome, Terms, and setup again. Your circles and profile data stay as they are. Saved terms acceptance is cleared so you can test accepting again.",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Replay",
+                      onPress: () => void restartOnboarding({ clearTermsAcceptance: true }),
+                    },
+                  ]
+                );
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.rowLabel}>Replay onboarding</Text>
+              <Ionicons name="refresh-outline" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        </>
+      ) : null}
 
       <View style={styles.sectionGap} />
 

@@ -12,12 +12,14 @@ import { BackgroundProvider } from "./src/contexts/BackgroundContext";
 import { supabase } from "./lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import OnboardingScreen from "./screens/OnboardingScreen";
+import {
+  OnboardingRestartContext,
+  OnboardingRestartOptions,
+} from "./src/contexts/OnboardingRestartContext";
 
 SplashScreen.preventAutoHideAsync();
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
-
-export const OnboardingRestartContext = React.createContext<{ restart: () => void }>({ restart: () => {} });
 
 // Shows OnboardingScreen for new users; renders children once complete
 function OnboardingGate({ children }: { children: React.ReactNode }) {
@@ -37,9 +39,13 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
     });
   }, [isSignedIn, user?.id]);
 
-  function restart() {
+  async function restart(options?: OnboardingRestartOptions) {
     if (!user) return;
-    AsyncStorage.removeItem(`onboarding_v1_${user.id}`).then(() => setNeedsOnboarding(true));
+    if (options?.clearTermsAcceptance) {
+      await supabase.from("terms_acceptances").delete().eq("user_id", user.id);
+    }
+    await AsyncStorage.removeItem(`onboarding_v1_${user.id}`);
+    setNeedsOnboarding(true);
   }
 
   if (!ready) return null;

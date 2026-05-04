@@ -1,8 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   Animated,
   ImageBackground,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StatusBar,
@@ -11,7 +14,6 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  ActivityIndicator,
 } from "react-native";
 import { BlurView } from "expo-blur";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -74,7 +76,15 @@ function getClerkOnboardingDisplayName(user: ReturnType<typeof useUser>["user"])
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const TOTAL_STEPS = 6;
+/** Bump when in-app terms / EULA text changes (must match compliance expectations). */
+const TERMS_AND_EULA_VERSION = "2026.04.1";
+
+/** Public terms page (override with EXPO_PUBLIC_TERMS_URL in env if needed). */
+const TERMS_PUBLIC_URL =
+  (typeof process !== "undefined" && process.env.EXPO_PUBLIC_TERMS_URL?.trim()) ||
+  "https://valmia.ch/terms-and-conditions";
+
+const TOTAL_STEPS = 7;
 
 const THEME_OPTIONS: {
   key: BgOption;
@@ -248,7 +258,115 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
   );
 }
 
-// ─── Step 1: User Type ────────────────────────────────────────────────────────
+// ─── Step 1: Terms & EULA (required before continuing onboarding) ───────────
+
+function TermsStep({
+  userId,
+  onNext,
+  onBack,
+}: {
+  userId: string;
+  onNext: () => void;
+  onBack: () => void;
+}) {
+  const [agreed, setAgreed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleAcceptAndContinue() {
+    if (!agreed || submitting) return;
+    if (!userId) {
+      Alert.alert("Not signed in", "Please sign in again, then continue onboarding.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.from("terms_acceptances").upsert(
+        {
+          user_id: userId,
+          terms_version: TERMS_AND_EULA_VERSION,
+          eula_version: TERMS_AND_EULA_VERSION,
+          accepted_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
+      );
+      if (error) {
+        Alert.alert(
+          "Could not save acceptance",
+          error.message ?? "Check that the terms_acceptances table exists in Supabase, then try again."
+        );
+        return;
+      }
+      onNext();
+    } catch (e: any) {
+      Alert.alert("Could not save acceptance", e?.message ?? "Something went wrong.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <View style={styles.formStep}>
+      <View style={[styles.panel, styles.termsPanel]}>
+        <StepHeader
+          title="Terms & community rules"
+          subtitle="You must accept before using Valmia."
+          onBack={onBack}
+        />
+        <ScrollView
+          style={styles.termsScroll}
+          contentContainerStyle={styles.termsScrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.termsBody}>
+            By using Valmia you agree to our terms and community standards. There is{" "}
+            <Text style={styles.termsEmphasis}>no tolerance</Text> for objectionable content or abusive behaviour.
+            We may remove content or restrict accounts that violate these rules.
+          </Text>
+          <Text style={styles.termsBody}>
+            If you see something inappropriate, use reporting tools in the app where available. We aim to review
+            serious reports promptly.
+          </Text>
+          <TouchableOpacity
+            onPress={() => Linking.openURL(TERMS_PUBLIC_URL)}
+            hitSlop={{ top: 8, bottom: 8 }}
+          >
+            <Text style={styles.termsLink}>Read full terms →</Text>
+          </TouchableOpacity>
+        </ScrollView>
+        <TouchableOpacity
+          style={styles.termsCheckboxRow}
+          onPress={() => setAgreed((v) => !v)}
+          activeOpacity={0.75}
+          disabled={submitting}
+        >
+          <Ionicons
+            name={agreed ? "checkbox" : "square-outline"}
+            size={22}
+            color={agreed ? "#efede1" : "rgba(239,237,225,0.45)"}
+            style={{ marginRight: 12 }}
+          />
+          <Text style={styles.termsCheckboxLabel}>
+            I have read and agree to the Terms and the rules above, including zero tolerance for objectionable
+            content and abusive users.
+          </Text>
+        </TouchableOpacity>
+        {submitting ? (
+          <View style={{ marginTop: 16, alignItems: "center" }}>
+            <ActivityIndicator color="#efede1" />
+          </View>
+        ) : (
+          <GlassButton
+            label="Continue"
+            onPress={agreed ? handleAcceptAndContinue : undefined}
+            disabled={!agreed}
+          />
+        )}
+      </View>
+    </View>
+  );
+}
+
+// ─── Step 2: User Type ────────────────────────────────────────────────────────
 
 function UserTypeStep({
   data,
@@ -782,6 +900,7 @@ export default function OnboardingScreen({ onComplete }: Props) {
 
   const steps = [
     <WelcomeStep onNext={onNext} />,
+    <TermsStep userId={user?.id ?? ""} onNext={onNext} onBack={onBack} />,
     <UserTypeStep data={data} onUpdate={update} onNext={onNext} onBack={onBack} />,
     <InterestsStep data={data} onUpdate={update} onNext={onNext} onBack={onBack} />,
     <LocationStep onUpdate={update} onNext={onNext} onBack={onBack} onSkip={onSkip} />,
@@ -922,6 +1041,51 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 8,
     paddingBottom: Platform.OS === "ios" ? 36 : 24,
+  },
+  termsPanel: {
+    flex: 1,
+    maxHeight: "92%" as const,
+  },
+  termsScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+    maxHeight: 340,
+  },
+  termsScrollContent: {
+    paddingBottom: 12,
+  },
+  termsBody: {
+    fontSize: 14,
+    fontFamily: "Lora_400Regular",
+    color: "rgba(239,237,225,0.88)",
+    lineHeight: 22,
+    marginBottom: 14,
+  },
+  termsEmphasis: {
+    fontFamily: "Lora_400Regular",
+    fontWeight: "700" as const,
+    color: "#efede1",
+  },
+  termsLink: {
+    fontSize: 14,
+    fontFamily: "Lora_400Regular",
+    color: "rgba(239,237,225,0.95)",
+    textDecorationLine: "underline" as const,
+    marginTop: 4,
+  },
+  termsCheckboxRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginTop: 8,
+    marginBottom: 4,
+    paddingVertical: 8,
+  },
+  termsCheckboxLabel: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Lora_400Regular",
+    color: "rgba(239,237,225,0.9)",
+    lineHeight: 20,
   },
   themePanel: {
     borderWidth: 1,
