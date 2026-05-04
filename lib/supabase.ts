@@ -6,6 +6,15 @@ const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+/** Returns a Supabase client authenticated with a Clerk JWT.
+ *  Requires a "supabase" JWT template configured in Clerk Dashboard. */
+export function getAuthClient(token: string) {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false },
+  });
+}
+
 export type Event = {
   id: string;
   title: string;
@@ -23,7 +32,9 @@ export type Event = {
   maybe: number;
   created_at: string;
   circle_id: string | null;
-  visibility: 'public' | 'circle';
+  visibility: 'public' | 'circle' | 'friends' | 'private';
+  invited_user_ids?: string[] | null;
+  is_activity?: boolean | null;
   created_by: string | null;
 };
 
@@ -32,7 +43,7 @@ export type Circle = {
   name: string;
   description: string | null;
   image_url: string | null;
-  visibility: 'public' | 'request' | 'private';
+  visibility: 'public' | 'private' | 'request';
   category: string | null;
   location: string | null;
   organizer: string | null;
@@ -44,6 +55,11 @@ export type Circle = {
 export type UserProfile = {
   user_id: string;
   display_name: string | null;
+  bio: string | null;
+  location: string | null;
+  interests: string[] | null;
+  user_type: string | null;
+  avatar_url: string | null;
   updated_at: string;
 };
 

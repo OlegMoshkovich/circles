@@ -15,15 +15,30 @@ type EventCardProps = {
   location: string;
   going: number;
   maybe: number;
+  maxParticipants?: number | null;
+  isActivity?: boolean | null;
   rsvp?: "going" | "maybe";
   isOwner?: boolean;
   circleName?: string | null;
   noteCount?: number;
   hasNewActivity?: boolean;
   onPress?: () => void;
+  onSharePress?: () => void;
   onActionPress?: () => void;
   actionIcon?: keyof typeof Ionicons.glyphMap;
 };
+
+function formatDateWithYear(date: string): string {
+  const trimmed = date.trim();
+  if (!trimmed) return trimmed;
+
+  // Keep explicit year formats as-is (e.g. 31.3.26, 31.03.2026, Mar 29 2026).
+  if (/\b\d{4}\b/.test(trimmed) || /^\d{1,2}\.\d{1,2}\.\d{2,4}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  return `${trimmed} ${new Date().getFullYear()}`;
+}
 
 export function EventCard({
   title,
@@ -33,19 +48,24 @@ export function EventCard({
   location,
   going,
   maybe,
+  maxParticipants,
+  isActivity,
   rsvp,
   isOwner = false,
   circleName,
   noteCount = 0,
   hasNewActivity = false,
   onPress,
+  onSharePress,
   onActionPress,
   actionIcon,
 }: EventCardProps) {
+  const isFilled = maxParticipants != null && going >= maxParticipants;
   const { t } = useLanguage();
   const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
+  const dateWithYear = formatDateWithYear(date);
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
@@ -68,6 +88,10 @@ export function EventCard({
                 {rsvp === "going" ? t.events.badgeGoing : t.events.badgeMaybe}
               </Text>
             </View>
+          ) : isFilled ? (
+            <View style={[styles.badge, styles.badgeFilled]}>
+              <Text style={[styles.badgeText, styles.badgeTextFilled]}>Filled</Text>
+            </View>
           ) : null}
           {actionIcon && onActionPress ? (
             <TouchableOpacity style={styles.headerAction} onPress={onActionPress} activeOpacity={0.8}>
@@ -81,7 +105,7 @@ export function EventCard({
 
       <View style={styles.metaRow}>
         <Ionicons name="calendar-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
-        <Text style={styles.metaText}>{date} · {time}</Text>
+        <Text style={styles.metaText}>{dateWithYear} · {time}</Text>
       </View>
 
       <View style={styles.metaRow}>
@@ -96,17 +120,28 @@ export function EventCard({
         </View>
       ) : null}
 
-      <View style={styles.divider} />
-
       <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          <Text style={styles.footerCount}>{going}</Text>
-          <Text style={styles.footerLabel}> {t.events.goingLabel}</Text>
-          {"   "}
-          <Text style={styles.footerCount}>{maybe}</Text>
-          <Text style={styles.footerLabel}> {t.events.maybeLabel}</Text>
-        </Text>
+        <View style={styles.footerLeft}>
+          {isActivity && (
+            <View style={styles.activityBadge}>
+              <Ionicons name="body-outline" size={12} color={colors.textMuted} style={{ marginRight: 4 }} />
+              <Text style={styles.activityBadgeText}>Activity</Text>
+            </View>
+          )}
+          <Text style={styles.footerText}>
+            <Text style={styles.footerCount}>{going}</Text>
+            <Text style={styles.footerLabel}> {t.events.goingLabel}</Text>
+            {"   "}
+            <Text style={styles.footerCount}>{maybe}</Text>
+            <Text style={styles.footerLabel}> {t.events.maybeLabel}</Text>
+          </Text>
+        </View>
         <View style={styles.noteCountRow}>
+          {onSharePress ? (
+            <TouchableOpacity onPress={onSharePress} style={styles.shareAction} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Ionicons name="share-outline" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+          ) : null}
           {noteCount > 0 && (
             <Text style={styles.noteCountText}>{noteCount}</Text>
           )}
@@ -124,8 +159,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       borderRadius: 16,
       padding: spacing.cardPadding,
       marginBottom: spacing.md,
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
       ...Platform.select({
         ios: {
           shadowColor: "#000000",
@@ -160,14 +193,20 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       paddingHorizontal: 10,
       paddingVertical: 4,
       borderRadius: 999,
-      borderWidth: isOnboarding ? 1 : 0,
-      borderColor: isOnboarding ? colors.cardBorder : "transparent",
     },
     badgeGoing: {
       backgroundColor: isOnboarding ? "rgba(255,255,255,0.12)" : colors.iconbBg,
     },
     badgeMaybe: {
       backgroundColor: colors.badgeBg,
+    },
+    badgeFilled: {
+      backgroundColor: "rgba(255,255,255,0.08)",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.15)",
+    },
+    badgeTextFilled: {
+      color: colors.textMuted,
     },
     badgeText: {
       fontSize: 11,
@@ -200,15 +239,33 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       color: colors.text,
       fontFamily: "Lora_400Regular",
     },
-    divider: {
-      height: 1,
-      backgroundColor: colors.divider,
-      marginVertical: spacing.md,
-    },
     footer: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
+      marginTop: spacing.md,
+    },
+    footerLeft: {
+      flexDirection: "column",
+      gap: 6,
+    },
+    activityBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      alignSelf: "flex-start",
+      paddingVertical: 3,
+      paddingHorizontal: 8,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      backgroundColor: "transparent",
+    },
+    activityBadgeText: {
+      fontSize: 11,
+      fontWeight: "600" as const,
+      letterSpacing: 0.5,
+      textTransform: "uppercase" as const,
+      color: colors.textMuted,
     },
     footerText: {
       ...typography.bodySmall,
@@ -237,8 +294,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       borderRadius: 999,
       alignItems: "center",
       justifyContent: "center",
-      borderWidth: 1,
-      borderColor: colors.cardBorder,
       backgroundColor: colors.badgeBg,
       marginLeft: spacing.sm,
     },
@@ -246,6 +301,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       flexDirection: "row",
       alignItems: "center",
       gap: 4,
+    },
+    shareAction: {
+      marginRight: spacing.sm,
+      alignItems: "center",
+      justifyContent: "center",
     },
     noteCountText: {
       fontSize: 12,

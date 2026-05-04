@@ -24,6 +24,7 @@ export type EventDetailParams = {
   created_by?: string | null;
   circleName?: string | null;
   circle_id?: string | null;
+  hasNewActivity?: boolean;
 };
 
 export type PromptDetailParams = {
@@ -39,7 +40,7 @@ export type CircleDetailParams = {
   id: string;
   name: string;
   description: string | null;
-  visibility: 'public' | 'request' | 'private';
+  visibility: 'public' | 'private' | 'request';
   owner_id: string;
   member_count: number;
   organizer?: string | null;
@@ -52,9 +53,11 @@ export type RootStackParamList = {
   SignIn: undefined;
   MyProfile: undefined;
   VerifyCode: undefined;
+  ForgotPassword: { email?: string };
   EventDetail: EventDetailParams;
   PromptDetail: PromptDetailParams;
   CircleDetail: CircleDetailParams;
+  DeleteAccount: undefined;
 };
 
 export type RootStackScreenProps<Screen extends keyof RootStackParamList> =

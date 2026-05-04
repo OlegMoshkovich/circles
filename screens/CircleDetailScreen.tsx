@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ActivityIndicator,
   Alert,
@@ -6,6 +7,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -28,6 +30,7 @@ import { supabase, CircleMember, CircleNote, Event, UserProfile } from "../lib/s
 import { CircleInviteModal } from "../src/components/modals/CircleInviteModal";
 import { EditCircleModal, EditCircleData } from "../src/components/modals/EditCircleModal";
 import { CreateEventModal, NewEventData } from "../src/components/modals/CreateEventModal";
+import { PublicProfileModal } from "../src/components/modals/PublicProfileModal";
 import { EventCard } from "../src/components/cards/EventCard";
 import { ThemedBackground } from "../src/components/layout/ThemedBackground";
 
@@ -72,6 +75,8 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [profileMap, setProfileMap] = useState<Record<string, string>>({});
   const [events, setEvents] = useState<Event[]>([]);
   const [eventNoteCountMap, setEventNoteCountMap] = useState<Record<string, number>>({});
+  const [prevViewedEventsAt, setPrevViewedEventsAt] = useState<number>(0);
+  const lastViewedKey = `lastViewed_circle_events_${id}`;
   const [notes, setNotes] = useState<CircleNote[]>([]);
   const [noteText, setNoteText] = useState("");
   const [postingNote, setPostingNote] = useState(false);
@@ -81,9 +86,11 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [pendingInviteId, setPendingInviteId] = useState<string | null>(null);
   const [circleInviteVisible, setCircleInviteVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [createEventVisible, setCreateEventVisible] = useState(false);
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [didAutoSelectInitialTab, setDidAutoSelectInitialTab] = useState(false);
 
   // Load current user's membership status
@@ -96,6 +103,20 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       .eq("user_id", user.id)
       .maybeSingle()
       .then(({ data }) => setMembership(data));
+  }, [id, user]);
+
+  // Load pending invite notification for current user
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("notifications")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("type", "circle_invitation")
+      .eq("read", false)
+      .filter("data->>circle_id", "eq", id)
+      .maybeSingle()
+      .then(({ data }) => setPendingInviteId(data?.id ?? null));
   }, [id, user]);
 
   // Load fresh member count
@@ -221,6 +242,15 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     loadFeed();
   }, [activeTab, loadFeed]);
 
+  // Track last-viewed timestamp for new event dots
+  // Read previous visit time on mount, then update to now when events tab is viewed
+  useEffect(() => {
+    AsyncStorage.getItem(lastViewedKey).then((val) => {
+      setPrevViewedEventsAt(val ? parseInt(val, 10) : 0);
+      AsyncStorage.setItem(lastViewedKey, Date.now().toString());
+    });
+  }, [lastViewedKey]);
+
   useFocusEffect(
     useCallback(() => {
       if (activeTab !== "events" && activeTab !== "feed") return;
@@ -241,8 +271,10 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       max_participants: data.max_participants,
       contact_info: data.contact_info || null,
       price_info: data.price_info || null,
-      visibility: "circle",
+      visibility: data.visibility === "circle" ? "circle" : data.visibility,
       circle_id: id,
+      invited_user_ids: data.invited_user_ids?.length > 0 ? data.invited_user_ids : null,
+      is_activity: data.is_activity,
       created_by: user?.id ?? null,
     }).select("id").single();
     if (!error) {
@@ -277,7 +309,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         circle_id: id,
         user_id: user.id,
         display_name: user.fullName ?? user.firstName ?? user.username ?? null,
-        avatar_url: (user.externalAccounts?.find((a: any) => a.provider === "oauth_google" || a.provider === "google") as any)?.imageUrl ?? user.imageUrl ?? null,
+        avatar_url: (user.externalAccounts?.find((a: any) => a.provider === "oauth_google" || a.provider === "google") as any)?.imageUrl ?? null,
         content: noteText.trim(),
       })
       .select()
@@ -287,6 +319,28 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       setNoteText("");
     }
     setPostingNote(false);
+  }
+
+  async function handleShareEvent(event: Event) {
+    const shareUrl = "https://valmia.ch";
+    const lines = [
+      event.title,
+      `${event.date_label} · ${event.time_label}`,
+      event.location,
+      name ? `${t.nav.circles}: ${name}` : null,
+      event.description?.trim() ? event.description.trim() : null,
+      shareUrl,
+    ].filter(Boolean);
+
+    try {
+      await Share.share({
+        title: event.title,
+        message: lines.join("\n"),
+        url: shareUrl,
+      });
+    } catch {
+      Alert.alert("Error", "Could not open share menu.");
+    }
   }
 
   // Load members
@@ -374,7 +428,8 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     if (!user || submitting) return;
     setSubmitting(true);
 
-    const newStatus = visibility === "request" ? "requested" : "active";
+    // If accepting an invitation, always join as active regardless of visibility
+    const newStatus = pendingInviteId ? "active" : (visibility === "request" ? "requested" : "active");
 
     const basePayload = {
       circle_id: id,
@@ -404,6 +459,13 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       setMembership(data);
       if (newStatus === "active") setMemberCount((c) => c + 1);
     }
+
+    // Mark the invitation notification as read
+    if (pendingInviteId) {
+      await supabase.from("notifications").update({ read: true }).eq("id", pendingInviteId);
+      setPendingInviteId(null);
+    }
+
     setSubmitting(false);
   }
 
@@ -472,6 +534,18 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       );
     }
 
+    if (pendingInviteId) {
+      return (
+        <TouchableOpacity
+          style={[styles.actionButton, styles.joinButton]}
+          onPress={handleJoin}
+          disabled={submitting}
+        >
+          <Text style={styles.joinButtonText}>{t.circles.acceptInvitation}</Text>
+        </TouchableOpacity>
+      );
+    }
+
     if (visibility === "private") return null;
 
     return (
@@ -537,8 +611,6 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       <View style={[styles.headerCard, styles.headerCardOuter]}>
         <Text style={styles.title}>{name}</Text>
 
-        <View style={styles.divider} />
-
         {/* Tabs */}
         <View style={styles.tabRow}>
           <View style={styles.tabList}>
@@ -589,7 +661,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
               (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
             );
             return (
-              <>
+              <View style={[styles.tabContentCard, styles.feedCard, { flex: 1 }]}>
                 {(isOwner || isMember) && (
                   <View style={styles.composeBox}>
                     <View style={styles.composeRow}>
@@ -672,7 +744,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                     })
                   )}
                 </ScrollView>
-              </>
+              </View>
             );
           })()}
         </View>
@@ -694,12 +766,17 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                 );
 
                 return (
-                  <>
+                  <View style={styles.tabContentCard}>
                     {sortedEvents.length === 0 ? (
                       <Text style={styles.emptyText}>{t.circles.noCircleEvents}</Text>
                     ) : null}
 
-                    {sortedEvents.map((event) => (
+                    {sortedEvents.map((event) => {
+                      const eventCreatedAt = event.created_at ? new Date(event.created_at).getTime() : 0;
+                      const isNewEvent = prevViewedEventsAt > 0
+                        ? eventCreatedAt > prevViewedEventsAt && event.created_by !== user?.id
+                        : false;
+                      return (
                       <EventCard
                         key={`event-${event.id}`}
                         title={event.title}
@@ -709,7 +786,11 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                         location={event.location}
                         going={event.going}
                         maybe={event.maybe}
+                        maxParticipants={event.max_participants ?? null}
+                        isActivity={event.is_activity ?? false}
                         noteCount={eventNoteCountMap[event.id] ?? 0}
+                        hasNewActivity={isNewEvent}
+                        onSharePress={() => handleShareEvent(event)}
                         onPress={() =>
                           nav.navigate("EventDetail", {
                             id: event.id,
@@ -731,8 +812,9 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                           })
                         }
                       />
-                    ))}
-                  </>
+                    );
+                    })}
+                  </View>
                 );
               })()}
             </>
@@ -798,10 +880,14 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                     <Text style={styles.descriptionMetaValue}>{visibilityLabel[visibility]}</Text>
                   </View>
                   {organizer ? (
-                    <View style={styles.descriptionMetaRow}>
+                    <TouchableOpacity
+                      style={styles.descriptionMetaRow}
+                      onPress={() => setProfileModalVisible(true)}
+                      activeOpacity={0.7}
+                    >
                       <Text style={styles.descriptionMetaLabel}>{t.circles.organizer}</Text>
-                      <Text style={styles.descriptionMetaValue}>{organizer}</Text>
-                    </View>
+                      <Text style={[styles.descriptionMetaValue, styles.descriptionMetaLink]}>{organizer}</Text>
+                    </TouchableOpacity>
                   ) : null}
                   <View style={styles.descriptionMetaRow}>
                     <Text style={styles.descriptionMetaLabel}>{t.circles.members}</Text>
@@ -811,8 +897,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
                 {isOwner && (
                   <>
-                    <View style={styles.sectionDivider} />
-                    <View style={styles.ownerSectionHeader}>
+                    <View style={[styles.ownerSectionHeader, styles.ownerSectionHeaderAfterMeta]}>
                       <Text style={styles.sectionTitle}>{t.circles.pendingRequestsLabel}</Text>
                       {requestCount > 0 && (
                         <View style={styles.tabBadge}>
@@ -881,6 +966,13 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         onClose={() => setCircleInviteVisible(false)}
         circleId={id}
         circleName={name}
+      />
+
+      <PublicProfileModal
+        visible={profileModalVisible}
+        onClose={() => setProfileModalVisible(false)}
+        userId={owner_id}
+        displayName={organizer ?? name}
       />
 
       <CreateEventModal
@@ -963,8 +1055,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     borderRadius: 16,
     padding: spacing.cardPadding,
     marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
     ...Platform.select({
       ios: {
         shadowColor: "#000000",
@@ -990,8 +1080,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     borderRadius: 999,
     paddingHorizontal: isOnboarding ? 12 : 0,
     paddingVertical: isOnboarding ? 8 : 0,
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   backLabel: {
     ...typography.body,
@@ -1036,15 +1124,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     color: colors.textMuted,
     marginHorizontal: spacing.sm,
   },
-  divider: {
-    height: 1,
-    backgroundColor: colors.divider,
-    marginVertical: spacing.md,
-  },
   tabRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: spacing.sm,
+    marginTop: spacing.md,
   },
   tabList: {
     flexDirection: "row",
@@ -1079,21 +1163,18 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     ...typography.bodySmall,
     color: colors.textMuted,
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.cardPadding,
   },
   membersPanel: {
     backgroundColor: colors.card,
     borderRadius: 16,
     paddingHorizontal: spacing.cardPadding,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
     marginBottom: spacing.md,
   },
   descriptionPanel: {
     backgroundColor: colors.card,
     borderRadius: 16,
     padding: spacing.cardPadding,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
   },
   sectionTitle: {
     ...typography.body,
@@ -1126,10 +1207,9 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     flexShrink: 1,
     textAlign: "right",
   },
-  sectionDivider: {
-    height: 1,
-    backgroundColor: colors.divider,
-    marginVertical: spacing.lg,
+  descriptionMetaLink: {
+    textDecorationLine: "underline" as const,
+    color: colors.text,
   },
   ownerSectionHeader: {
     flexDirection: "row",
@@ -1137,12 +1217,13 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     justifyContent: "space-between",
     marginBottom: spacing.sm,
   },
+  ownerSectionHeaderAfterMeta: {
+    marginTop: spacing.lg,
+  },
   memberRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   avatar: {
     width: 36,
@@ -1160,8 +1241,8 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   avatarText: {
     fontSize: 13,
-    fontWeight: "600" as const,
-    color: colors.textMuted,
+    fontFamily: "Lora_400Regular",
+    color: colors.text,
   },
   memberUserId: {
     flex: 1,
@@ -1173,8 +1254,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   roleBadgeText: {
     fontSize: 10,
@@ -1198,12 +1277,10 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     backgroundColor: isOnboarding ? "rgba(15,13,10,0.78)" : colors.text,
     borderRadius: 999,
     height: 54,
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
     ...Platform.select({
       ios: {
         shadowColor: "#000000",
@@ -1217,8 +1294,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   actionButtonOutline: {
     backgroundColor: isOnboarding ? "rgba(15,13,10,0.78)" : colors.card,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
   },
   actionButtonText: {
     color: isOnboarding ? colors.text : colors.background,
@@ -1227,8 +1302,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   joinButton: {
     backgroundColor: "#F5EFE3",
-    borderWidth: 1,
-    borderColor: "rgba(53,65,42,0.08)",
   },
   joinButtonText: {
     color: "#35412A",
@@ -1237,8 +1310,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   inviteActionButton: {
     backgroundColor: "#F5EFE3",
-    borderWidth: 1,
-    borderColor: "rgba(53,65,42,0.08)",
   },
   inviteActionButtonText: {
     color: "#35412A",
@@ -1254,8 +1325,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.divider,
   },
   acceptButton: {
     backgroundColor: colors.text,
@@ -1301,8 +1370,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   invitedBadgeText: {
     fontSize: 10,
@@ -1319,8 +1386,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     borderRadius: 999,
     paddingHorizontal: isOnboarding ? 12 : 0,
     paddingVertical: isOnboarding ? 8 : 0,
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   headerCardOuter: {
     marginHorizontal: spacing.pageHorizontal,
@@ -1334,29 +1399,12 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   messagesPanel: {
     backgroundColor: colors.card,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
     marginBottom: spacing.md,
     paddingHorizontal: spacing.cardPadding,
     paddingVertical: spacing.cardPadding,
   },
   composeBox: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
     padding: spacing.cardPadding,
-    marginBottom: spacing.md,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: isOnboarding ? 0.12 : 0.05,
-        shadowRadius: 2,
-      },
-      android: { elevation: 1 },
-      default: {},
-    }),
   },
   composeRow: {
     flexDirection: "row",
@@ -1383,8 +1431,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     marginTop: 10,
     minWidth: 84,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "rgba(27,36,23,0.12)",
   },
   postButtonText: {
     color: "#35412A",
@@ -1392,12 +1438,8 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     fontWeight: "600" as const,
   },
   noteCard: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.cardBorder,
     padding: spacing.cardPadding,
-    marginBottom: spacing.md,
+    paddingBottom: spacing.lg,
   },
   noteHeader: {
     flexDirection: "row",
@@ -1405,22 +1447,44 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     marginBottom: spacing.sm,
   },
   noteHeaderText: {
-    marginLeft: spacing.sm,
     flex: 1,
+    marginLeft: spacing.sm,
+  },
+  noteHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
   },
   noteName: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: "600" as const,
     color: colors.text,
   },
   noteTime: {
     fontSize: 11,
     color: colors.textMuted,
-    marginTop: 1,
+    marginTop: 2,
   },
   noteContent: {
     ...typography.body,
     color: colors.text,
     lineHeight: 21,
+  },
+  tabContentCard: {
+    borderRadius: 16,
+    overflow: "hidden" as const,
+  },
+  feedCard: {
+    backgroundColor: colors.card,
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: isOnboarding ? 0.14 : 0.06,
+        shadowRadius: 3,
+      },
+      android: { elevation: 2 },
+      default: {},
+    }),
   },
 }); }

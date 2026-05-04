@@ -20,7 +20,7 @@ import { supabase } from "../../../lib/supabase";
 export type EditCircleData = {
   name: string;
   description: string;
-  visibility: "public" | "request" | "private";
+  visibility: "public" | "private" | "request";
 };
 
 type Props = {
@@ -31,9 +31,8 @@ type Props = {
   initialValues: EditCircleData;
 };
 
-const VISIBILITY_OPTIONS: { value: "public" | "request" | "private"; label: string }[] = [
+const VISIBILITY_OPTIONS: { value: "public" | "private"; label: string }[] = [
   { value: "public", label: "Public" },
-  { value: "request", label: "Request" },
   { value: "private", label: "Private" },
 ];
 
@@ -48,7 +47,7 @@ export function EditCircleModal({ visible, onClose, onSaved, circleId, initialVa
   const [description, setDescription] = useState(initialValues.description ?? "");
   const [categoryPreset, setCategoryPreset] = useState("");
   const [customCategoryText, setCustomCategoryText] = useState("");
-  const [visibility, setVisibility] = useState<"public" | "request" | "private">(initialValues.visibility);
+  const [visibility, setVisibility] = useState<"public" | "private">(initialValues.visibility === "request" ? "public" : initialValues.visibility);
   const [location, setLocation] = useState("");
   const [showMap, setShowMap] = useState(false);
   const [saving, setSaving] = useState(false);

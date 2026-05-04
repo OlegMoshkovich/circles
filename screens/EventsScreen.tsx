@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Share, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -11,6 +11,7 @@ import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { TextBlock } from "../src/components/blocks/TextBlock";
 import { EventCard } from "../src/components/cards/EventCard";
 import { CreateEventModal, NewEventData } from "../src/components/modals/CreateEventModal";
+import { GradientRingLoader } from "../src/components/loaders/GradientRingLoader";
 import { Colors } from "../src/theme/colors";
 
 import { useUser } from "@clerk/clerk-expo";
@@ -19,9 +20,10 @@ import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { supabase, Event } from "../lib/supabase";
 
 type EventWithCircle = Event & { circles?: { name: string } | null };
-type Filter = "all" | "circles";
-type SortBy = "newest" | "popular" | "activity" | "new_activity";
+type Filter = "all" | "circles" | "hosting";
+type SortBy = "newest" | "recent" | "popular" | "activity" | "new_activity";
 type RsvpFilter = "all" | "going" | "maybe";
+type ContentType = "all" | "events" | "activity";
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function EventsScreen() {
@@ -30,6 +32,7 @@ export default function EventsScreen() {
   const { user } = useUser();
   const [modalVisible, setModalVisible] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
+  const [contentType, setContentType] = useState<ContentType>("all");
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("newest");
   const [rsvpFilter, setRsvpFilter] = useState<RsvpFilter>("all");
@@ -37,19 +40,20 @@ export default function EventsScreen() {
   const [rsvpStatusMap, setRsvpStatusMap] = useState<Record<string, "going" | "maybe">>({});
   const [noteCountMap, setNoteCountMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [activityMap, setActivityMap] = useState<Record<string, number>>({});
   const [lastViewedMap, setLastViewedMap] = useState<Record<string, number>>({});
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [showDismissed, setShowDismissed] = useState(false);
-  const [hideCards, setHideCards] = useState(false);
+  const [showPastEvents, setShowPastEvents] = useState(false);
 
-  const fetchEvents = useCallback(async () => {
+  const fetchEvents = useCallback(async (silent = false) => {
     if (!user) {
       setEvents([]);
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!silent) setLoading(true);
 
     if (user) {
       const { data: dismissedData } = await supabase
@@ -90,12 +94,14 @@ export default function EventsScreen() {
         return;
       }
       query = query.in("circle_id", circleIds);
+    } else if (filter === "hosting") {
+      query = query.eq("created_by", user.id);
     } else {
-      // All: public events + events in user's circles
+      // All: public events + events in user's circles + own events (any visibility)
       if (circleIds.length > 0) {
-        query = query.or(`visibility.eq.public,circle_id.in.(${circleIds.join(",")})`);
+        query = query.or(`visibility.eq.public,circle_id.in.(${circleIds.join(",")}),created_by.eq.${user.id}`);
       } else {
-        query = query.eq("visibility", "public");
+        query = query.or(`visibility.eq.public,created_by.eq.${user.id}`);
       }
     }
 
@@ -144,7 +150,7 @@ export default function EventsScreen() {
   );
 
   async function handleSave(event: NewEventData) {
-    const { error } = await supabase.from("events").insert({
+    const { data: inserted, error } = await supabase.from("events").insert({
       title: event.title,
       organizer: event.organizer,
       date_label: event.date,
@@ -158,32 +164,144 @@ export default function EventsScreen() {
       price_info: event.price_info || null,
       visibility: event.visibility,
       circle_id: event.circle_id,
+      invited_user_ids: event.invited_user_ids.length > 0 ? event.invited_user_ids : null,
+      is_activity: event.is_activity,
       created_by: user?.id ?? null,
-    });
-    if (!error) {
+    }).select("id").single();
+    if (!error && inserted && user) {
+      await supabase.from("event_rsvps").insert({
+        event_id: inserted.id,
+        user_id: user.id,
+        status: "going",
+      });
       setModalVisible(false);
       await fetchEvents();
       return true;
     }
     console.error("Failed to create event", error);
-    Alert.alert("Could not create event", error.message);
+    Alert.alert("Could not create event", error?.message ?? "Unknown error");
     return false;
   }
 
-  const displayedEvents = events
+  async function handleShareEvent(event: EventWithCircle) {
+    const shareUrl = "https://valmia.ch";
+    const lines = [
+      event.title,
+      `${event.date_label} · ${event.time_label}`,
+      event.location,
+      event.circles?.name ? `${t.nav.circles}: ${event.circles.name}` : null,
+      event.description?.trim() ? event.description.trim() : null,
+      shareUrl,
+    ].filter(Boolean);
+
+    try {
+      await Share.share({
+        title: event.title,
+        message: lines.join("\n"),
+        url: shareUrl,
+      });
+    } catch {
+      Alert.alert("Error", "Could not open share menu.");
+    }
+  }
+
+  function parseEventDateTime(dateLabel: string, timeLabel: string): number {
+    const now = new Date();
+    const monthMap: Record<string, number> = {
+      jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+      jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+    };
+
+    const cleanedDate = dateLabel.trim().replace(/\s*[•·]\s*.*/, "");
+    const cleanedTime = timeLabel.trim();
+
+    let hour = 0;
+    let minute = 0;
+    const ampmMatch = cleanedTime.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+    if (ampmMatch) {
+      hour = parseInt(ampmMatch[1], 10);
+      minute = ampmMatch[2] ? parseInt(ampmMatch[2], 10) : 0;
+      const ampm = (ampmMatch[3] ?? "").toUpperCase();
+      if (ampm === "AM" && hour === 12) hour = 0;
+      if (ampm === "PM" && hour < 12) hour += 12;
+    }
+
+    // Format: "Mar 29" / "Tue, Mar 29"
+    const monthDayMatch = cleanedDate.match(/^(?:\w{3},\s*)?([A-Za-z]{3})\s+(\d{1,2})(?:\s+(\d{2,4}))?$/);
+    if (monthDayMatch) {
+      const monthIdx = monthMap[monthDayMatch[1].toLowerCase()];
+      const day = parseInt(monthDayMatch[2], 10);
+      if (monthIdx != null && !Number.isNaN(day)) {
+        const rawYear = monthDayMatch[3];
+        const parsedYear = rawYear ? parseInt(rawYear, 10) : now.getFullYear();
+        const year = rawYear ? (rawYear.length === 2 ? 2000 + parsedYear : parsedYear) : parsedYear;
+        const eventDate = new Date(year, monthIdx, day, hour, minute, 0, 0);
+        if (!rawYear && eventDate.getTime() < now.getTime() - 180 * 24 * 60 * 60 * 1000) {
+          eventDate.setFullYear(now.getFullYear() + 1);
+        }
+        return eventDate.getTime();
+      }
+    }
+
+    // Format: "Mar23" / "Mar23 2026" / "Tue, Mar23"
+    const compactMonthDayMatch = cleanedDate.match(/^(?:\w{3},\s*)?([A-Za-z]{3})\s?(\d{1,2})(?:\s+(\d{2,4}))?$/);
+    if (compactMonthDayMatch) {
+      const monthIdx = monthMap[compactMonthDayMatch[1].toLowerCase()];
+      const day = parseInt(compactMonthDayMatch[2], 10);
+      if (monthIdx != null && !Number.isNaN(day)) {
+        const rawYear = compactMonthDayMatch[3];
+        const parsedYear = rawYear ? parseInt(rawYear, 10) : now.getFullYear();
+        const year = rawYear ? (rawYear.length === 2 ? 2000 + parsedYear : parsedYear) : parsedYear;
+        const eventDate = new Date(year, monthIdx, day, hour, minute, 0, 0);
+        if (!rawYear && eventDate.getTime() < now.getTime() - 180 * 24 * 60 * 60 * 1000) {
+          eventDate.setFullYear(now.getFullYear() + 1);
+        }
+        return eventDate.getTime();
+      }
+    }
+
+    // Format: "31.3.26" / "31.03.2026"
+    const numericMatch = cleanedDate.match(/^(\d{1,2})\.(\d{1,2})\.(\d{2,4})$/);
+    if (numericMatch) {
+      const day = parseInt(numericMatch[1], 10);
+      const month = parseInt(numericMatch[2], 10) - 1;
+      const yy = parseInt(numericMatch[3], 10);
+      const year = numericMatch[3].length === 2 ? 2000 + yy : yy;
+      const eventDate = new Date(year, month, day, hour, minute, 0, 0);
+      if (!Number.isNaN(eventDate.getTime())) return eventDate.getTime();
+    }
+
+    const parsed = Date.parse(`${cleanedDate} ${cleanedTime}`.trim());
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  function isEventPast(event: EventWithCircle): boolean {
+    const ts = parseEventDateTime(event.date_label, event.time_label);
+    return ts > 0 && ts < Date.now();
+  }
+
+  const visibleEvents = events.filter((e) => showPastEvents || !isEventPast(e));
+
+  const displayedEvents = visibleEvents
     .filter((e) => rsvpFilter === "all" || rsvpStatusMap[e.id] === rsvpFilter)
+    .filter((e) => {
+      if (contentType === "events") return !e.is_activity;
+      if (contentType === "activity") return !!e.is_activity;
+      return true;
+    })
     .sort((a, b) => {
       if (sortBy === "new_activity") {
         const aNew = (activityMap[a.id] ?? 0) > (lastViewedMap[a.id] ?? 0) ? 1 : 0;
         const bNew = (activityMap[b.id] ?? 0) > (lastViewedMap[b.id] ?? 0) ? 1 : 0;
         return bNew - aNew;
       }
+      if (sortBy === "recent") return parseEventDateTime(a.date_label, a.time_label) - parseEventDateTime(b.date_label, b.time_label);
       if (sortBy === "popular") return (b.going + b.maybe) - (a.going + a.maybe);
       if (sortBy === "activity") return (noteCountMap[b.id] ?? 0) - (noteCountMap[a.id] ?? 0);
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
-  const filterActive = sortBy !== "newest" || rsvpFilter !== "all";
+  const filterActive = sortBy !== "newest" || rsvpFilter !== "all" || showDismissed || showPastEvents || contentType !== "all";
 
   const { bgOption } = useBackground();
   const colors = useColors();
@@ -194,86 +312,83 @@ export default function EventsScreen() {
     <>
       <ScreenLayout
         backgroundColor={screenBgColor}
-      >
-        <ScreenHeaderCard>
+        contentStyle={loading ? styles.scrollContentLoader : undefined}
+        onRefresh={async () => { setRefreshing(true); await fetchEvents(true); setRefreshing(false); }}
+        refreshing={refreshing}
+        stickyTop={<ScreenHeaderCard>
           <NavbarTitle
             title={t.nav.events}
             rightElement={
-              <TouchableOpacity
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                style={styles.addButton}
-                onPress={() => setModalVisible(true)}
-              >
-                <Ionicons name="add" size={16} color={colors.textOnIconBg} />
-              </TouchableOpacity>
-              
+              <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                <TouchableOpacity
+                  style={[styles.filterIconButton, (filter !== "all" || filterActive) && styles.filterIconButtonActive]}
+                  onPress={() => setShowFilterPanel((v) => !v)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="options-outline"
+                    size={17}
+                    color={(filter !== "all" || filterActive) ? colors.iconbBg : colors.textMuted}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  style={styles.addButton}
+                  onPress={() => setModalVisible(true)}
+                >
+                  <Ionicons name="add" size={16} color={colors.textOnIconBg} />
+                </TouchableOpacity>
+              </View>
             }
           />
           {/* <TextBlock subtitle={t.events.subtitle} /> */}
 
-          <View style={styles.filterRow}>
-            <View style={styles.toggle}>
-              <TouchableOpacity
-                style={[styles.toggleOption, filter === "all" && styles.toggleOptionActive]}
-                onPress={() => setFilter("all")}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.toggleLabel, filter === "all" && styles.toggleLabelActive]}>
-                  {t.events.filterAll}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.toggleOption, filter === "circles" && styles.toggleOptionActive]}
-                onPress={() => setFilter("circles")}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.toggleLabel, filter === "circles" && styles.toggleLabelActive]}>
-                  {t.events.filterMyCircles}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <TouchableOpacity
-                style={[styles.filterIconButton, hideCards && styles.filterIconButtonActive]}
-                onPress={() => setHideCards((v) => !v)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={hideCards ? "eye-off-outline" : "eye-outline"}
-                  size={17}
-                  color={hideCards ? colors.iconbBg : colors.textMuted}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.filterIconButton, filterActive && styles.filterIconButtonActive]}
-                onPress={() => setShowFilterPanel((v) => !v)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name="options-outline"
-                  size={17}
-                  color={filterActive ? colors.iconbBg : colors.textMuted}
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-
           {showFilterPanel && (
             <View style={styles.filterPanel}>
               <View style={styles.filterSection}>
+                <Text style={styles.filterSectionLabel}>{t.events.filterAll} / {t.events.filterMyCircles}</Text>
+                <View style={styles.filterChipRow}>
+                  {(["all", "circles", "hosting"] as Filter[]).map((opt) => (
+                    <TouchableOpacity
+                      key={opt}
+                      style={[styles.filterChip, filter === opt && styles.filterChipActive]}
+                      onPress={() => setFilter(opt)}
+                    >
+                      <Text style={[styles.filterChipText, filter === opt && styles.filterChipTextActive]}>
+                        {opt === "all" ? t.events.filterAll : opt === "circles" ? t.events.filterMyCircles : t.events.filterHosting}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              <View style={styles.filterSection}>
                 <Text style={styles.filterSectionLabel}>{t.common.sort}</Text>
                 <View style={styles.filterChipRow}>
-                  {(["newest", "popular", "activity", "new_activity"] as SortBy[]).map((opt) => (
+                  {(["newest", "recent", "popular", "activity", "new_activity"] as SortBy[]).map((opt) => (
                     <TouchableOpacity
                       key={opt}
                       style={[styles.filterChip, sortBy === opt && styles.filterChipActive]}
                       onPress={() => setSortBy(opt)}
                     >
                       <Text style={[styles.filterChipText, sortBy === opt && styles.filterChipTextActive]}>
-                        {opt === "newest" ? t.events.sortNewest : opt === "popular" ? t.events.sortPopular : opt === "activity" ? t.events.sortActive : t.events.sortNewActivity}
+                        {opt === "newest" ? t.events.sortNewest : opt === "recent" ? t.events.sortRecent : opt === "popular" ? t.events.sortPopular : opt === "activity" ? t.events.sortActive : t.events.sortNewActivity}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              <View style={styles.filterSection}>
+                <Text style={styles.filterSectionLabel}>{t.events.contentTypeLabel}</Text>
+                <View style={styles.filterChipRow}>
+                  {(["all", "events", "activity"] as ContentType[]).map((opt) => (
+                    <TouchableOpacity
+                      key={opt}
+                      style={[styles.filterChip, contentType === opt && styles.filterChipActive]}
+                      onPress={() => setContentType(opt)}
+                    >
+                      <Text style={[styles.filterChipText, contentType === opt && styles.filterChipTextActive]}>
+                        {opt === "all" ? t.events.contentTypeAll : opt === "events" ? t.events.contentTypeEvents : t.events.contentTypeActivity}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -306,22 +421,31 @@ export default function EventsScreen() {
                       {t.common.dismissed}
                     </Text>
                   </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.filterChip, showPastEvents && styles.filterChipActive]}
+                    onPress={() => setShowPastEvents((v) => !v)}
+                  >
+                    <Text style={[styles.filterChipText, showPastEvents && styles.filterChipTextActive]}>
+                      Past events
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </View>
           )}
-        </ScreenHeaderCard>
-        {!hideCards && (loading ? (
+        </ScreenHeaderCard>}
+      >
+        {loading ? (
           <View style={styles.loader}>
-            <ActivityIndicator size="small" color={colors.textMuted} />
+            <GradientRingLoader size={40} strokeWidth={7} />
           </View>
         ) : showDismissed ? (
-          events.filter((e) => dismissedIds.has(e.id)).length === 0 ? (
+          visibleEvents.filter((e) => dismissedIds.has(e.id)).length === 0 ? (
             <View style={styles.empty}>
               <Text style={styles.emptyText}>{t.events.noDismissed}</Text>
             </View>
           ) : (
-            events.filter((e) => dismissedIds.has(e.id)).map((event) => (
+            visibleEvents.filter((e) => dismissedIds.has(e.id)).map((event) => (
               <EventCard
                 key={event.id}
                 title={event.title}
@@ -331,11 +455,14 @@ export default function EventsScreen() {
                 location={event.location}
                 going={event.going}
                 maybe={event.maybe}
+                maxParticipants={event.max_participants ?? null}
+                isActivity={event.is_activity ?? false}
                 rsvp={rsvpStatusMap[event.id]}
                 isOwner={!!user && event.created_by === user.id}
                 circleName={event.circles?.name ?? null}
                 noteCount={noteCountMap[event.id] ?? 0}
                 hasNewActivity={false}
+                onSharePress={() => handleShareEvent(event)}
                 actionIcon="refresh"
                 onActionPress={() => {
                   setDismissedIds((prev) => { const next = new Set(prev); next.delete(event.id); return next; });
@@ -387,11 +514,14 @@ export default function EventsScreen() {
               location={event.location}
               going={event.going}
               maybe={event.maybe}
+              maxParticipants={event.max_participants ?? null}
+              isActivity={event.is_activity ?? false}
               rsvp={rsvpStatusMap[event.id]}
               isOwner={!!user && event.created_by === user.id}
               circleName={event.circles?.name ?? null}
               noteCount={noteCountMap[event.id] ?? 0}
-              hasNewActivity={(activityMap[event.id] ?? 0) > (lastViewedMap[event.id] ?? 0)}
+              hasNewActivity={!!lastViewedMap[event.id] && (activityMap[event.id] ?? 0) > lastViewedMap[event.id]}
+              onSharePress={() => handleShareEvent(event)}
               actionIcon={!!user && event.created_by === user.id ? undefined : "close"}
               onActionPress={
                 !!user && event.created_by === user.id
@@ -428,11 +558,12 @@ export default function EventsScreen() {
                   created_by: event.created_by,
                   circleName: event.circles?.name ?? null,
                   circle_id: event.circle_id,
+                  hasNewActivity: !!lastViewedMap[event.id] && (activityMap[event.id] ?? 0) > lastViewedMap[event.id],
                 });
               }}
             />
           ))
-        ))}
+        )}
       </ScreenLayout>
 
       <CreateEventModal
@@ -454,9 +585,14 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     alignItems: "center",
     justifyContent: "center",
   },
-  loader: {
-    paddingVertical: 12,
+  scrollContentLoader: {
+    flexGrow: 1,
+    justifyContent: "center",
     alignItems: "center",
+  },
+  loader: {
+    alignItems: "center",
+    justifyContent: "center",
   },
   filterRow: {
     flexDirection: "row",

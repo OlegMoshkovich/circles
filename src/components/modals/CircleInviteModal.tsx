@@ -5,6 +5,7 @@ import {
   Modal,
   Platform,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,6 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@clerk/clerk-expo";
+import * as Linking from "expo-linking";
 import { Colors } from "../../theme/colors";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { supabase, UserProfile } from "../../../lib/supabase";
@@ -40,17 +42,18 @@ export function CircleInviteModal({ visible, onClose, circleId, circleName }: Pr
     setSelected(new Set());
     setAlreadyInvited(new Set());
 
-    // Fetch all known users, existing members, and pending invitations in parallel
+    // Fetch all known users from multiple sources, existing members, and pending invitations
     Promise.all([
       supabase.from("user_profiles").select("user_id, display_name"),
-      supabase.from("circle_members").select("user_id").eq("circle_id", circleId),
+      supabase.from("circle_members").select("user_id, display_name").eq("circle_id", circleId),
+      supabase.from("circle_members").select("user_id, display_name").neq("circle_id", circleId),
       supabase
         .from("notifications")
         .select("data")
         .eq("type", "circle_invitation")
         .filter("data->>circle_id", "eq", circleId)
         .eq("read", false),
-    ]).then(([profilesResult, membersResult, notifsResult]) => {
+    ]).then(([profilesResult, membersResult, allCircleMembersResult, notifsResult]) => {
       const existingMemberIds = new Set(
         (membersResult.data ?? []).map((m: any) => m.user_id)
       );
@@ -63,19 +66,19 @@ export function CircleInviteModal({ visible, onClose, circleId, circleName }: Pr
       setAlreadyInvited(invitedIds);
       setSelected(new Set(invitedIds));
 
-      // Deduplicate by user_id in case of stale duplicate profile rows
-      const seen = new Set<string>();
-      const list = (profilesResult.data ?? [] as UserProfile[])
-        .filter((p: any) => {
-          if (existingMemberIds.has(p.user_id) || p.user_id === user.id) return false;
-          if (seen.has(p.user_id)) return false;
-          seen.add(p.user_id);
-          return true;
-        })
-        .map((p: any) => ({
-          user_id: p.user_id,
-          name: p.display_name ?? p.user_id,
-        }));
+      // Build a merged user map: user_profiles takes priority, circle_members as fallback
+      const userMap = new Map<string, string>();
+      for (const m of (allCircleMembersResult.data ?? []) as any[]) {
+        if (m.user_id && m.display_name) userMap.set(m.user_id, m.display_name);
+      }
+      for (const p of (profilesResult.data ?? []) as any[]) {
+        if (p.user_id && p.display_name) userMap.set(p.user_id, p.display_name);
+      }
+
+      const list = Array.from(userMap.entries())
+        .filter(([userId]) => !existingMemberIds.has(userId) && userId !== user.id)
+        .map(([userId, name]) => ({ user_id: userId, name }));
+
       setCandidates(list);
       setLoading(false);
     });
@@ -118,6 +121,16 @@ export function CircleInviteModal({ visible, onClose, circleId, circleName }: Pr
     onClose();
   }
 
+  async function handleShareLink() {
+    const url = Linking.createURL(`circle/join`, { queryParams: { id: circleId, name: circleName } });
+    try {
+      await Share.share({
+        message: `Join "${circleName}" on ValMia! ${url}`,
+        url,
+      });
+    } catch (_) {}
+  }
+
   const initials = (name: string) => {
     const parts = name.trim().split(" ");
     return parts.length >= 2
@@ -142,6 +155,16 @@ export function CircleInviteModal({ visible, onClose, circleId, circleName }: Pr
                   <Ionicons name="close" size={20} color={colors.textMuted} />
                 </TouchableOpacity>
               </View>
+
+              <TouchableOpacity style={styles.shareLinkRow} onPress={handleShareLink} activeOpacity={0.75}>
+                <View style={styles.shareLinkIcon}>
+                  <Ionicons name="link-outline" size={18} color={colors.text} />
+                </View>
+                <Text style={styles.shareLinkText}>Share invite link</Text>
+                <Ionicons name="share-outline" size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+
+              <View style={styles.divider} />
 
               {loading ? (
                 <View style={styles.loader}>
@@ -267,6 +290,36 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       paddingVertical: 24,
       textAlign: "center",
     },
+    shareLinkRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      marginBottom: 12,
+      backgroundColor: isOnboarding ? "#F0EBE0" : colors.card,
+    },
+    shareLinkIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: isOnboarding ? "rgba(255,255,255,0.9)" : colors.badgeBg,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 12,
+    },
+    shareLinkText: {
+      flex: 1,
+      fontSize: 15,
+      color: colors.text,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: colors.divider,
+      marginBottom: 12,
+    },
     memberRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -293,8 +346,8 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     },
     avatarText: {
       fontSize: 12,
-      fontWeight: "600" as const,
-      color: isOnboarding ? colors.background : colors.textMuted,
+      fontFamily: "Lora_400Regular",
+      color: colors.text,
     },
     memberName: {
       flex: 1,

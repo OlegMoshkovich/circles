@@ -20,7 +20,7 @@ export type NewCircleData = {
   name: string;
   description: string;
   category: string;
-  visibility: "public" | "request" | "private";
+  visibility: "public" | "private";
   location: string;
   organizer: string;
 };
@@ -31,9 +31,8 @@ type Props = {
   onSave: (circle: NewCircleData) => Promise<void>;
 };
 
-const VISIBILITY_OPTIONS: { value: "public" | "request" | "private"; label: string }[] = [
+const VISIBILITY_OPTIONS: { value: "public" | "private"; label: string }[] = [
   { value: "public", label: "Public" },
-  { value: "request", label: "Request" },
   { value: "private", label: "Private" },
 ];
 
@@ -56,7 +55,7 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
   const [description, setDescription] = useState("");
   const [categoryPreset, setCategoryPreset] = useState("");
   const [customCategoryText, setCustomCategoryText] = useState("");
-  const [visibility, setVisibility] = useState<"public" | "request" | "private">("public");
+  const [visibility, setVisibility] = useState<"public" | "private">("public");
   const [location, setLocation] = useState("");
   const [showMap, setShowMap] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -204,21 +203,29 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
 
                 <View style={styles.fieldContainer}>
                   <Text style={styles.fieldLabel}>Location</Text>
-                  <TouchableOpacity
-                    style={styles.locationButton}
-                    onPress={() => setShowMap(true)}
-                    activeOpacity={0.7}
-                  >
+                  <View style={styles.locationInputRow}>
                     <Ionicons
                       name={location ? "location" : "location-outline"}
                       size={16}
                       color={location ? colors.iconbBg : colors.textMuted}
                       style={styles.locationIcon}
                     />
-                    <Text style={[styles.locationButtonText, !location && styles.locationButtonPlaceholder]} numberOfLines={1}>
-                      {location || "Tap to choose on map (optional)"}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+                    <TextInput
+                      value={location}
+                      onChangeText={setLocation}
+                      placeholder="Enter an address (optional)"
+                      placeholderTextColor={colors.textMuted}
+                      style={styles.locationInput}
+                      numberOfLines={1}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    style={styles.locationMapButton}
+                    onPress={() => setShowMap(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="map-outline" size={14} color={colors.textMuted} style={styles.locationIcon} />
+                    <Text style={styles.locationMapButtonText}>Choose on map instead</Text>
                   </TouchableOpacity>
                 </View>
               </ScrollView>
@@ -436,27 +443,38 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     marginBottom: 8,
     textAlign: "center",
   },
-  locationButton: {
+  locationInputRow: {
     flexDirection: "row",
     alignItems: "center",
-    minHeight: 52,
     borderWidth: 1,
     borderColor: colors.cardBorder,
     backgroundColor: isOnboarding ? colors.badgeBg : colors.background,
     borderRadius: 14,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 12,
+  },
+  locationInput: {
+    flex: 1,
+    color: colors.text,
+    fontSize: 16,
+    fontFamily: "Lora_400Regular",
+    paddingVertical: 0,
+    margin: 0,
   },
   locationIcon: {
     marginRight: 8,
   },
-  locationButtonText: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: "Lora_400Regular",
-    color: colors.text,
+  locationMapButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    marginTop: 8,
+    paddingHorizontal: 2,
+    paddingVertical: 2,
   },
-  locationButtonPlaceholder: {
+  locationMapButtonText: {
+    fontSize: 14,
+    fontFamily: "Lora_400Regular",
     color: colors.textMuted,
   },
   readOnlyValue: { fontSize: 16, color: colors.textMuted, minHeight: 24, textAlignVertical: "center", fontFamily: "Lora_400Regular" },

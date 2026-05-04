@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -15,25 +16,27 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useUser } from "@clerk/clerk-expo";
+import { useAuth, useUser } from "@clerk/clerk-expo";
 import { RootStackParamList } from "../types";
 import { Colors } from "../src/theme/colors";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { useLanguage } from "../src/i18n/LanguageContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
-import { supabase, EventNote } from "../lib/supabase";
+import { supabase, getAuthClient, EventNote } from "../lib/supabase";
 import { InviteModal } from "../src/components/modals/InviteModal";
 import { EditEventModal, EditEventData } from "../src/components/modals/EditEventModal";
+import { PublicProfileModal } from "../src/components/modals/PublicProfileModal";
 import { ThemedBackground } from "../src/components/layout/ThemedBackground";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EventDetail">;
 
 export default function EventDetailScreen({ route, navigation }: Props) {
-  const { id, created_by, circleName, circle_id } = route.params;
+  const { id, created_by, circleName, circle_id, hasNewActivity: initialHasNewActivity } = route.params;
   const insets = useSafeAreaInsets();
   const footerBottomInset = 0;
   const { user } = useUser();
+  const { getToken } = useAuth();
 
   const { t } = useLanguage();
   const { bgOption } = useBackground();
@@ -43,6 +46,8 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const [inviteVisible, setInviteVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [hasNewActivity, setHasNewActivity] = useState(!!initialHasNewActivity);
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
 
   // Mutable local copies of editable fields
   const [title, setTitle] = useState(route.params.title);
@@ -66,8 +71,24 @@ export default function EventDetailScreen({ route, navigation }: Props) {
           text: t.common.delete,
           style: "destructive",
           onPress: async () => {
-            const { error } = await supabase.from("events").delete().eq("id", id);
-            if (!error) navigation.goBack();
+            let token: string | null = null;
+            try { token = await getToken({ template: "supabase" }); } catch (_) {}
+            const client = token ? getAuthClient(token) : supabase;
+            // Delete child records first to avoid FK constraint failures
+            await client.from("event_rsvps").delete().eq("event_id", id);
+            await client.from("event_notes").delete().eq("event_id", id);
+            const { data: deleted, error } = await client
+              .from("events")
+              .delete()
+              .eq("id", id)
+              .select("id");
+            if (error) {
+              Alert.alert("Error", error.message);
+            } else if (!deleted || deleted.length === 0) {
+              Alert.alert("Permission denied", "Your Supabase RLS policy is blocking this delete.\n\nRun in Supabase SQL Editor:\n\nCREATE POLICY \"del_events\" ON events FOR DELETE USING (true);\nCREATE POLICY \"del_rsvps\" ON event_rsvps FOR DELETE USING (true);\nCREATE POLICY \"del_notes\" ON event_notes FOR DELETE USING (true);");
+            } else {
+              navigation.goBack();
+            }
           },
         },
       ]
@@ -82,6 +103,28 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const [notes, setNotes] = useState<EventNote[]>([]);
   const [noteText, setNoteText] = useState("");
   const [postingNote, setPostingNote] = useState(false);
+
+  async function handleShare() {
+    const shareUrl = "https://valmia.ch";
+    const lines = [
+      title,
+      `${date} · ${time}`,
+      location,
+      circleName ? `${t.nav.circles}: ${circleName}` : null,
+      description.trim().length > 0 ? description.trim() : null,
+      shareUrl,
+    ].filter(Boolean);
+
+    try {
+      await Share.share({
+        title,
+        message: lines.join("\n"),
+        url: shareUrl,
+      });
+    } catch {
+      Alert.alert("Error", "Could not open share menu.");
+    }
+  }
 
   // Load fresh counts + this user's RSVP on every mount
   useEffect(() => {
@@ -136,7 +179,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         event_id: id,
         user_id: user.id,
         display_name: user.fullName ?? user.firstName ?? user.username ?? null,
-        avatar_url: (user.externalAccounts?.find((a: any) => a.provider === "oauth_google" || a.provider === "google") as any)?.imageUrl ?? user.imageUrl ?? null,
+        avatar_url: (user.externalAccounts?.find((a: any) => a.provider === "oauth_google" || a.provider === "google") as any)?.imageUrl ?? null,
         content: noteText.trim(),
       })
       .select()
@@ -235,15 +278,27 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         </TouchableOpacity>
         <View style={styles.headerActions}>
           <TouchableOpacity
-            onPress={() => setShowChat((v) => !v)}
+            onPress={handleShare}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             style={styles.headerAction}
           >
-            <Ionicons
-              name={showChat ? "document-text-outline" : "chatbubble-outline"}
-              size={22}
-              color={colors.text}
-            />
+            <Ionicons name="share-outline" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => { setShowChat((v) => !v); setHasNewActivity(false); }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={styles.headerAction}
+          >
+            <View style={{ position: "relative" }}>
+              <Ionicons
+                name={showChat ? "document-text-outline" : "chatbubble-outline"}
+                size={22}
+                color={colors.text}
+              />
+              {hasNewActivity && !showChat && (
+                <View style={styles.chatDot} />
+              )}
+            </View>
           </TouchableOpacity>
           {isCreator && (
             <>
@@ -278,7 +333,15 @@ export default function EventDetailScreen({ route, navigation }: Props) {
           ) : null}
           <Text style={styles.title}>{title}</Text>
           <View style={styles.organizerRow}>
-            <Text style={styles.organizer}>{t.events.hostedBy} {organizer}</Text>
+            <Text style={styles.organizer}>
+              {t.events.hostedBy}{" "}
+              <Text
+                style={styles.organizerLink}
+                onPress={() => created_by ? setProfileModalVisible(true) : undefined}
+              >
+                {organizer}
+              </Text>
+            </Text>
             {circleName ? (
               <View style={styles.circlePill}>
                 <Ionicons name="people-outline" size={11} color={colors.textMuted} style={{ marginRight: 4 }} />
@@ -439,29 +502,47 @@ export default function EventDetailScreen({ route, navigation }: Props) {
             {/* <Ionicons name="person-add-outline" size={16} color={styles.inviteButtonText.color} style={styles.rsvpIcon} /> */}
             <Text style={styles.inviteButtonText}>{t.common.inviteMembers}</Text>
           </TouchableOpacity>
-        ) : (
-          <View style={styles.rsvpButtons}>
-            <TouchableOpacity
-              style={[styles.rsvpButton, rsvp === "going" ? styles.rsvpButtonActive : styles.rsvpButtonOutline]}
-              onPress={() => handleRsvp("going")}
-              disabled={submitting}
-            >
-              <Text style={[styles.rsvpButtonText, rsvp === "going" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline]}>
-                {t.events.rsvpGoing}
-              </Text>
-            </TouchableOpacity>
+        ) : (() => {
+          const isFilled = maxParticipants != null && going >= maxParticipants && rsvp !== "going";
+          if (isFilled) {
+            return (
+              <View style={[styles.rsvpButtons]}>
+                <View style={[styles.rsvpButton, styles.rsvpButtonFull, { flex: 1 }]}>
+                  <Text style={[styles.rsvpButtonText, styles.rsvpButtonTextFull]}>Event is Full</Text>
+                </View>
+              </View>
+            );
+          }
+          return (
+            <View style={styles.rsvpButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.rsvpButton,
+                  rsvp === "going" ? styles.rsvpButtonActive : styles.rsvpButtonOutline,
+                ]}
+                onPress={() => handleRsvp("going")}
+                disabled={submitting}
+              >
+                <Text style={[
+                  styles.rsvpButtonText,
+                  rsvp === "going" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline,
+                ]}>
+                  {t.events.rsvpGoing}
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.rsvpButton, rsvp === "maybe" ? styles.rsvpButtonActive : styles.rsvpButtonOutline]}
-              onPress={() => handleRsvp("maybe")}
-              disabled={submitting}
-            >
-              <Text style={[styles.rsvpButtonText, rsvp === "maybe" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline]}>
-                {t.events.rsvpMaybe}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+              <TouchableOpacity
+                style={[styles.rsvpButton, rsvp === "maybe" ? styles.rsvpButtonActive : styles.rsvpButtonOutline]}
+                onPress={() => handleRsvp("maybe")}
+                disabled={submitting}
+              >
+                <Text style={[styles.rsvpButtonText, rsvp === "maybe" ? styles.rsvpButtonTextActive : styles.rsvpButtonTextOutline]}>
+                  {t.events.rsvpMaybe}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })()}
       </View>}
 
       <InviteModal
@@ -472,6 +553,15 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         circleId={circle_id ?? ""}
         circleName={circleName ?? ""}
       />
+
+      {created_by ? (
+        <PublicProfileModal
+          visible={profileModalVisible}
+          onClose={() => setProfileModalVisible(false)}
+          userId={created_by}
+          displayName={organizer}
+        />
+      ) : null}
 
       <EditEventModal
         visible={editVisible}
@@ -582,6 +672,10 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     ...typography.bodySmall,
     color: colors.textMuted,
     flex: 1,
+  },
+  organizerLink: {
+    textDecorationLine: "underline" as const,
+    color: colors.textMuted,
   },
   circlePill: {
     flexDirection: "row",
@@ -738,6 +832,20 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   rsvpButtonTextActive: {
     color: colors.background,
   },
+  rsvpButtonDisabled: {
+    opacity: 0.4,
+  },
+  rsvpButtonTextDisabled: {
+    color: colors.textMuted,
+  },
+  rsvpButtonFull: {
+    backgroundColor: colors.badgeBg,
+    borderColor: colors.cardBorder,
+    opacity: 0.7,
+  },
+  rsvpButtonTextFull: {
+    color: colors.textMuted,
+  },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
@@ -750,6 +858,15 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     borderColor: isOnboarding ? colors.cardBorder : "transparent",
   },
   headerAction: {},
+  chatDot: {
+    position: "absolute",
+    top: -2,
+    right: -3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#FF4D00",
+  },
   chatContainer: {
     flex: 1,
     paddingHorizontal: spacing.pageHorizontal,
@@ -835,8 +952,8 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   avatarText: {
     fontSize: 13,
-    fontWeight: "600" as const,
-    color: colors.textMuted,
+    fontFamily: "Lora_400Regular",
+    color: colors.text,
   },
   noteHeaderText: {
     flex: 1,

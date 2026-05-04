@@ -10,7 +10,9 @@ import * as React from "react";
 import SignUpScreen from "../screens/SignUpScreen";
 import SignInScreen from "../screens/SignInScreen";
 import VerifyCodeScreen from "../screens/VerifyCodeScreen";
+import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
 import MyProfileScreen from "../screens/MyProfileScreen";
+import DeleteAccountScreen from "../screens/DeleteAccountScreen";
 import EventDetailScreen from "../screens/EventDetailScreen";
 import PromptDetailScreen from "../screens/PromptDetailScreen";
 import CircleDetailScreen from "../screens/CircleDetailScreen";
@@ -60,6 +62,11 @@ const RootNavigator = () => {
               options={{ title: "MyProfile" }}
             />
             <Stack.Screen
+              name="DeleteAccount"
+              component={DeleteAccountScreen}
+              options={{ title: "Delete Account" }}
+            />
+            <Stack.Screen
               name="EventDetail"
               component={EventDetailScreen}
               options={{ headerShown: false }}
@@ -90,7 +97,12 @@ const RootNavigator = () => {
             <Stack.Screen
               name="VerifyCode"
               component={VerifyCodeScreen}
-              options={{ title: "Sign Up" }}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="ForgotPassword"
+              component={ForgotPasswordScreen}
+              options={{ headerShown: false }}
             />
           </>
         )}

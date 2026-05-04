@@ -5,6 +5,7 @@ import {
   Modal,
   Platform,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,6 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@clerk/clerk-expo";
+import * as Linking from "expo-linking";
 import { Colors } from "../../theme/colors";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { supabase, UserProfile } from "../../../lib/supabase";
@@ -116,6 +118,23 @@ export function InviteModal({ visible, onClose, eventId, eventTitle, circleId, c
     onClose();
   }
 
+  async function handleShareLink() {
+    const url = Linking.createURL(`event/join`, { queryParams: { id: eventId, title: eventTitle } });
+    try {
+      await Share.share({
+        message: `You're invited to "${eventTitle}" · ${circleName} on ValMia! ${url}`,
+        url,
+      });
+    } catch (_) {}
+  }
+
+  function handleSelectAll() {
+    if (members.length === 0) return;
+    const allIds = new Set(members.map((m) => m.user_id));
+    const allSelected = members.every((m) => selected.has(m.user_id));
+    setSelected(allSelected ? new Set() : allIds);
+  }
+
   const initials = (name: string) => {
     const parts = name.trim().split(" ");
     return parts.length >= 2
@@ -140,6 +159,28 @@ export function InviteModal({ visible, onClose, eventId, eventTitle, circleId, c
                   <Ionicons name="close" size={20} color={colors.textMuted} />
                 </TouchableOpacity>
               </View>
+
+              <TouchableOpacity style={styles.actionRow} onPress={handleShareLink} activeOpacity={0.75}>
+                <View style={styles.actionIcon}>
+                  <Ionicons name="link-outline" size={18} color={colors.text} />
+                </View>
+                <Text style={styles.actionText}>Share invite link</Text>
+                <Ionicons name="share-outline" size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+
+              {!loading && members.length > 0 && (
+                <TouchableOpacity style={styles.actionRow} onPress={handleSelectAll} activeOpacity={0.75}>
+                  <View style={styles.actionIcon}>
+                    <Ionicons name="people-outline" size={18} color={colors.text} />
+                  </View>
+                  <Text style={styles.actionText}>Invite all circle members</Text>
+                  {members.every((m) => selected.has(m.user_id)) && (
+                    <Ionicons name="checkmark" size={18} color={colors.text} />
+                  )}
+                </TouchableOpacity>
+              )}
+
+              <View style={styles.divider} />
 
               {loading ? (
                 <View style={styles.loader}>
@@ -256,6 +297,36 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       paddingVertical: 24,
       textAlign: "center",
     },
+    actionRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      marginBottom: 10,
+      backgroundColor: isOnboarding ? "#F0EBE0" : colors.card,
+    },
+    actionIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: isOnboarding ? "rgba(255,255,255,0.9)" : colors.badgeBg,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 12,
+    },
+    actionText: {
+      flex: 1,
+      fontSize: 15,
+      color: colors.text,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: colors.divider,
+      marginBottom: 12,
+    },
     memberRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -282,8 +353,8 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     },
     avatarText: {
       fontSize: 12,
-      fontWeight: "600" as const,
-      color: isOnboarding ? colors.background : colors.textMuted,
+      fontFamily: "Lora_400Regular",
+      color: colors.text,
     },
     memberName: {
       flex: 1,
