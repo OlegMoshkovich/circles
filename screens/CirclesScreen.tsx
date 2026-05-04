@@ -18,6 +18,7 @@ import { Colors } from "../src/theme/colors";
 
 import { useLanguage } from "../src/i18n/LanguageContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
+import { fetchReportedHiddenContentIds } from "../lib/contentReports";
 import { supabase, Circle } from "../lib/supabase";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -132,7 +133,14 @@ export default function CirclesScreen() {
         .filter((circle: any) =>
           circle.visibility !== "private" || map[circle.id] != null
         );
-      setCircles(mapped);
+      const reportedCircleIds = await fetchReportedHiddenContentIds(
+        "circle",
+        mapped.map((c: any) => c.id)
+      );
+      const visibleCircles = mapped.filter(
+        (c: any) => !reportedCircleIds.has(c.id) || c.owner_id === user?.id
+      );
+      setCircles(visibleCircles);
     }
 
     if (!membershipsResult.error && membershipsResult.data) {

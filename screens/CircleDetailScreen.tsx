@@ -27,6 +27,11 @@ import { useLanguage } from "../src/i18n/LanguageContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, CircleMember, CircleNote, Event, UserProfile } from "../lib/supabase";
+import {
+  fetchReportedHiddenContentIds,
+  fetchReportedHiddenNoteIds,
+  promptReportContent,
+} from "../lib/contentReports";
 import { CircleInviteModal } from "../src/components/modals/CircleInviteModal";
 import { EditCircleModal, EditCircleData } from "../src/components/modals/EditCircleModal";
 import { CreateEventModal, NewEventData } from "../src/components/modals/CreateEventModal";
@@ -202,9 +207,18 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       supabase.from("events").select("*").eq("circle_id", id).order("created_at", { ascending: false }),
       supabase.from("circle_notes").select("*").eq("circle_id", id).order("created_at", { ascending: false }),
     ]).then(async ([eventsResult, notesResult]) => {
+      let eventRows: Event[] = [];
       if (!eventsResult.error && eventsResult.data) {
-        setEvents(eventsResult.data);
-        const eventIds = eventsResult.data.map((e: any) => e.id);
+        const evs = eventsResult.data as Event[];
+        const reportedEv = await fetchReportedHiddenContentIds(
+          "event",
+          evs.map((e) => e.id)
+        );
+        eventRows = evs.filter(
+          (e) => !reportedEv.has(e.id) || e.created_by === user?.id
+        );
+        setEvents(eventRows);
+        const eventIds = eventRows.map((e: any) => e.id);
         if (eventIds.length > 0) {
           const { data: noteCounts } = await supabase
             .from("event_notes")
@@ -217,11 +231,20 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
             }
             setEventNoteCountMap(map);
           }
+        } else {
+          setEventNoteCountMap({});
         }
       }
-      if (!notesResult.error && notesResult.data) setNotes(notesResult.data);
-      const eventRows = eventsResult.error ? [] : (eventsResult.data ?? []);
-      const noteRows = notesResult.error ? [] : (notesResult.data ?? []);
+      let noteRows: CircleNote[] = [];
+      if (!notesResult.error) {
+        const raw = (notesResult.data ?? []) as CircleNote[];
+        const hidden = await fetchReportedHiddenNoteIds(
+          "circle_note",
+          raw.map((n) => n.id)
+        );
+        noteRows = raw.filter((n) => !hidden.has(n.id));
+        setNotes(noteRows);
+      }
       if (!didAutoSelectInitialTab) {
         const nextTab: Tab =
           eventRows.length > 0
@@ -234,7 +257,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       }
       setLoadingFeed(false);
     });
-  }, [didAutoSelectInitialTab, id]);
+  }, [didAutoSelectInitialTab, id, user?.id]);
 
   // Load circle events + feed items
   useEffect(() => {
@@ -579,32 +602,50 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           <Ionicons name="chevron-back" size={18} color={colors.text} />
           <Text style={styles.backLabel}>{t.common.back}</Text>
         </TouchableOpacity>
-        {(isOwner || isMember) && (
+        {(isOwner || isMember || (user && !isOwner)) ? (
           <View style={styles.headerActions}>
-            <TouchableOpacity
-              onPress={() => setCreateEventVisible(true)}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Ionicons name="calendar-outline" size={18} color={colors.text} />
-            </TouchableOpacity>
-            {isOwner && (
-            <TouchableOpacity
-              onPress={() => setEditVisible(true)}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Ionicons name="create-outline" size={18} color={colors.text} />
-            </TouchableOpacity>
-            )}
-            {isOwner && (
-            <TouchableOpacity
-              onPress={handleDelete}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Ionicons name="trash-outline" size={18} color={colors.text} />
-            </TouchableOpacity>
-            )}
+            {(isOwner || isMember) ? (
+              <TouchableOpacity
+                onPress={() => setCreateEventVisible(true)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Ionicons name="calendar-outline" size={18} color={colors.text} />
+              </TouchableOpacity>
+            ) : null}
+            {isOwner ? (
+              <TouchableOpacity
+                onPress={() => setEditVisible(true)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Ionicons name="create-outline" size={18} color={colors.text} />
+              </TouchableOpacity>
+            ) : null}
+            {isOwner ? (
+              <TouchableOpacity
+                onPress={handleDelete}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Ionicons name="trash-outline" size={18} color={colors.text} />
+              </TouchableOpacity>
+            ) : null}
+            {user && !isOwner ? (
+              <TouchableOpacity
+                onPress={() =>
+                  promptReportContent({
+                    reporterUserId: user.id,
+                    targetType: "circle",
+                    targetId: id,
+                    reportedUserId: owner_id,
+                    onReported: () => nav.goBack(),
+                  })
+                }
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Ionicons name="flag-outline" size={18} color={colors.text} />
+              </TouchableOpacity>
+            ) : null}
           </View>
-        )}
+        ) : null}
       </View>
 
       {/* Header card - fixed, not scrollable */}
@@ -726,17 +767,36 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                               <Text style={styles.noteName}>{note.display_name ?? t.circles.typeMember}</Text>
                               <Text style={styles.noteTime}>{timeAgo}</Text>
                             </View>
-                            {note.user_id === user?.id && (
-                              <TouchableOpacity
-                                onPress={async () => {
-                                  await supabase.from("circle_notes").delete().eq("id", note.id);
-                                  setNotes((prev) => prev.filter((n) => n.id !== note.id));
-                                }}
-                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                              >
-                                <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
-                              </TouchableOpacity>
-                            )}
+                            <View style={styles.noteHeaderActions}>
+                              {user?.id && note.user_id !== user.id ? (
+                                <TouchableOpacity
+                                  onPress={() =>
+                                    promptReportContent({
+                                      reporterUserId: user.id,
+                                      targetType: "circle_note",
+                                      targetId: note.id,
+                                      reportedUserId: note.user_id,
+                                      onReported: (noteId) =>
+                                        setNotes((prev) => prev.filter((n) => n.id !== noteId)),
+                                    })
+                                  }
+                                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                >
+                                  <Ionicons name="flag-outline" size={14} color={colors.textMuted} />
+                                </TouchableOpacity>
+                              ) : null}
+                              {note.user_id === user?.id ? (
+                                <TouchableOpacity
+                                  onPress={async () => {
+                                    await supabase.from("circle_notes").delete().eq("id", note.id);
+                                    setNotes((prev) => prev.filter((n) => n.id !== note.id));
+                                  }}
+                                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                >
+                                  <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
+                                </TouchableOpacity>
+                              ) : null}
+                            </View>
                           </View>
                           <Text style={styles.noteContent}>{note.content}</Text>
                         </View>
@@ -1449,6 +1509,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   noteHeaderText: {
     flex: 1,
     marginLeft: spacing.sm,
+  },
+  noteHeaderActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   noteHeaderRight: {
     flexDirection: "row",

@@ -24,6 +24,7 @@ import MapView, { Region } from "react-native-maps";
 import * as Location from "expo-location";
 import { colors, glassColors, greenColors, lightColors, onboardingColors, Colors } from "../src/theme/colors";
 import { BgOption, useBackground } from "../src/contexts/BackgroundContext";
+import { fetchReportedHiddenContentIds } from "../lib/contentReports";
 import { supabase, Circle } from "../lib/supabase";
 
 const DEFAULT_MAP_REGION: Region = {
@@ -673,8 +674,31 @@ function CircleSuggestionsStep({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.from("circles").select("*").eq("visibility", "public").limit(14)
-      .then(({ data: rows }) => { if (rows) setCircles(rows as Circle[]); setLoading(false); });
+    let cancelled = false;
+    (async () => {
+      const { data: rows } = await supabase
+        .from("circles")
+        .select("*")
+        .eq("visibility", "public")
+        .limit(14);
+      if (cancelled) return;
+      if (!rows?.length) {
+        setCircles([]);
+        setLoading(false);
+        return;
+      }
+      const hidden = await fetchReportedHiddenContentIds(
+        "circle",
+        (rows as Circle[]).map((c) => c.id)
+      );
+      if (!cancelled) {
+        setCircles((rows as Circle[]).filter((c) => !hidden.has(c.id)));
+        setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function toggle(id: string) {

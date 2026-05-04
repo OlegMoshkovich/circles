@@ -24,6 +24,7 @@ import { useLanguage } from "../src/i18n/LanguageContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, getAuthClient, EventNote } from "../lib/supabase";
+import { fetchReportedHiddenNoteIds, promptReportContent } from "../lib/contentReports";
 import { InviteModal } from "../src/components/modals/InviteModal";
 import { EditEventModal, EditEventData } from "../src/components/modals/EditEventModal";
 import { PublicProfileModal } from "../src/components/modals/PublicProfileModal";
@@ -162,12 +163,26 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   }, [id, user]);
 
   useEffect(() => {
-    supabase
-      .from("event_notes")
-      .select("*")
-      .eq("event_id", id)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => { if (data) setNotes(data); });
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("event_notes")
+        .select("*")
+        .eq("event_id", id)
+        .order("created_at", { ascending: false });
+      if (cancelled || !data?.length) {
+        if (!cancelled) setNotes(data ?? []);
+        return;
+      }
+      const hidden = await fetchReportedHiddenNoteIds(
+        "event_note",
+        data.map((n: EventNote) => n.id)
+      );
+      if (!cancelled) setNotes(data.filter((n: EventNote) => !hidden.has(n.id)));
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   async function handlePostNote() {
@@ -284,6 +299,23 @@ export default function EventDetailScreen({ route, navigation }: Props) {
           >
             <Ionicons name="share-outline" size={22} color={colors.text} />
           </TouchableOpacity>
+          {user?.id && !isCreator ? (
+            <TouchableOpacity
+              onPress={() =>
+                promptReportContent({
+                  reporterUserId: user.id,
+                  targetType: "event",
+                  targetId: id,
+                  reportedUserId: created_by ?? null,
+                  onReported: () => navigation.goBack(),
+                })
+              }
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={styles.headerAction}
+            >
+              <Ionicons name="flag-outline" size={22} color={colors.text} />
+            </TouchableOpacity>
+          ) : null}
           <TouchableOpacity
             onPress={() => { setShowChat((v) => !v); setHasNewActivity(false); }}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -472,17 +504,36 @@ export default function EventDetailScreen({ route, navigation }: Props) {
                       <Text style={styles.noteName}>{note.display_name ?? "Guest"}</Text>
                       <Text style={styles.noteTime}>{timeAgo}</Text>
                     </View>
-                    {note.user_id === user?.id && (
-                      <TouchableOpacity
-                        onPress={async () => {
-                          await supabase.from("event_notes").delete().eq("id", note.id);
-                          setNotes((prev) => prev.filter((n) => n.id !== note.id));
-                        }}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                      >
-                        <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
-                      </TouchableOpacity>
-                    )}
+                    <View style={styles.noteHeaderActions}>
+                      {user?.id && note.user_id !== user.id ? (
+                        <TouchableOpacity
+                          onPress={() =>
+                            promptReportContent({
+                              reporterUserId: user.id,
+                              targetType: "event_note",
+                              targetId: note.id,
+                              reportedUserId: note.user_id,
+                              onReported: (noteId) =>
+                                setNotes((prev) => prev.filter((n) => n.id !== noteId)),
+                            })
+                          }
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Ionicons name="flag-outline" size={14} color={colors.textMuted} />
+                        </TouchableOpacity>
+                      ) : null}
+                      {note.user_id === user?.id ? (
+                        <TouchableOpacity
+                          onPress={async () => {
+                            await supabase.from("event_notes").delete().eq("id", note.id);
+                            setNotes((prev) => prev.filter((n) => n.id !== note.id));
+                          }}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
                   </View>
                   <Text style={styles.noteContent}>{note.content}</Text>
                 </View>
@@ -767,12 +818,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     color: colors.text,
     flex: 1,
   },
-  chatDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.text,
-  },
   rsvpBar: {
     paddingHorizontal: spacing.pageHorizontal,
     paddingTop: spacing.md,
@@ -957,6 +1002,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   noteHeaderText: {
     flex: 1,
+  },
+  noteHeaderActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   noteName: {
     fontSize: 13,
