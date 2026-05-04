@@ -48,6 +48,30 @@ function makeInitialData(displayName: string): OnboardingData {
   return { userType: null, interests: [], location: "", displayName, bio: "", joinedCircleIds: [] };
 }
 
+/** Name/email identity from Sign in with Apple (or other OAuth) is already on the Clerk user — do not force re-entry in onboarding. */
+function getClerkOnboardingDisplayName(user: ReturnType<typeof useUser>["user"]): string {
+  if (!user) return "";
+  const fn = (user.firstName ?? "").trim();
+  const ln = (user.lastName ?? "").trim();
+  const fromParts = [fn, ln].filter(Boolean).join(" ").trim();
+  if (fromParts) return fromParts;
+  const full = (user.fullName ?? "").trim();
+  if (full) return full;
+  const un = (user.username ?? "").trim();
+  if (un) return un;
+  for (const a of user.externalAccounts ?? []) {
+    const p = String((a as { provider?: string }).provider ?? "").toLowerCase();
+    if (!p.includes("apple")) continue;
+    const afn = String((a as { firstName?: string }).firstName ?? "").trim();
+    const aln = String((a as { lastName?: string }).lastName ?? "").trim();
+    const ac = [afn, aln].filter(Boolean).join(" ").trim();
+    if (ac) return ac;
+    const lbl = String((a as { label?: string }).label ?? "").trim();
+    if (lbl) return lbl;
+  }
+  return "";
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const TOTAL_STEPS = 6;
@@ -440,13 +464,20 @@ function ProfileStep({
   onUpdate,
   onNext,
   onBack,
+  clerkDisplayName,
 }: {
   data: OnboardingData;
   onUpdate: (u: Partial<OnboardingData>) => void;
   onNext: () => void;
   onBack: () => void;
+  clerkDisplayName: string;
 }) {
-  const canContinue = !!data.displayName.trim();
+  const resolvedName = data.displayName.trim() || clerkDisplayName.trim();
+  const canContinue = !!resolvedName;
+  const subtitle =
+    clerkDisplayName.trim() && !data.displayName.trim()
+      ? "We already have a name from your sign-in (e.g. Sign in with Apple). You can edit it below, or tap Continue."
+      : "Let the community know who you are.";
   return (
     <KeyboardAvoidingView
       style={styles.formStep}
@@ -458,7 +489,7 @@ function ProfileStep({
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.profileStepContent}
         >
-          <StepHeader title="Your profile" subtitle="Let the community know who you are." onBack={onBack} />
+          <StepHeader title="Your profile" subtitle={subtitle} onBack={onBack} />
           <View style={{ paddingBottom: 8 }}>
             <Text style={styles.fieldLabel}>Name</Text>
             <View style={styles.inputRow}>
@@ -486,7 +517,19 @@ function ProfileStep({
               />
             </View>
           </View>
-          <GlassButton label="Continue" onPress={canContinue ? onNext : undefined} disabled={!canContinue} />
+          <GlassButton
+            label="Continue"
+            onPress={
+              canContinue
+                ? () => {
+                    const name = data.displayName.trim() || clerkDisplayName.trim();
+                    if (name) onUpdate({ displayName: name });
+                    onNext();
+                  }
+                : undefined
+            }
+            disabled={!canContinue}
+          />
         </ScrollView>
       </View>
     </KeyboardAvoidingView>
@@ -661,10 +704,19 @@ export default function OnboardingScreen({ onComplete }: Props) {
   const { user } = useUser();
   const [step, setStep] = useState(0);
   const [data, setData] = useState<OnboardingData>(() =>
-    makeInitialData(user?.fullName ?? user?.firstName ?? "")
+    makeInitialData(getClerkOnboardingDisplayName(user))
   );
   const [saving, setSaving] = useState(false);
   const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const clerkName = getClerkOnboardingDisplayName(user);
+    if (!clerkName) return;
+    setData((prev) => {
+      if (prev.displayName.trim()) return prev;
+      return { ...prev, displayName: clerkName };
+    });
+  }, [user]);
 
   function update(updates: Partial<OnboardingData>) {
     setData((prev) => ({ ...prev, ...updates }));
@@ -684,11 +736,13 @@ export default function OnboardingScreen({ onComplete }: Props) {
   async function handleComplete() {
     if (!user || saving) return;
     setSaving(true);
+    const profileDisplayName =
+      data.displayName.trim() || getClerkOnboardingDisplayName(user) || null;
     try {
       await supabase.from("user_profiles").upsert(
         {
           user_id: user.id,
-          display_name: data.displayName.trim() || null,
+          display_name: profileDisplayName,
           bio: data.bio.trim() || null,
           location: data.location || null,
           interests: data.interests.length > 0 ? data.interests : null,
@@ -701,7 +755,7 @@ export default function OnboardingScreen({ onComplete }: Props) {
         const rows = data.joinedCircleIds.map((circleId) => ({
           circle_id: circleId,
           user_id: user.id,
-          display_name: data.displayName.trim() || null,
+          display_name: profileDisplayName,
           role: "member" as const,
           status: "active" as const,
         }));
@@ -731,7 +785,13 @@ export default function OnboardingScreen({ onComplete }: Props) {
     <UserTypeStep data={data} onUpdate={update} onNext={onNext} onBack={onBack} />,
     <InterestsStep data={data} onUpdate={update} onNext={onNext} onBack={onBack} />,
     <LocationStep onUpdate={update} onNext={onNext} onBack={onBack} onSkip={onSkip} />,
-    <ProfileStep data={data} onUpdate={update} onNext={onNext} onBack={onBack} />,
+    <ProfileStep
+      data={data}
+      onUpdate={update}
+      onNext={onNext}
+      onBack={onBack}
+      clerkDisplayName={getClerkOnboardingDisplayName(user)}
+    />,
     <CircleSuggestionsStep data={data} onUpdate={update} onNext={handleComplete} onBack={onBack} onSkip={handleComplete} />,
   ];
 
