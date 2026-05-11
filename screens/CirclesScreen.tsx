@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -50,6 +50,7 @@ export default function CirclesScreen() {
   const [lastViewedMap, setLastViewedMap] = useState<Record<string, number>>({});
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [showDismissed, setShowDismissed] = useState(false);
+  const hasLoadedOnceRef = useRef(false);
 
   async function handleNearMe() {
     if (nearMe) {
@@ -203,7 +204,10 @@ export default function CirclesScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchCircles();
+      const silent = hasLoadedOnceRef.current;
+      void fetchCircles(silent).then(() => {
+        hasLoadedOnceRef.current = true;
+      });
       // Keep this user's profile up to date so others can see their name
       if (user) {
         const displayName = user.fullName ?? user.firstName ?? null;
@@ -266,7 +270,7 @@ export default function CirclesScreen() {
     <>
       <ScreenLayout
         backgroundColor={screenBgColor}
-        contentStyle={loading ? styles.scrollContentLoader : undefined}
+        contentStyle={loading && circles.length === 0 ? styles.scrollContentLoader : undefined}
         onRefresh={async () => { setRefreshing(true); await fetchCircles(true); setRefreshing(false); }}
         refreshing={refreshing}
         stickyTop={<ScreenHeaderCard>
@@ -397,7 +401,7 @@ export default function CirclesScreen() {
           )}
         </ScreenHeaderCard>}
       >
-        {loading ? (
+        {loading && circles.length === 0 ? (
           <View style={styles.loader}>
             <GradientRingLoader size={40} strokeWidth={7} />
           </View>

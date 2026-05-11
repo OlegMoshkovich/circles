@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ActivityIndicator,
@@ -88,6 +88,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [requests, setRequests] = useState<CircleMember[]>([]);
   const [requestCount, setRequestCount] = useState(0);
   const [loadingFeed, setLoadingFeed] = useState(false);
+  const hasLoadedFeedRef = useRef(false);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -202,7 +203,9 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   }
 
   const loadFeed = useCallback(() => {
-    setLoadingFeed(true);
+    if (!hasLoadedFeedRef.current) {
+      setLoadingFeed(true);
+    }
     return Promise.all([
       supabase.from("events").select("*").eq("circle_id", id).order("created_at", { ascending: false }),
       supabase.from("circle_notes").select("*").eq("circle_id", id).order("created_at", { ascending: false }),
@@ -255,6 +258,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         setActiveTab(nextTab);
         setDidAutoSelectInitialTab(true);
       }
+      hasLoadedFeedRef.current = true;
       setLoadingFeed(false);
     });
   }, [didAutoSelectInitialTab, id, user?.id]);
@@ -693,7 +697,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       {/* Feed tab: sticky compose + scrollable notes */}
       {activeTab === "feed" && (
         <View style={styles.feedContainer}>
-          {loadingFeed ? (
+          {loadingFeed && notes.length === 0 ? (
             <View style={styles.loader}>
               <ActivityIndicator size="small" color={colors.textMuted} />
             </View>
@@ -816,7 +820,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           {/* Circle Events tab */}
           {activeTab === "events" && (
             <>
-              {loadingFeed ? (
+              {loadingFeed && events.length === 0 ? (
                 <View style={styles.loader}>
                   <ActivityIndicator size="small" color={colors.textMuted} />
                 </View>
