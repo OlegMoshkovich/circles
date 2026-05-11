@@ -645,7 +645,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                 }
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
-                <Ionicons name="flag-outline" size={18} color={colors.text} />
+                <Ionicons name="ellipsis-horizontal" size={18} color={colors.text} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -786,7 +786,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                                   }
                                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                 >
-                                  <Ionicons name="flag-outline" size={14} color={colors.textMuted} />
+                                  <Ionicons name="ellipsis-horizontal" size={14} color={colors.textMuted} />
                                 </TouchableOpacity>
                               ) : null}
                               {note.user_id === user?.id ? (

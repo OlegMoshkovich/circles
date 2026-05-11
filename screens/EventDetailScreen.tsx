@@ -24,7 +24,10 @@ import { useLanguage } from "../src/i18n/LanguageContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, getAuthClient, EventNote } from "../lib/supabase";
-import { fetchReportedHiddenNoteIds, promptReportContent } from "../lib/contentReports";
+import {
+  fetchReportedHiddenNoteIds,
+  promptReportContent,
+} from "../lib/contentReports";
 import { InviteModal } from "../src/components/modals/InviteModal";
 import { EditEventModal, EditEventData } from "../src/components/modals/EditEventModal";
 import { PublicProfileModal } from "../src/components/modals/PublicProfileModal";
@@ -299,23 +302,6 @@ export default function EventDetailScreen({ route, navigation }: Props) {
           >
             <Ionicons name="share-outline" size={22} color={colors.text} />
           </TouchableOpacity>
-          {user?.id && !isCreator ? (
-            <TouchableOpacity
-              onPress={() =>
-                promptReportContent({
-                  reporterUserId: user.id,
-                  targetType: "event",
-                  targetId: id,
-                  reportedUserId: created_by ?? null,
-                  onReported: () => navigation.goBack(),
-                })
-              }
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              style={styles.headerAction}
-            >
-              <Ionicons name="flag-outline" size={22} color={colors.text} />
-            </TouchableOpacity>
-          ) : null}
           <TouchableOpacity
             onPress={() => { setShowChat((v) => !v); setHasNewActivity(false); }}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -349,6 +335,23 @@ export default function EventDetailScreen({ route, navigation }: Props) {
               </TouchableOpacity>
             </>
           )}
+          {user?.id && !isCreator ? (
+            <TouchableOpacity
+              onPress={() =>
+                promptReportContent({
+                  reporterUserId: user.id,
+                  targetType: "event",
+                  targetId: id,
+                  reportedUserId: created_by ?? null,
+                  onReported: () => navigation.goBack(),
+                })
+              }
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={styles.headerAction}
+            >
+              <Ionicons name="ellipsis-horizontal" size={22} color={colors.text} />
+            </TouchableOpacity>
+          ) : null}
         </View>
       </View>
 
@@ -519,7 +522,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
                           }
                           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                         >
-                          <Ionicons name="flag-outline" size={14} color={colors.textMuted} />
+                          <Ionicons name="ellipsis-horizontal" size={14} color={colors.textMuted} />
                         </TouchableOpacity>
                       ) : null}
                       {note.user_id === user?.id ? (
