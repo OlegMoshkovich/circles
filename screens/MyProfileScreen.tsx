@@ -1,7 +1,6 @@
-import React, { useCallback, useContext, useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Platform,
   StyleSheet,
@@ -23,7 +22,6 @@ import { supabase, AppNotification, getAuthClient } from "../lib/supabase";
 import { useNotificationContext } from "../src/contexts/NotificationContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { DeleteConfirmationModal } from "../src/components/modals/DeleteConfirmationModal";
-import { OnboardingRestartContext } from "../src/contexts/OnboardingRestartContext";
 
 async function handleSignOut(signOut: () => Promise<void>) {
   try {
@@ -54,7 +52,6 @@ const ALL_INTERESTS = [
 export default function MyProfileScreen() {
   const { signOut, getToken } = useAuth();
   const { user } = useUser();
-  const { restart: restartOnboarding } = useContext(OnboardingRestartContext);
   const navigation = useNavigation<any>();
 const { language, setLanguage, t } = useLanguage();
   const { setUnreadCount } = useNotificationContext();
@@ -78,7 +75,7 @@ const { language, setLanguage, t } = useLanguage();
   const [deleteTyped, setDeleteTyped] = useState("");
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const { bgOption } = useBackground();
+  const { bgOption, setBgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const headerCardStyle = React.useMemo(
@@ -329,6 +326,22 @@ async function handleAccept(notif: AppNotification) {
     : "—";
 
   const screenBgColor = colors.background;
+  const THEME_ORDER: Array<"onboarding" | "light" | "glass"> = [
+    "onboarding",
+    "light",
+    "glass",
+  ];
+  const themeLabel: Record<(typeof THEME_ORDER)[number], string> = {
+    onboarding: "Glass",
+    light: "Light",
+    glass: "Solid",
+  };
+
+  function cycleTheme() {
+    const currentIndex = THEME_ORDER.indexOf(bgOption as (typeof THEME_ORDER)[number]);
+    const next = THEME_ORDER[(currentIndex + 1) % THEME_ORDER.length];
+    setBgOption(next);
+  }
 
   const stickyHeader = (
     <ScreenHeaderCard style={headerCardStyle}>
@@ -432,12 +445,9 @@ async function handleAccept(notif: AppNotification) {
             </TouchableOpacity>
           </View>
         )}
+        
+        <View style={styles.rowDivider} />
 
-      </View>
-
-      {/* About card — always visible, editable */}
-      <View style={styles.sectionGap} />
-      <View style={styles.card}>
         {/* Bio row */}
         <TouchableOpacity style={styles.row} onPress={() => startEdit("bio")} activeOpacity={0.7}>
           <Text style={styles.rowLabel}>Bio</Text>
@@ -578,6 +588,18 @@ async function handleAccept(notif: AppNotification) {
 
       <View style={styles.sectionGap} />
 
+      <View style={styles.card}>
+        <TouchableOpacity style={styles.row} onPress={cycleTheme} activeOpacity={0.7}>
+          <Text style={styles.rowLabel}>Theme</Text>
+          <View style={styles.themeValue}>
+            <Text style={styles.rowValue}>{themeLabel[bgOption as keyof typeof themeLabel] ?? "Glass"}</Text>
+            <Ionicons name="chevron-forward" size={14} color={colors.textMuted} style={{ marginLeft: 6 }} />
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.sectionGap} />
+
       {/* Language selector */}
       {/* <Text style={styles.sectionLabel}>{t.profile.language}</Text> */}
       <View style={styles.flagRow}>
@@ -598,34 +620,6 @@ async function handleAccept(notif: AppNotification) {
           );
         })}
       </View>
-
-      {__DEV__ ? (
-        <>
-          <View style={styles.sectionGap} />
-          <View style={styles.card}>
-            <TouchableOpacity
-              style={styles.row}
-              onPress={() => {
-                Alert.alert(
-                  "Replay onboarding?",
-                  "You’ll go through welcome, Terms, and setup again. Your circles and profile data stay as they are. Saved terms acceptance is cleared so you can test accepting again.",
-                  [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Replay",
-                      onPress: () => void restartOnboarding({ clearTermsAcceptance: true }),
-                    },
-                  ]
-                );
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.rowLabel}>Replay onboarding</Text>
-              <Ionicons name="refresh-outline" size={16} color={colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-        </>
-      ) : null}
 
       <View style={styles.sectionGap} />
 
@@ -911,6 +905,10 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       backgroundColor: colors.badgeBg,
     },
     circlesHeaderRight: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+    },
+    themeValue: {
       flexDirection: "row" as const,
       alignItems: "center" as const,
     },

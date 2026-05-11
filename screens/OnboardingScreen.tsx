@@ -22,7 +22,7 @@ import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import MapView, { Region } from "react-native-maps";
 import * as Location from "expo-location";
-import { colors, glassColors, greenColors, lightColors, onboardingColors, Colors } from "../src/theme/colors";
+import { colors, glassColors, lightColors, onboardingColors, Colors } from "../src/theme/colors";
 import { BgOption, useBackground } from "../src/contexts/BackgroundContext";
 import { fetchReportedHiddenContentIds } from "../lib/contentReports";
 import { supabase, Circle } from "../lib/supabase";
@@ -95,13 +95,13 @@ const THEME_OPTIONS: {
 }[] = [
   {
     key: "onboarding",
-    title: "Photo",
+    title: "Glass",
     subtitle: "Scenic background with dark frosted cards",
     swatches: ["#1B2417", "rgba(15, 13, 10, 0.78)", "#EFEDE1"],
   },
   {
     key: "glass",
-    title: "Green",
+    title: "Solid",
     subtitle: "Moody translucent cards over a soft green base",
     swatches: ["#35412A", "rgba(255, 255, 255, 0.14)", "#F0EBE0"],
   },
@@ -134,7 +134,6 @@ const INTERESTS: { key: string; icon: keyof typeof Ionicons.glyphMap }[] = [
 function getThemePreviewColors(theme: BgOption): Colors {
   if (theme === "light") return lightColors;
   if (theme === "glass") return glassColors;
-  if (theme === "solid") return greenColors;
   return onboardingColors;
 }
 
@@ -176,9 +175,7 @@ function GlassButton({
   const fillColor =
     previewTheme === "light"
       ? "rgba(44,42,38,0.08)"
-      : previewTheme === "solid"
-        ? "rgba(240,235,224,0.14)"
-        : "rgba(255,255,255,0.15)";
+      : "rgba(255,255,255,0.15)";
   const borderColor =
     previewTheme === "light"
       ? "rgba(44,42,38,0.16)"
@@ -775,15 +772,11 @@ function ThemeStep({
   const cardBackground =
     selectedTheme === "light"
       ? "rgba(44,42,38,0.03)"
-      : selectedTheme === "solid"
-        ? "rgba(240,235,224,0.08)"
-        : "rgba(255,255,255,0.07)";
+      : "rgba(255,255,255,0.07)";
   const selectedCardBackground =
     selectedTheme === "light"
       ? "rgba(44,42,38,0.08)"
-      : selectedTheme === "solid"
-        ? "rgba(240,235,224,0.16)"
-        : "rgba(255,255,255,0.18)";
+      : "rgba(255,255,255,0.18)";
 
   return (
     <View style={styles.formStep}>
@@ -844,6 +837,7 @@ type Props = { onComplete: () => void };
 
 export default function OnboardingScreen({ onComplete }: Props) {
   const { user } = useUser();
+  const { setBgOption } = useBackground();
   const [step, setStep] = useState(0);
   const [data, setData] = useState<OnboardingData>(() =>
     makeInitialData(getClerkOnboardingDisplayName(user))
@@ -917,6 +911,8 @@ export default function OnboardingScreen({ onComplete }: Props) {
     } catch {
       if (user) await AsyncStorage.setItem(`onboarding_v1_${user.id}`, "1");
     } finally {
+      // Default to "Solid" theme after onboarding (maps to internal "glass" mode).
+      setBgOption("glass");
       setSaving(false);
       onComplete();
     }

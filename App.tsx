@@ -33,10 +33,45 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
       setReady(true);
       return;
     }
-    AsyncStorage.getItem(`onboarding_v1_${user.id}`).then((val) => {
-      setNeedsOnboarding(val !== "1");
+    let cancelled = false;
+    (async () => {
+      const onboardingKey = `onboarding_v1_${user.id}`;
+      const localFlag = await AsyncStorage.getItem(onboardingKey);
+      if (cancelled) return;
+
+      if (localFlag === "1") {
+        setNeedsOnboarding(false);
+        setReady(true);
+        return;
+      }
+
+      // Fallback for reinstalls/new devices where local AsyncStorage is empty.
+      // If we already have server-side onboarding traces, treat onboarding as done.
+      const [termsRes, profileRes] = await Promise.all([
+        supabase
+          .from("terms_acceptances")
+          .select("user_id")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+        supabase
+          .from("user_profiles")
+          .select("user_id")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+      ]);
+      if (cancelled) return;
+
+      const completedOnServer = !!termsRes.data || !!profileRes.data;
+      if (completedOnServer) {
+        await AsyncStorage.setItem(onboardingKey, "1");
+      }
+      setNeedsOnboarding(!completedOnServer);
       setReady(true);
-    });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [isSignedIn, user?.id]);
 
   async function restart(options?: OnboardingRestartOptions) {
