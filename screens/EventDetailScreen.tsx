@@ -25,6 +25,7 @@ import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, getAuthClient, EventNote } from "../lib/supabase";
 import {
+  fetchHiddenAuthorIds,
   fetchReportedHiddenNoteIds,
   promptReportContent,
 } from "../lib/contentReports";
@@ -47,6 +48,20 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const isCreator = !!user && !!created_by && user.id === created_by;
+
+  React.useEffect(() => {
+    if (!created_by || isCreator) return;
+    let cancelled = false;
+    (async () => {
+      const hidden = await fetchHiddenAuthorIds([created_by]);
+      if (cancelled || !hidden.has(created_by)) return;
+      Alert.alert("Unavailable", "This event is no longer available.");
+      navigation.goBack();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [created_by, isCreator, navigation]);
   const [inviteVisible, setInviteVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [showChat, setShowChat] = useState(false);
@@ -177,16 +192,26 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         if (!cancelled) setNotes(data ?? []);
         return;
       }
-      const hidden = await fetchReportedHiddenNoteIds(
-        "event_note",
-        data.map((n: EventNote) => n.id)
-      );
-      if (!cancelled) setNotes(data.filter((n: EventNote) => !hidden.has(n.id)));
+      const [hidden, hiddenAuthors] = await Promise.all([
+        fetchReportedHiddenNoteIds("event_note", data.map((n: EventNote) => n.id)),
+        fetchHiddenAuthorIds(
+          data.map((n: EventNote) => n.user_id).filter((uid): uid is string => !!uid)
+        ),
+      ]);
+      if (!cancelled) {
+        setNotes(
+          data.filter((n: EventNote) => {
+            if (hidden.has(n.id)) return false;
+            if (n.user_id && n.user_id !== user?.id && hiddenAuthors.has(n.user_id)) return false;
+            return true;
+          })
+        );
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, user?.id]);
 
   async function handlePostNote() {
     if (!user || !noteText.trim() || postingNote) return;

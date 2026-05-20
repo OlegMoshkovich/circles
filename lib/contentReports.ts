@@ -65,6 +65,41 @@ export async function fetchReportedHiddenContentIds(
   }
 }
 
+/**
+ * User ids that should be hidden as content authors — banned users OR users with any
+ * non-dismissed report against them. Used to filter out events/circles authored by them.
+ */
+export async function fetchHiddenAuthorIds(authorIds: string[]): Promise<Set<string>> {
+  const hidden = new Set<string>();
+  if (authorIds.length === 0) return hidden;
+
+  const unique = Array.from(new Set(authorIds.filter(Boolean)));
+  if (unique.length === 0) return hidden;
+
+  try {
+    const [reportedRes, bannedRes] = await Promise.all([
+      supabase
+        .from("content_reports")
+        .select("reported_user_id")
+        .in("reported_user_id", unique)
+        .in("status", [...HIDE_UNTIL_DISMISSED_REPORT_STATUSES]),
+      supabase
+        .from("user_profiles")
+        .select("user_id")
+        .in("user_id", unique)
+        .not("banned_at", "is", null),
+    ]);
+
+    (reportedRes.data as { reported_user_id: string | null }[] | null)?.forEach((r) => {
+      if (r.reported_user_id) hidden.add(r.reported_user_id);
+    });
+    (bannedRes.data as { user_id: string }[] | null)?.forEach((r) => hidden.add(r.user_id));
+  } catch {
+    // Fail open — return whatever we've gathered so far (likely empty).
+  }
+  return hidden;
+}
+
 export async function submitContentReport(
   params: SubmitContentReportParams
 ): Promise<{ error: { message: string } | null }> {

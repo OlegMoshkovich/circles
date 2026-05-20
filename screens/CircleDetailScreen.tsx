@@ -28,6 +28,7 @@ import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, CircleMember, CircleNote, Event, UserProfile } from "../lib/supabase";
 import {
+  fetchHiddenAuthorIds,
   fetchReportedHiddenContentIds,
   fetchReportedHiddenNoteIds,
   promptReportContent,
@@ -60,6 +61,21 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const isOwner = user?.id === owner_id;
+
+  React.useEffect(() => {
+    if (!owner_id || isOwner) return;
+    let cancelled = false;
+    (async () => {
+      const hidden = await fetchHiddenAuthorIds([owner_id]);
+      if (cancelled || !hidden.has(owner_id)) return;
+      Alert.alert("Unavailable", "This circle is no longer available.");
+      navigation.goBack();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [owner_id, isOwner, navigation]);
+
   const visibilityLabel: Record<string, string> = {
     public: t.circles.public,
     request: t.circles.visibilityRequestToJoin,
@@ -213,13 +229,17 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       let eventRows: Event[] = [];
       if (!eventsResult.error && eventsResult.data) {
         const evs = eventsResult.data as Event[];
-        const reportedEv = await fetchReportedHiddenContentIds(
-          "event",
-          evs.map((e) => e.id)
-        );
-        eventRows = evs.filter(
-          (e) => !reportedEv.has(e.id) || e.created_by === user?.id
-        );
+        const [reportedEv, hiddenEvAuthors] = await Promise.all([
+          fetchReportedHiddenContentIds("event", evs.map((e) => e.id)),
+          fetchHiddenAuthorIds(evs.map((e) => e.created_by).filter((c): c is string => !!c)),
+        ]);
+        eventRows = evs.filter((e) => {
+          const isOwn = e.created_by === user?.id;
+          if (isOwn) return true;
+          if (reportedEv.has(e.id)) return false;
+          if (e.created_by && hiddenEvAuthors.has(e.created_by)) return false;
+          return true;
+        });
         setEvents(eventRows);
         const eventIds = eventRows.map((e: any) => e.id);
         if (eventIds.length > 0) {
@@ -241,11 +261,15 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       let noteRows: CircleNote[] = [];
       if (!notesResult.error) {
         const raw = (notesResult.data ?? []) as CircleNote[];
-        const hidden = await fetchReportedHiddenNoteIds(
-          "circle_note",
-          raw.map((n) => n.id)
-        );
-        noteRows = raw.filter((n) => !hidden.has(n.id));
+        const [hidden, hiddenAuthors] = await Promise.all([
+          fetchReportedHiddenNoteIds("circle_note", raw.map((n) => n.id)),
+          fetchHiddenAuthorIds(raw.map((n) => n.user_id).filter((uid): uid is string => !!uid)),
+        ]);
+        noteRows = raw.filter((n) => {
+          if (hidden.has(n.id)) return false;
+          if (n.user_id && n.user_id !== user?.id && hiddenAuthors.has(n.user_id)) return false;
+          return true;
+        });
         setNotes(noteRows);
       }
       if (!didAutoSelectInitialTab) {

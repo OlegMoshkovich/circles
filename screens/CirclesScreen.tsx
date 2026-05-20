@@ -18,7 +18,7 @@ import { Colors } from "../src/theme/colors";
 
 import { useLanguage } from "../src/i18n/LanguageContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
-import { fetchReportedHiddenContentIds } from "../lib/contentReports";
+import { fetchHiddenAuthorIds, fetchReportedHiddenContentIds } from "../lib/contentReports";
 import { supabase, Circle } from "../lib/supabase";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -134,13 +134,19 @@ export default function CirclesScreen() {
         .filter((circle: any) =>
           circle.visibility !== "private" || map[circle.id] != null
         );
-      const reportedCircleIds = await fetchReportedHiddenContentIds(
-        "circle",
-        mapped.map((c: any) => c.id)
-      );
-      const visibleCircles = mapped.filter(
-        (c: any) => !reportedCircleIds.has(c.id) || c.owner_id === user?.id
-      );
+      const [reportedCircleIds, hiddenAuthorIds] = await Promise.all([
+        fetchReportedHiddenContentIds("circle", mapped.map((c: any) => c.id)),
+        fetchHiddenAuthorIds(
+          mapped.map((c: any) => c.owner_id).filter((id: any): id is string => !!id)
+        ),
+      ]);
+      const visibleCircles = mapped.filter((c: any) => {
+        const isOwn = c.owner_id === user?.id;
+        if (isOwn) return true;
+        if (reportedCircleIds.has(c.id)) return false;
+        if (c.owner_id && hiddenAuthorIds.has(c.owner_id)) return false;
+        return true;
+      });
       setCircles(visibleCircles);
     }
 
