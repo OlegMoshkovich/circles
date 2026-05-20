@@ -58,6 +58,7 @@ export type RootStackParamList = {
   PromptDetail: PromptDetailParams;
   CircleDetail: CircleDetailParams;
   DeleteAccount: undefined;
+  Banned: undefined;
 };
 
 export type RootStackScreenProps<Screen extends keyof RootStackParamList> =
