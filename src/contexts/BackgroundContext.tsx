@@ -5,12 +5,11 @@ import {
   createGlassColors,
   GLASS_BACKGROUND_OPTIONS,
   GlassBackgroundColor,
-  greenColors,
   lightColors,
   onboardingColors,
 } from "../theme/colors";
 
-export type BgOption = "light" | "onboarding" | "glass" | "solid";
+export type BgOption = "light" | "onboarding" | "glass";
 const BG_STORAGE_KEY = "profile_bg_v1";
 const GLASS_BG_STORAGE_KEY = "profile_glass_bg_v1";
 
@@ -40,11 +39,12 @@ export function BackgroundProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     AsyncStorage.getItem(BG_STORAGE_KEY).then((val) => {
       if (val === "green" || val === "solid") {
+        // Legacy value migration: removed solid/green mode -> glass.
         setBgOptionState("glass");
         void AsyncStorage.setItem(BG_STORAGE_KEY, "glass");
         return;
       }
-      if (val === "light" || val === "onboarding" || val === "glass" || val === "solid") {
+      if (val === "light" || val === "onboarding" || val === "glass") {
         setBgOptionState(val);
       }
     });
@@ -78,9 +78,7 @@ export function BackgroundProvider({ children }: { children: React.ReactNode }) 
       ? lightColors
       : bgOption === "onboarding"
         ? onboardingColors
-        : bgOption === "glass"
-          ? createGlassColors(glassBackground)
-          : greenColors;
+        : createGlassColors(glassBackground);
 
   return (
     <BackgroundContext.Provider value={{ bgOption, setBgOption, glassBackground, setGlassBackground, colors }}>

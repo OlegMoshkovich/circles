@@ -2,9 +2,8 @@ import React from "react";
 import { ImageBackground, ImageSourcePropType, RefreshControl, ScrollView, StyleSheet, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
-import { colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
-import { useBackground } from "../../contexts/BackgroundContext";
+import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { ThemedBackground } from "./ThemedBackground";
 
 type ScreenLayoutProps = {
@@ -21,6 +20,7 @@ type ScreenLayoutProps = {
 
 export function ScreenLayout({ header, children, stickyTop, contentStyle, backgroundImage, backgroundBlurIntensity = 55, backgroundColor, onRefresh, refreshing = false }: ScreenLayoutProps) {
   const insets = useSafeAreaInsets();
+  const colors = useColors();
   const resolvedBg = backgroundColor ?? colors.background;
   const { bgOption } = useBackground();
   const shouldUseThemedBackground = backgroundImage == null && bgOption === "onboarding";

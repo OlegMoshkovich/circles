@@ -152,3 +152,8 @@ $$;
 
 comment on function public.reject_objectionable_note_content() is
   'Example DB-level filter; maintain a real blocklist or call a moderation API from an Edge Function instead.';
+
+-- Optional: receive email when a report is filed — deploy Edge Function + Database Webhook:
+--   supabase/functions/content-report-email/index.ts
+--   supabase/config.toml (verify_jwt = false for that function)
+--   Resend (RESEND_API_KEY) + secrets REPORT_NOTIFY_EMAIL, REPORT_WEBHOOK_SECRET; webhook URL + header x-webhook-secret.

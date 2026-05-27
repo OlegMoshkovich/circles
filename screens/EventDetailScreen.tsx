@@ -24,6 +24,11 @@ import { useLanguage } from "../src/i18n/LanguageContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, getAuthClient, EventNote } from "../lib/supabase";
+import {
+  fetchHiddenAuthorIds,
+  fetchReportedHiddenNoteIds,
+  promptReportContent,
+} from "../lib/contentReports";
 import { InviteModal } from "../src/components/modals/InviteModal";
 import { EditEventModal, EditEventData } from "../src/components/modals/EditEventModal";
 import { PublicProfileModal } from "../src/components/modals/PublicProfileModal";
@@ -43,6 +48,20 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const isCreator = !!user && !!created_by && user.id === created_by;
+
+  React.useEffect(() => {
+    if (!created_by || isCreator) return;
+    let cancelled = false;
+    (async () => {
+      const hidden = await fetchHiddenAuthorIds([created_by]);
+      if (cancelled || !hidden.has(created_by)) return;
+      Alert.alert("Unavailable", "This event is no longer available.");
+      navigation.goBack();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [created_by, isCreator, navigation]);
   const [inviteVisible, setInviteVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [showChat, setShowChat] = useState(false);
@@ -162,13 +181,37 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   }, [id, user]);
 
   useEffect(() => {
-    supabase
-      .from("event_notes")
-      .select("*")
-      .eq("event_id", id)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => { if (data) setNotes(data); });
-  }, [id]);
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("event_notes")
+        .select("*")
+        .eq("event_id", id)
+        .order("created_at", { ascending: false });
+      if (cancelled || !data?.length) {
+        if (!cancelled) setNotes(data ?? []);
+        return;
+      }
+      const [hidden, hiddenAuthors] = await Promise.all([
+        fetchReportedHiddenNoteIds("event_note", data.map((n: EventNote) => n.id)),
+        fetchHiddenAuthorIds(
+          data.map((n: EventNote) => n.user_id).filter((uid): uid is string => !!uid)
+        ),
+      ]);
+      if (!cancelled) {
+        setNotes(
+          data.filter((n: EventNote) => {
+            if (hidden.has(n.id)) return false;
+            if (n.user_id && n.user_id !== user?.id && hiddenAuthors.has(n.user_id)) return false;
+            return true;
+          })
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, user?.id]);
 
   async function handlePostNote() {
     if (!user || !noteText.trim() || postingNote) return;
@@ -317,6 +360,23 @@ export default function EventDetailScreen({ route, navigation }: Props) {
               </TouchableOpacity>
             </>
           )}
+          {user?.id && !isCreator ? (
+            <TouchableOpacity
+              onPress={() =>
+                promptReportContent({
+                  reporterUserId: user.id,
+                  targetType: "event",
+                  targetId: id,
+                  reportedUserId: created_by ?? null,
+                  onReported: () => navigation.goBack(),
+                })
+              }
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={styles.headerAction}
+            >
+              <Ionicons name="ellipsis-horizontal" size={22} color={colors.text} />
+            </TouchableOpacity>
+          ) : null}
         </View>
       </View>
 
@@ -472,17 +532,36 @@ export default function EventDetailScreen({ route, navigation }: Props) {
                       <Text style={styles.noteName}>{note.display_name ?? "Guest"}</Text>
                       <Text style={styles.noteTime}>{timeAgo}</Text>
                     </View>
-                    {note.user_id === user?.id && (
-                      <TouchableOpacity
-                        onPress={async () => {
-                          await supabase.from("event_notes").delete().eq("id", note.id);
-                          setNotes((prev) => prev.filter((n) => n.id !== note.id));
-                        }}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                      >
-                        <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
-                      </TouchableOpacity>
-                    )}
+                    <View style={styles.noteHeaderActions}>
+                      {user?.id && note.user_id !== user.id ? (
+                        <TouchableOpacity
+                          onPress={() =>
+                            promptReportContent({
+                              reporterUserId: user.id,
+                              targetType: "event_note",
+                              targetId: note.id,
+                              reportedUserId: note.user_id,
+                              onReported: (noteId) =>
+                                setNotes((prev) => prev.filter((n) => n.id !== noteId)),
+                            })
+                          }
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Ionicons name="ellipsis-horizontal" size={14} color={colors.textMuted} />
+                        </TouchableOpacity>
+                      ) : null}
+                      {note.user_id === user?.id ? (
+                        <TouchableOpacity
+                          onPress={async () => {
+                            await supabase.from("event_notes").delete().eq("id", note.id);
+                            setNotes((prev) => prev.filter((n) => n.id !== note.id));
+                          }}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
                   </View>
                   <Text style={styles.noteContent}>{note.content}</Text>
                 </View>
@@ -767,12 +846,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     color: colors.text,
     flex: 1,
   },
-  chatDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.text,
-  },
   rsvpBar: {
     paddingHorizontal: spacing.pageHorizontal,
     paddingTop: spacing.md,
@@ -957,6 +1030,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   noteHeaderText: {
     flex: 1,
+  },
+  noteHeaderActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   noteName: {
     fontSize: 13,

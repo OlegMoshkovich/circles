@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ActivityIndicator,
@@ -27,6 +27,12 @@ import { useLanguage } from "../src/i18n/LanguageContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, CircleMember, CircleNote, Event, UserProfile } from "../lib/supabase";
+import {
+  fetchHiddenAuthorIds,
+  fetchReportedHiddenContentIds,
+  fetchReportedHiddenNoteIds,
+  promptReportContent,
+} from "../lib/contentReports";
 import { CircleInviteModal } from "../src/components/modals/CircleInviteModal";
 import { EditCircleModal, EditCircleData } from "../src/components/modals/EditCircleModal";
 import { CreateEventModal, NewEventData } from "../src/components/modals/CreateEventModal";
@@ -55,6 +61,21 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const isOwner = user?.id === owner_id;
+
+  React.useEffect(() => {
+    if (!owner_id || isOwner) return;
+    let cancelled = false;
+    (async () => {
+      const hidden = await fetchHiddenAuthorIds([owner_id]);
+      if (cancelled || !hidden.has(owner_id)) return;
+      Alert.alert("Unavailable", "This circle is no longer available.");
+      navigation.goBack();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [owner_id, isOwner, navigation]);
+
   const visibilityLabel: Record<string, string> = {
     public: t.circles.public,
     request: t.circles.visibilityRequestToJoin,
@@ -83,6 +104,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [requests, setRequests] = useState<CircleMember[]>([]);
   const [requestCount, setRequestCount] = useState(0);
   const [loadingFeed, setLoadingFeed] = useState(false);
+  const hasLoadedFeedRef = useRef(false);
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [loadingRequests, setLoadingRequests] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -197,14 +219,29 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   }
 
   const loadFeed = useCallback(() => {
-    setLoadingFeed(true);
+    if (!hasLoadedFeedRef.current) {
+      setLoadingFeed(true);
+    }
     return Promise.all([
       supabase.from("events").select("*").eq("circle_id", id).order("created_at", { ascending: false }),
       supabase.from("circle_notes").select("*").eq("circle_id", id).order("created_at", { ascending: false }),
     ]).then(async ([eventsResult, notesResult]) => {
+      let eventRows: Event[] = [];
       if (!eventsResult.error && eventsResult.data) {
-        setEvents(eventsResult.data);
-        const eventIds = eventsResult.data.map((e: any) => e.id);
+        const evs = eventsResult.data as Event[];
+        const [reportedEv, hiddenEvAuthors] = await Promise.all([
+          fetchReportedHiddenContentIds("event", evs.map((e) => e.id)),
+          fetchHiddenAuthorIds(evs.map((e) => e.created_by).filter((c): c is string => !!c)),
+        ]);
+        eventRows = evs.filter((e) => {
+          const isOwn = e.created_by === user?.id;
+          if (isOwn) return true;
+          if (reportedEv.has(e.id)) return false;
+          if (e.created_by && hiddenEvAuthors.has(e.created_by)) return false;
+          return true;
+        });
+        setEvents(eventRows);
+        const eventIds = eventRows.map((e: any) => e.id);
         if (eventIds.length > 0) {
           const { data: noteCounts } = await supabase
             .from("event_notes")
@@ -217,11 +254,24 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
             }
             setEventNoteCountMap(map);
           }
+        } else {
+          setEventNoteCountMap({});
         }
       }
-      if (!notesResult.error && notesResult.data) setNotes(notesResult.data);
-      const eventRows = eventsResult.error ? [] : (eventsResult.data ?? []);
-      const noteRows = notesResult.error ? [] : (notesResult.data ?? []);
+      let noteRows: CircleNote[] = [];
+      if (!notesResult.error) {
+        const raw = (notesResult.data ?? []) as CircleNote[];
+        const [hidden, hiddenAuthors] = await Promise.all([
+          fetchReportedHiddenNoteIds("circle_note", raw.map((n) => n.id)),
+          fetchHiddenAuthorIds(raw.map((n) => n.user_id).filter((uid): uid is string => !!uid)),
+        ]);
+        noteRows = raw.filter((n) => {
+          if (hidden.has(n.id)) return false;
+          if (n.user_id && n.user_id !== user?.id && hiddenAuthors.has(n.user_id)) return false;
+          return true;
+        });
+        setNotes(noteRows);
+      }
       if (!didAutoSelectInitialTab) {
         const nextTab: Tab =
           eventRows.length > 0
@@ -232,9 +282,10 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         setActiveTab(nextTab);
         setDidAutoSelectInitialTab(true);
       }
+      hasLoadedFeedRef.current = true;
       setLoadingFeed(false);
     });
-  }, [didAutoSelectInitialTab, id]);
+  }, [didAutoSelectInitialTab, id, user?.id]);
 
   // Load circle events + feed items
   useEffect(() => {
@@ -579,32 +630,50 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           <Ionicons name="chevron-back" size={18} color={colors.text} />
           <Text style={styles.backLabel}>{t.common.back}</Text>
         </TouchableOpacity>
-        {(isOwner || isMember) && (
+        {(isOwner || isMember || (user && !isOwner)) ? (
           <View style={styles.headerActions}>
-            <TouchableOpacity
-              onPress={() => setCreateEventVisible(true)}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Ionicons name="calendar-outline" size={18} color={colors.text} />
-            </TouchableOpacity>
-            {isOwner && (
-            <TouchableOpacity
-              onPress={() => setEditVisible(true)}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Ionicons name="create-outline" size={18} color={colors.text} />
-            </TouchableOpacity>
-            )}
-            {isOwner && (
-            <TouchableOpacity
-              onPress={handleDelete}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Ionicons name="trash-outline" size={18} color={colors.text} />
-            </TouchableOpacity>
-            )}
+            {(isOwner || isMember) ? (
+              <TouchableOpacity
+                onPress={() => setCreateEventVisible(true)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Ionicons name="calendar-outline" size={18} color={colors.text} />
+              </TouchableOpacity>
+            ) : null}
+            {isOwner ? (
+              <TouchableOpacity
+                onPress={() => setEditVisible(true)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Ionicons name="create-outline" size={18} color={colors.text} />
+              </TouchableOpacity>
+            ) : null}
+            {isOwner ? (
+              <TouchableOpacity
+                onPress={handleDelete}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Ionicons name="trash-outline" size={18} color={colors.text} />
+              </TouchableOpacity>
+            ) : null}
+            {user && !isOwner ? (
+              <TouchableOpacity
+                onPress={() =>
+                  promptReportContent({
+                    reporterUserId: user.id,
+                    targetType: "circle",
+                    targetId: id,
+                    reportedUserId: owner_id,
+                    onReported: () => nav.goBack(),
+                  })
+                }
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Ionicons name="ellipsis-horizontal" size={18} color={colors.text} />
+              </TouchableOpacity>
+            ) : null}
           </View>
-        )}
+        ) : null}
       </View>
 
       {/* Header card - fixed, not scrollable */}
@@ -652,7 +721,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       {/* Feed tab: sticky compose + scrollable notes */}
       {activeTab === "feed" && (
         <View style={styles.feedContainer}>
-          {loadingFeed ? (
+          {loadingFeed && notes.length === 0 ? (
             <View style={styles.loader}>
               <ActivityIndicator size="small" color={colors.textMuted} />
             </View>
@@ -726,17 +795,36 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                               <Text style={styles.noteName}>{note.display_name ?? t.circles.typeMember}</Text>
                               <Text style={styles.noteTime}>{timeAgo}</Text>
                             </View>
-                            {note.user_id === user?.id && (
-                              <TouchableOpacity
-                                onPress={async () => {
-                                  await supabase.from("circle_notes").delete().eq("id", note.id);
-                                  setNotes((prev) => prev.filter((n) => n.id !== note.id));
-                                }}
-                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                              >
-                                <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
-                              </TouchableOpacity>
-                            )}
+                            <View style={styles.noteHeaderActions}>
+                              {user?.id && note.user_id !== user.id ? (
+                                <TouchableOpacity
+                                  onPress={() =>
+                                    promptReportContent({
+                                      reporterUserId: user.id,
+                                      targetType: "circle_note",
+                                      targetId: note.id,
+                                      reportedUserId: note.user_id,
+                                      onReported: (noteId) =>
+                                        setNotes((prev) => prev.filter((n) => n.id !== noteId)),
+                                    })
+                                  }
+                                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                >
+                                  <Ionicons name="ellipsis-horizontal" size={14} color={colors.textMuted} />
+                                </TouchableOpacity>
+                              ) : null}
+                              {note.user_id === user?.id ? (
+                                <TouchableOpacity
+                                  onPress={async () => {
+                                    await supabase.from("circle_notes").delete().eq("id", note.id);
+                                    setNotes((prev) => prev.filter((n) => n.id !== note.id));
+                                  }}
+                                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                >
+                                  <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
+                                </TouchableOpacity>
+                              ) : null}
+                            </View>
                           </View>
                           <Text style={styles.noteContent}>{note.content}</Text>
                         </View>
@@ -756,7 +844,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           {/* Circle Events tab */}
           {activeTab === "events" && (
             <>
-              {loadingFeed ? (
+              {loadingFeed && events.length === 0 ? (
                 <View style={styles.loader}>
                   <ActivityIndicator size="small" color={colors.textMuted} />
                 </View>
@@ -1449,6 +1537,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   noteHeaderText: {
     flex: 1,
     marginLeft: spacing.sm,
+  },
+  noteHeaderActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   noteHeaderRight: {
     flexDirection: "row",

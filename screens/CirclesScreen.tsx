@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -18,6 +18,7 @@ import { Colors } from "../src/theme/colors";
 
 import { useLanguage } from "../src/i18n/LanguageContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
+import { fetchHiddenAuthorIds, fetchReportedHiddenContentIds } from "../lib/contentReports";
 import { supabase, Circle } from "../lib/supabase";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -49,6 +50,7 @@ export default function CirclesScreen() {
   const [lastViewedMap, setLastViewedMap] = useState<Record<string, number>>({});
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [showDismissed, setShowDismissed] = useState(false);
+  const hasLoadedOnceRef = useRef(false);
 
   async function handleNearMe() {
     if (nearMe) {
@@ -132,7 +134,20 @@ export default function CirclesScreen() {
         .filter((circle: any) =>
           circle.visibility !== "private" || map[circle.id] != null
         );
-      setCircles(mapped);
+      const [reportedCircleIds, hiddenAuthorIds] = await Promise.all([
+        fetchReportedHiddenContentIds("circle", mapped.map((c: any) => c.id)),
+        fetchHiddenAuthorIds(
+          mapped.map((c: any) => c.owner_id).filter((id: any): id is string => !!id)
+        ),
+      ]);
+      const visibleCircles = mapped.filter((c: any) => {
+        const isOwn = c.owner_id === user?.id;
+        if (isOwn) return true;
+        if (reportedCircleIds.has(c.id)) return false;
+        if (c.owner_id && hiddenAuthorIds.has(c.owner_id)) return false;
+        return true;
+      });
+      setCircles(visibleCircles);
     }
 
     if (!membershipsResult.error && membershipsResult.data) {
@@ -195,7 +210,10 @@ export default function CirclesScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchCircles();
+      const silent = hasLoadedOnceRef.current;
+      void fetchCircles(silent).then(() => {
+        hasLoadedOnceRef.current = true;
+      });
       // Keep this user's profile up to date so others can see their name
       if (user) {
         const displayName = user.fullName ?? user.firstName ?? null;
@@ -258,7 +276,7 @@ export default function CirclesScreen() {
     <>
       <ScreenLayout
         backgroundColor={screenBgColor}
-        contentStyle={loading ? styles.scrollContentLoader : undefined}
+        contentStyle={loading && circles.length === 0 ? styles.scrollContentLoader : undefined}
         onRefresh={async () => { setRefreshing(true); await fetchCircles(true); setRefreshing(false); }}
         refreshing={refreshing}
         stickyTop={<ScreenHeaderCard>
@@ -389,7 +407,7 @@ export default function CirclesScreen() {
           )}
         </ScreenHeaderCard>}
       >
-        {loading ? (
+        {loading && circles.length === 0 ? (
           <View style={styles.loader}>
             <GradientRingLoader size={40} strokeWidth={7} />
           </View>

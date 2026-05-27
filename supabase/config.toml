@@ -1,0 +1,8 @@
+# Minimal Supabase CLI config. Run `supabase init` or merge with your project
+# config if you already use Supabase locally.
+#
+# Database Webhooks cannot send a user JWT, so this function is gated by
+# REPORT_WEBHOOK_SECRET instead (see function source).
+
+[functions.content-report-email]
+verify_jwt = false

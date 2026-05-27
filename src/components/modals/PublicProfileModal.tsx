@@ -10,8 +10,10 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useUser } from "@clerk/clerk-expo";
 import { Colors } from "../../theme/colors";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
+import { promptReportContent } from "../../../lib/contentReports";
 import { supabase, UserProfile } from "../../../lib/supabase";
 
 type Props = {
@@ -29,6 +31,7 @@ function initials(name: string): string {
 }
 
 export function PublicProfileModal({ visible, onClose, userId, displayName }: Props) {
+  const { user } = useUser();
   const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
@@ -62,9 +65,26 @@ export function PublicProfileModal({ visible, onClose, userId, displayName }: Pr
 
             <View style={styles.header}>
               <View />
-              <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-                <Ionicons name="close" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
+              <View style={styles.headerActions}>
+                {user?.id && user.id !== userId ? (
+                  <TouchableOpacity
+                    onPress={() =>
+                      promptReportContent({
+                        reporterUserId: user.id,
+                        targetType: "user_profile",
+                        targetId: userId,
+                        reportedUserId: userId,
+                      })
+                    }
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  >
+                    <Ionicons name="ellipsis-horizontal" size={18} color={colors.textMuted} />
+                  </TouchableOpacity>
+                ) : null}
+                <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                  <Ionicons name="close" size={20} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {loading ? (
@@ -158,6 +178,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       alignItems: "center",
       justifyContent: "space-between",
       marginBottom: 24,
+    },
+    headerActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
     },
     headerTitle: {
       fontSize: 20,

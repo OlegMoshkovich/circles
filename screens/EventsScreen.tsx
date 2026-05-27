@@ -17,6 +17,7 @@ import { Colors } from "../src/theme/colors";
 import { useUser } from "@clerk/clerk-expo";
 import { useLanguage } from "../src/i18n/LanguageContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
+import { fetchHiddenAuthorIds, fetchReportedHiddenContentIds } from "../lib/contentReports";
 import { supabase, Event } from "../lib/supabase";
 
 type EventWithCircle = Event & { circles?: { name: string } | null };
@@ -107,9 +108,21 @@ export default function EventsScreen() {
 
     const { data, error } = await query.order("created_at", { ascending: false });
     if (!error && data) {
-      setEvents(data as EventWithCircle[]);
+      const rows = data as EventWithCircle[];
+      const [reportedEventIds, hiddenAuthorIds] = await Promise.all([
+        fetchReportedHiddenContentIds("event", rows.map((e) => e.id)),
+        fetchHiddenAuthorIds(rows.map((e) => e.created_by).filter((id): id is string => !!id)),
+      ]);
+      const visible = rows.filter((e) => {
+        const isOwn = e.created_by === user?.id;
+        if (isOwn) return true;
+        if (reportedEventIds.has(e.id)) return false;
+        if (e.created_by && hiddenAuthorIds.has(e.created_by)) return false;
+        return true;
+      });
+      setEvents(visible);
       // Fetch note counts for all loaded events
-      const eventIds = data.map((e: any) => e.id);
+      const eventIds = visible.map((e: any) => e.id);
       if (eventIds.length > 0) {
         const { data: noteCounts } = await supabase
           .from("event_notes")
