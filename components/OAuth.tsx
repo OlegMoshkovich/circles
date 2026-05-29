@@ -30,8 +30,21 @@ export function OAuthButtons({
   useWamUpBrowser();
 
   const { startOAuthFlow } = useOAuth({ strategy });
+  const inFlight = React.useRef(false);
 
   const onPress = React.useCallback(async () => {
+    // Prevent re-entry: a second tap (or retry after a cancelled flow) while a
+    // browser session is still open throws "Another web browser is already open".
+    if (inFlight.current) return;
+    inFlight.current = true;
+
+    // Close any auth session left open by a previous cancelled/failed attempt.
+    try {
+      WebBrowser.dismissAuthSession();
+    } catch {
+      // no-op: nothing to dismiss (Android, or no session open)
+    }
+
     try {
       const { createdSessionId, setActive } = await startOAuthFlow();
       if (createdSessionId && setActive) {
@@ -46,6 +59,8 @@ export function OAuthButtons({
         "OAuth sign-in failed";
       log(`OAuth error (${String(strategy)} | ${code}): ${message}`);
       onError?.(message);
+    } finally {
+      inFlight.current = false;
     }
   }, [onError, startOAuthFlow, strategy]);
 
