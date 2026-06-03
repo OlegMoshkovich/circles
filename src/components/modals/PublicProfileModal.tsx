@@ -13,7 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@clerk/clerk-expo";
 import { Colors } from "../../theme/colors";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
-import { promptReportContent } from "../../../lib/contentReports";
+import { useReport } from "../../contexts/ReportProvider";
 import { supabase, UserProfile } from "../../../lib/supabase";
 
 type Props = {
@@ -32,6 +32,7 @@ function initials(name: string): string {
 
 export function PublicProfileModal({ visible, onClose, userId, displayName }: Props) {
   const { user } = useUser();
+  const { report } = useReport();
   const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
@@ -69,7 +70,7 @@ export function PublicProfileModal({ visible, onClose, userId, displayName }: Pr
                 {user?.id && user.id !== userId ? (
                   <TouchableOpacity
                     onPress={() =>
-                      promptReportContent({
+                      report({
                         reporterUserId: user.id,
                         targetType: "user_profile",
                         targetId: userId,

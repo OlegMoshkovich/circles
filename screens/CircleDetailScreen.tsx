@@ -31,8 +31,8 @@ import {
   fetchHiddenAuthorIds,
   fetchReportedHiddenContentIds,
   fetchReportedHiddenNoteIds,
-  promptReportContent,
 } from "../lib/contentReports";
+import { useReport } from "../src/contexts/ReportProvider";
 import { CircleInviteModal } from "../src/components/modals/CircleInviteModal";
 import { EditCircleModal, EditCircleData } from "../src/components/modals/EditCircleModal";
 import { CreateEventModal, NewEventData } from "../src/components/modals/CreateEventModal";
@@ -55,6 +55,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const footerBottomInset = insets.bottom > 0 ? 0 : 24;
   const { user } = useUser();
   const nav = useNavigation<Nav>();
+  const { report } = useReport();
 
   const { t } = useLanguage();
   const { bgOption } = useBackground();
@@ -659,12 +660,14 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
             {user && !isOwner ? (
               <TouchableOpacity
                 onPress={() =>
-                  promptReportContent({
+                  report({
                     reporterUserId: user.id,
                     targetType: "circle",
                     targetId: id,
                     reportedUserId: owner_id,
-                    onReported: () => nav.goBack(),
+                    onReported: (_t, { restrict }) => {
+                      if (restrict) nav.goBack();
+                    },
                   })
                 }
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -799,13 +802,14 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                               {user?.id && note.user_id !== user.id ? (
                                 <TouchableOpacity
                                   onPress={() =>
-                                    promptReportContent({
+                                    report({
                                       reporterUserId: user.id,
                                       targetType: "circle_note",
                                       targetId: note.id,
                                       reportedUserId: note.user_id,
-                                      onReported: (noteId) =>
-                                        setNotes((prev) => prev.filter((n) => n.id !== noteId)),
+                                      onReported: (noteId, { restrict }) => {
+                                        if (restrict) setNotes((prev) => prev.filter((n) => n.id !== noteId));
+                                      },
                                     })
                                   }
                                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}

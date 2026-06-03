@@ -1,4 +1,3 @@
-import { Alert, ActionSheetIOS, Platform } from "react-native";
 import { supabase } from "./supabase";
 
 export type ContentReportTargetType =
@@ -18,6 +17,25 @@ export type SubmitContentReportParams = {
   details?: string | null;
 };
 
+/**
+ * Report reasons offered to users. Only "Harassment or abuse" restricts access
+ * (hides the reported content/author pending review); spam/offensive reports are
+ * logged as a warning for moderators but do NOT hide content. A comment is
+ * mandatory for harassment and optional otherwise.
+ */
+export const RESTRICTING_REPORT_REASON = "Harassment or abuse";
+
+export const REPORT_REASONS: {
+  value: string;
+  label: string;
+  restricts: boolean;
+  commentRequired: boolean;
+}[] = [
+  { value: "Spam or scam", label: "Spam or scam", restricts: false, commentRequired: false },
+  { value: "Harassment or abuse", label: "Harassment or abuse", restricts: true, commentRequired: true },
+  { value: "Offensive or inappropriate", label: "Offensive or inappropriate", restricts: false, commentRequired: false },
+];
+
 /** Reports in these states hide content for others until dismissed by a moderator. */
 const HIDE_UNTIL_DISMISSED_REPORT_STATUSES = ["pending", "reviewed", "action_taken"] as const;
 
@@ -34,6 +52,7 @@ export async function fetchReportedHiddenNoteIds(
       .from("content_reports")
       .select("target_id")
       .eq("target_type", targetType)
+      .eq("reason", RESTRICTING_REPORT_REASON)
       .in("target_id", noteIds)
       .in("status", [...HIDE_UNTIL_DISMISSED_REPORT_STATUSES]);
     if (error || !data) return new Set();
@@ -56,6 +75,7 @@ export async function fetchReportedHiddenContentIds(
       .from("content_reports")
       .select("target_id")
       .eq("target_type", targetType)
+      .eq("reason", RESTRICTING_REPORT_REASON)
       .in("target_id", ids)
       .in("status", [...HIDE_UNTIL_DISMISSED_REPORT_STATUSES]);
     if (error || !data) return new Set();
@@ -81,6 +101,7 @@ export async function fetchHiddenAuthorIds(authorIds: string[]): Promise<Set<str
       supabase
         .from("content_reports")
         .select("reported_user_id")
+        .eq("reason", RESTRICTING_REPORT_REASON)
         .in("reported_user_id", unique)
         .in("status", [...HIDE_UNTIL_DISMISSED_REPORT_STATUSES]),
       supabase
@@ -113,83 +134,5 @@ export async function submitContentReport(
     status: "pending",
   });
   return { error: error ? { message: error.message } : null };
-}
-
-/**
- * Ask for a reason, then insert into `content_reports`.
- * iOS: action sheet. Android: stacked alerts (max 3 buttons per dialog).
- */
-export function promptReportContent(params: {
-  reporterUserId: string;
-  targetType: ContentReportTargetType;
-  targetId: string;
-  reportedUserId?: string | null;
-  /** Called after a successful insert so the UI can hide the note immediately. */
-  onReported?: (targetId: string) => void;
-}): void {
-  const finish = async (reason: string) => {
-    const { onReported, ...reportFields } = params;
-    const { error } = await submitContentReport({ ...reportFields, reason });
-    if (error) {
-      Alert.alert("Could not send report", error.message);
-      return;
-    }
-    onReported?.(params.targetId);
-    const thanksBody = (() => {
-      switch (params.targetType) {
-        case "event_note":
-        case "circle_note":
-          return "We received your report. This note is hidden while we review it.";
-        case "event":
-          return "We received your report. This event will be hidden until the issue is resolved.";
-        case "circle":
-          return "We received your report. This circle will be hidden until the issue is resolved.";
-        default:
-          return "We received your report. We will review it.";
-      }
-    })();
-    Alert.alert("Thanks", thanksBody);
-  };
-
-  const granularReasons = [
-    "Spam or scam",
-    "Harassment or abuse",
-    "Offensive or inappropriate",
-    "Other",
-  ] as const;
-
-  if (Platform.OS === "ios") {
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        title: "Report content",
-        message: "Why are you reporting this?",
-        options: ["Cancel", ...granularReasons],
-        cancelButtonIndex: 0,
-      },
-      (buttonIndex) => {
-        if (buttonIndex === 0) return;
-        const reason = granularReasons[buttonIndex - 1];
-        if (reason) void finish(reason);
-      }
-    );
-    return;
-  }
-
-  Alert.alert("Report content", "Why are you reporting this?", [
-    { text: "Cancel", style: "cancel" },
-    { text: "Spam or scam", onPress: () => void finish("Spam or scam") },
-    {
-      text: "More…",
-      onPress: () =>
-        Alert.alert("Report content", "Choose a category", [
-          { text: "Cancel", style: "cancel" },
-          { text: "Harassment or abuse", onPress: () => void finish("Harassment or abuse") },
-          {
-            text: "Offensive, inappropriate, or other",
-            onPress: () => void finish("Offensive, inappropriate, or other"),
-          },
-        ]),
-    },
-  ]);
 }
 

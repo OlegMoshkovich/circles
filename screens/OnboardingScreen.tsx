@@ -26,6 +26,14 @@ import { colors, glassColors, lightColors, onboardingColors, Colors } from "../s
 import { BgOption, useBackground } from "../src/contexts/BackgroundContext";
 import { fetchReportedHiddenContentIds } from "../lib/contentReports";
 import { supabase, getAuthClient, Circle } from "../lib/supabase";
+import {
+  COMMUNITY_TAGLINE,
+  COMMUNITY_MISSION,
+  CORE_VALUES,
+  COMMUNITY_PRINCIPLES,
+  COMMUNITY_GUIDELINES,
+  COMMUNITY_MODERATION,
+} from "../src/constants/community";
 
 const DEFAULT_MAP_REGION: Region = {
   latitude: 46.8,
@@ -85,7 +93,7 @@ const TERMS_PUBLIC_URL =
   (typeof process !== "undefined" && process.env.EXPO_PUBLIC_TERMS_URL?.trim()) ||
   "https://valmia.ch/terms-and-conditions";
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 9;
 
 const THEME_OPTIONS: {
   key: BgOption;
@@ -256,7 +264,73 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
   );
 }
 
-// ─── Step 1: Terms & EULA (required before continuing onboarding) ───────────
+// ─── Step 1: Mission, Values & Code of Conduct ──────────────────────────────
+
+function CommunityStep({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
+  return (
+    <View style={styles.formStep}>
+      <View style={[styles.panel, styles.termsPanel]}>
+        <StepHeader
+          title="Our mission & values"
+          subtitle={COMMUNITY_TAGLINE}
+          onBack={onBack}
+        />
+        <ScrollView
+          style={styles.communityScroll}
+          contentContainerStyle={styles.termsScrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.termsBody}>{COMMUNITY_MISSION}</Text>
+
+          <Text style={styles.communityHeading}>Core values</Text>
+          {CORE_VALUES.map((v) => (
+            <Text key={v.name} style={styles.termsBody}>
+              <Text style={styles.termsEmphasis}>{v.name}. </Text>
+              {v.desc}
+            </Text>
+          ))}
+
+          <Text style={styles.communityHeading}>Community principles</Text>
+          <Text style={styles.termsBody}>ValMia works best when everyone contributes positively. Please:</Text>
+          {COMMUNITY_PRINCIPLES.map((p) => (
+            <View key={p} style={styles.communityBulletRow}>
+              <Text style={styles.communityBulletDot}>•</Text>
+              <Text style={styles.communityBulletText}>{p}</Text>
+            </View>
+          ))}
+
+          <Text style={styles.communityHeading}>Reporting & moderation</Text>
+          <Text style={styles.termsBody}>{COMMUNITY_MODERATION}</Text>
+        </ScrollView>
+        <GlassButton label="Continue" onPress={onNext} />
+      </View>
+    </View>
+  );
+}
+
+// ─── Step 2: Community Guidelines (must agree to continue) ───────────────────
+
+function CommunityGuidelinesStep({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
+  return (
+    <View style={styles.formStep}>
+      <View style={styles.panel}>
+        <StepHeader title="Community Guidelines" onBack={onBack} />
+        <View style={styles.guidelineList}>
+          {COMMUNITY_GUIDELINES.map((g) => (
+            <View key={g} style={styles.guidelineRow}>
+              <Ionicons name="checkmark-sharp" size={18} color="#efede1" style={styles.guidelineCheck} />
+              <Text style={styles.guidelineText}>{g}</Text>
+            </View>
+          ))}
+        </View>
+        <Text style={styles.guidelineTagline}>{COMMUNITY_TAGLINE}</Text>
+        <GlassButton label="Agree & Continue" onPress={onNext} />
+      </View>
+    </View>
+  );
+}
+
+// ─── Step 3: Terms & EULA (required before continuing onboarding) ───────────
 
 function TermsStep({
   userId,
@@ -930,6 +1004,8 @@ export default function OnboardingScreen({ onComplete }: Props) {
 
   const steps = [
     <WelcomeStep onNext={onNext} />,
+    <CommunityStep onNext={onNext} onBack={onBack} />,
+    <CommunityGuidelinesStep onNext={onNext} onBack={onBack} />,
     <TermsStep userId={user?.id ?? ""} onNext={onNext} onBack={onBack} />,
     <UserTypeStep data={data} onUpdate={update} onNext={onNext} onBack={onBack} />,
     <InterestsStep data={data} onUpdate={update} onNext={onNext} onBack={onBack} />,
@@ -1080,6 +1156,62 @@ const styles = StyleSheet.create({
     flexGrow: 0,
     flexShrink: 1,
     maxHeight: 340,
+  },
+  communityScroll: {
+    flexGrow: 0,
+    flexShrink: 1,
+  },
+  communityHeading: {
+    fontSize: 16,
+    fontFamily: "Lora_400Regular",
+    fontWeight: "700" as const,
+    color: "#efede1",
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  communityBulletRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
+  communityBulletDot: {
+    fontSize: 14,
+    color: "rgba(239,237,225,0.88)",
+    lineHeight: 22,
+    width: 16,
+  },
+  communityBulletText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Lora_400Regular",
+    color: "rgba(239,237,225,0.88)",
+    lineHeight: 22,
+  },
+  guidelineList: {
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+  guidelineRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  guidelineCheck: {
+    marginRight: 12,
+  },
+  guidelineText: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: "Lora_400Regular",
+    color: "#efede1",
+  },
+  guidelineTagline: {
+    fontSize: 16,
+    fontFamily: "Lora_400Regular",
+    fontWeight: "700" as const,
+    color: "#efede1",
+    marginTop: 8,
+    marginBottom: 20,
   },
   termsScrollContent: {
     paddingBottom: 12,

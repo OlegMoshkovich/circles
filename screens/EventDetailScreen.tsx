@@ -27,8 +27,8 @@ import { supabase, getAuthClient, EventNote } from "../lib/supabase";
 import {
   fetchHiddenAuthorIds,
   fetchReportedHiddenNoteIds,
-  promptReportContent,
 } from "../lib/contentReports";
+import { useReport } from "../src/contexts/ReportProvider";
 import { InviteModal } from "../src/components/modals/InviteModal";
 import { EditEventModal, EditEventData } from "../src/components/modals/EditEventModal";
 import { PublicProfileModal } from "../src/components/modals/PublicProfileModal";
@@ -42,6 +42,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const footerBottomInset = 0;
   const { user } = useUser();
   const { getToken } = useAuth();
+  const { report } = useReport();
 
   const { t } = useLanguage();
   const { bgOption } = useBackground();
@@ -363,12 +364,14 @@ export default function EventDetailScreen({ route, navigation }: Props) {
           {user?.id && !isCreator ? (
             <TouchableOpacity
               onPress={() =>
-                promptReportContent({
+                report({
                   reporterUserId: user.id,
                   targetType: "event",
                   targetId: id,
                   reportedUserId: created_by ?? null,
-                  onReported: () => navigation.goBack(),
+                  onReported: (_t, { restrict }) => {
+                    if (restrict) navigation.goBack();
+                  },
                 })
               }
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -536,13 +539,14 @@ export default function EventDetailScreen({ route, navigation }: Props) {
                       {user?.id && note.user_id !== user.id ? (
                         <TouchableOpacity
                           onPress={() =>
-                            promptReportContent({
+                            report({
                               reporterUserId: user.id,
                               targetType: "event_note",
                               targetId: note.id,
                               reportedUserId: note.user_id,
-                              onReported: (noteId) =>
-                                setNotes((prev) => prev.filter((n) => n.id !== noteId)),
+                              onReported: (noteId, { restrict }) => {
+                                if (restrict) setNotes((prev) => prev.filter((n) => n.id !== noteId));
+                              },
                             })
                           }
                           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}

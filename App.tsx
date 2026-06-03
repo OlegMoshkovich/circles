@@ -9,6 +9,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { LanguageProvider } from "./src/i18n/LanguageContext";
 import { NotificationProvider } from "./src/contexts/NotificationContext";
 import { BackgroundProvider } from "./src/contexts/BackgroundContext";
+import { ReportProvider } from "./src/contexts/ReportProvider";
 import { supabase, setSupabaseTokenGetter } from "./lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import OnboardingScreen from "./screens/OnboardingScreen";
@@ -138,13 +139,15 @@ export default function App() {
         <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
           <SafeAreaProvider>
             <SupabaseAuthBridge />
-            <NotificationProvider>
-              <ProfileSync />
-              <OnboardingGate>
-                <Navigation />
-              </OnboardingGate>
-              <StatusBar />
-            </NotificationProvider>
+            <ReportProvider>
+              <NotificationProvider>
+                <ProfileSync />
+                <OnboardingGate>
+                  <Navigation />
+                </OnboardingGate>
+                <StatusBar />
+              </NotificationProvider>
+            </ReportProvider>
           </SafeAreaProvider>
         </ClerkProvider>
         </BackgroundProvider>

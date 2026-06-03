@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Platform,
   StyleSheet,
@@ -22,6 +23,8 @@ import { supabase, AppNotification, getAuthClient } from "../lib/supabase";
 import { useNotificationContext } from "../src/contexts/NotificationContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { DeleteConfirmationModal } from "../src/components/modals/DeleteConfirmationModal";
+import { CommunityValuesModal } from "../src/components/modals/CommunityValuesModal";
+import { OnboardingRestartContext } from "../src/contexts/OnboardingRestartContext";
 
 async function handleSignOut(signOut: () => Promise<void>) {
   try {
@@ -53,6 +56,7 @@ export default function MyProfileScreen() {
   const { signOut, getToken } = useAuth();
   const { user } = useUser();
   const navigation = useNavigation<any>();
+  const { restart: restartOnboarding } = React.useContext(OnboardingRestartContext);
 const { language, setLanguage, t } = useLanguage();
   const { setUnreadCount } = useNotificationContext();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -71,6 +75,7 @@ const { language, setLanguage, t } = useLanguage();
   const [editInterests, setEditInterests] = useState<string[]>([]);
   const editInputRef = useRef<TextInput>(null);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [valuesModalVisible, setValuesModalVisible] = useState(false);
   const [deleteConfirming, setDeleteConfirming] = useState(false);
   const [deleteTyped, setDeleteTyped] = useState("");
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
@@ -623,6 +628,37 @@ async function handleAccept(notif: AppNotification) {
 
       <View style={styles.sectionGap} />
 
+      <View style={styles.card}>
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => setValuesModalVisible(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.rowLabel}>Mission & values</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        </TouchableOpacity>
+        <View style={styles.rowDivider} />
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() =>
+            Alert.alert(
+              "Replay onboarding",
+              "Go through the welcome and setup steps again? Your profile and circles stay as they are.",
+              [
+                { text: "Cancel", style: "cancel" },
+                { text: "Replay", onPress: () => restartOnboarding() },
+              ]
+            )
+          }
+          activeOpacity={0.7}
+        >
+          <Text style={styles.rowLabel}>Replay onboarding</Text>
+          <Ionicons name="refresh" size={16} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.sectionGap} />
+
       <View
         style={[
           styles.card,
@@ -738,6 +774,10 @@ async function handleAccept(notif: AppNotification) {
         </>
       )}
     </DeleteConfirmationModal>
+    <CommunityValuesModal
+      visible={valuesModalVisible}
+      onClose={() => setValuesModalVisible(false)}
+    />
     </>
   );
 }
