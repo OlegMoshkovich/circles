@@ -4,7 +4,17 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+/** Set once at app startup (see SupabaseAuthBridge in App.tsx) so every request
+ *  from the shared client carries the signed-in user's Clerk JWT. Returns null
+ *  when signed out, in which case requests fall back to the anon role. */
+let tokenGetter: (() => Promise<string | null>) | null = null;
+export function setSupabaseTokenGetter(fn: () => Promise<string | null>) {
+  tokenGetter = fn;
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  accessToken: async () => (tokenGetter ? await tokenGetter() : null),
+});
 
 /** Returns a Supabase client authenticated with a Clerk JWT.
  *  Requires a "supabase" JWT template configured in Clerk Dashboard. */

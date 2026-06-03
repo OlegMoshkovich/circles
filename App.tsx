@@ -3,13 +3,13 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import useCachedResources from "./hooks/useCachedResources";
 import Navigation from "./navigation";
-import { ClerkProvider, useUser } from "@clerk/clerk-expo";
+import { ClerkProvider, useUser, useAuth } from "@clerk/clerk-expo";
 import { tokenCache } from "./cache";
 import * as SplashScreen from "expo-splash-screen";
 import { LanguageProvider } from "./src/i18n/LanguageContext";
 import { NotificationProvider } from "./src/contexts/NotificationContext";
 import { BackgroundProvider } from "./src/contexts/BackgroundContext";
-import { supabase } from "./lib/supabase";
+import { supabase, setSupabaseTokenGetter } from "./lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import {
@@ -93,6 +93,17 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Registers the Clerk JWT getter so the shared Supabase client authenticates
+// every request as the signed-in user (required for RLS policies to recognize
+// the user via auth.jwt() ->> 'sub').
+function SupabaseAuthBridge() {
+  const { getToken } = useAuth();
+  React.useEffect(() => {
+    setSupabaseTokenGetter(() => getToken({ template: "supabase" }));
+  }, [getToken]);
+  return null;
+}
+
 // Upserts the signed-in user's name to user_profiles on every app open
 function ProfileSync() {
   const { user } = useUser();
@@ -127,6 +138,7 @@ export default function App() {
         <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
           <SafeAreaProvider>
             <NotificationProvider>
+              <SupabaseAuthBridge />
               <ProfileSync />
               <OnboardingGate>
                 <Navigation />
