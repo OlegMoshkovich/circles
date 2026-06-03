@@ -5,7 +5,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useUser } from "@clerk/clerk-expo";
+import { useAuth, useUser } from "@clerk/clerk-expo";
 import { RootStackParamList } from "../types";
 import { ScreenLayout } from "../src/components/layout/ScreenLayout";
 import { ScreenHeaderCard } from "../src/components/layout/ScreenHeaderCard";
@@ -19,7 +19,7 @@ import { Colors } from "../src/theme/colors";
 import { useLanguage } from "../src/i18n/LanguageContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { fetchHiddenAuthorIds, fetchReportedHiddenContentIds } from "../lib/contentReports";
-import { supabase, Circle } from "../lib/supabase";
+import { supabase, getAuthClient, Circle } from "../lib/supabase";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type MemberStatusMap = Record<string, "owner" | "active" | "requested" | "invited">;
@@ -32,12 +32,13 @@ export default function CirclesScreen() {
   const navigation = useNavigation<Nav>();
   const { t } = useLanguage();
   const { user } = useUser();
+  const { getToken } = useAuth();
   const [modalVisible, setModalVisible] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("newest");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [locationFilter, setLocationFilter] = useState<string | null>(null);
-  const [roleFilter, setRoleFilter] = useState<"owner" | "active" | "invited" | null>("active");
+  const [roleFilter, setRoleFilter] = useState<"owner" | "active" | "invited" | null>(null);
   const [nearMe, setNearMe] = useState(false);
   const [nearMeCity, setNearMeCity] = useState<string | null>(null);
   const [nearMeLoading, setNearMeLoading] = useState(false);
@@ -76,35 +77,38 @@ export default function CirclesScreen() {
   const fetchCircles = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
 
-    if (user) {
-      const { data: dismissedData } = await supabase
-        .from("dismissed_items")
-        .select("item_id")
-        .eq("user_id", user.id)
-        .eq("item_type", "circle");
-      if (dismissedData) setDismissedIds(new Set(dismissedData.map((r: any) => r.item_id)));
-    }
+    // Read through the Clerk-authed client so RLS evaluates with the user's
+    // identity (reveals their memberships and any private circles they own/joined).
+    const token = await getToken({ template: "supabase" });
+    const client = token ? getAuthClient(token) : supabase;
 
-    const [circlesResult, membershipsResult, invitationsResult] = await Promise.all([
-      supabase
-        .from("circles")
-        .select("*, circle_members(count)")
-        .order("created_at", { ascending: false }),
+    // All of these are independent of each other, so fetch them in one round-trip
+    // instead of chaining awaits (dismissed → circles → activity were 3 hops).
+    const [
+      dismissedResult,
+      circlesResult,
+      membershipsResult,
+      invitationsResult,
+      notesActivity,
+      eventsActivity,
+    ] = await Promise.all([
       user
-        ? supabase
-            .from("circle_members")
-            .select("circle_id, role, status")
-            .eq("user_id", user.id)
+        ? client.from("dismissed_items").select("item_id").eq("user_id", user.id).eq("item_type", "circle")
+        : Promise.resolve({ data: [], error: null }),
+      client.from("circles").select("*, circle_members(count)").order("created_at", { ascending: false }),
+      user
+        ? client.from("circle_members").select("circle_id, role, status").eq("user_id", user.id)
         : Promise.resolve({ data: [], error: null }),
       user
-        ? supabase
-            .from("notifications")
-            .select("data")
-            .eq("user_id", user.id)
-            .eq("type", "circle_invitation")
-            .eq("read", false)
+        ? client.from("notifications").select("data").eq("user_id", user.id).eq("type", "circle_invitation").eq("read", false)
         : Promise.resolve({ data: [], error: null }),
+      client.from("circle_notes").select("circle_id, created_at, user_id").order("created_at", { ascending: false }).limit(500),
+      client.from("events").select("circle_id, created_at, created_by").not("circle_id", "is", null).order("created_at", { ascending: false }).limit(500),
     ]);
+
+    if (dismissedResult.data) {
+      setDismissedIds(new Set((dismissedResult.data as any[]).map((r) => r.item_id)));
+    }
 
     // Build membership map first so we can filter private circles
     const map: MemberStatusMap = {};
@@ -124,21 +128,23 @@ export default function CirclesScreen() {
     }
     setMemberStatusMap(map);
 
+    // Post-filtering (reported/hidden) and owner pending-request counts both depend
+    // on the batch above but not on each other -- run them in one more round-trip.
+    const ownedIds = Object.entries(map).filter(([, v]) => v === "owner").map(([k]) => k);
     if (!circlesResult.error && circlesResult.data) {
-      const mapped = circlesResult.data
-        .map((row: any) => ({
+      const mapped = (circlesResult.data as any[])
+        .map((row) => ({
           ...row,
           member_count: row.circle_members?.[0]?.count ?? 0,
         }))
         // Hide private circles unless the user is already a member/owner
-        .filter((circle: any) =>
-          circle.visibility !== "private" || map[circle.id] != null
-        );
-      const [reportedCircleIds, hiddenAuthorIds] = await Promise.all([
+        .filter((circle) => circle.visibility !== "private" || map[circle.id] != null);
+      const [reportedCircleIds, hiddenAuthorIds, pendingResult] = await Promise.all([
         fetchReportedHiddenContentIds("circle", mapped.map((c: any) => c.id)),
-        fetchHiddenAuthorIds(
-          mapped.map((c: any) => c.owner_id).filter((id: any): id is string => !!id)
-        ),
+        fetchHiddenAuthorIds(mapped.map((c: any) => c.owner_id).filter((id: any): id is string => !!id)),
+        ownedIds.length > 0
+          ? client.from("circle_members").select("circle_id").in("circle_id", ownedIds).eq("status", "requested")
+          : Promise.resolve({ data: [], error: null }),
       ]);
       const visibleCircles = mapped.filter((c: any) => {
         const isOwn = c.owner_id === user?.id;
@@ -148,35 +154,17 @@ export default function CirclesScreen() {
         return true;
       });
       setCircles(visibleCircles);
-    }
 
-    if (!membershipsResult.error && membershipsResult.data) {
-
-      // Fetch pending request counts for circles the current user owns
-      const ownedIds = Object.entries(map).filter(([, v]) => v === "owner").map(([k]) => k);
-      if (ownedIds.length > 0) {
-        const { data: pending } = await supabase
-          .from("circle_members")
-          .select("circle_id")
-          .in("circle_id", ownedIds)
-          .eq("status", "requested");
-        if (pending) {
-          const reqMap: PendingRequestsMap = {};
-          for (const row of pending as any[]) {
-            reqMap[row.circle_id] = (reqMap[row.circle_id] ?? 0) + 1;
-          }
-          setPendingRequestsMap(reqMap);
-        }
-      } else {
-        setPendingRequestsMap({});
+      const reqMap: PendingRequestsMap = {};
+      for (const row of (pendingResult.data ?? []) as any[]) {
+        reqMap[row.circle_id] = (reqMap[row.circle_id] ?? 0) + 1;
       }
+      setPendingRequestsMap(reqMap);
+    } else {
+      setPendingRequestsMap({});
     }
 
-    // Fetch latest activity per circle (notes + events)
-    const [notesActivity, eventsActivity] = await Promise.all([
-      supabase.from("circle_notes").select("circle_id, created_at, user_id").order("created_at", { ascending: false }),
-      supabase.from("events").select("circle_id, created_at, created_by").not("circle_id", "is", null).order("created_at", { ascending: false }),
-    ]);
+    // Latest activity per circle (notes + events) -- fetched in the batch above
     const newActivityMap: Record<string, number> = {};
     for (const row of (notesActivity.data ?? []) as any[]) {
       if (user?.id && row.user_id === user.id) continue;
@@ -206,7 +194,7 @@ export default function CirclesScreen() {
     }
 
     setLoading(false);
-  }, [user]);
+  }, [user, getToken]);
 
   useFocusEffect(
     useCallback(() => {
@@ -218,18 +206,30 @@ export default function CirclesScreen() {
       if (user) {
         const displayName = user.fullName ?? user.firstName ?? null;
         if (displayName) {
-          supabase.from("user_profiles").upsert(
-            { user_id: user.id, display_name: displayName, updated_at: new Date().toISOString() },
-            { onConflict: "user_id" }
-          ).then(() => {});
+          authedClient().then((client) =>
+            client.from("user_profiles").upsert(
+              { user_id: user.id, display_name: displayName, updated_at: new Date().toISOString() },
+              { onConflict: "user_id" }
+            )
+          );
         }
       }
     }, [fetchCircles, user])
   );
 
+  // Writes must carry the Clerk JWT so RLS (owner_id = requesting_user_id()) passes.
+  async function authedClient() {
+    const token = await getToken({ template: "supabase" });
+    return token ? getAuthClient(token) : supabase;
+  }
+
   async function handleSave(data: NewCircleData) {
     if (!user) throw new Error("Not signed in.");
-    const { data: inserted, error } = await supabase
+    const token = await getToken({ template: "supabase" });
+    if (!token) throw new Error("Could not authenticate. Please sign in again.");
+    const client = getAuthClient(token);
+
+    const { data: inserted, error } = await client
       .from("circles")
       .insert({
         name: data.name,
@@ -253,13 +253,13 @@ export default function CirclesScreen() {
     };
 
     // Try with display_name first; fall back without it if the column doesn't exist yet
-    const { error: memberError } = await supabase.from("circle_members").insert({
+    const { error: memberError } = await client.from("circle_members").insert({
       ...memberPayload,
       display_name: user.fullName ?? user.firstName ?? user.username ?? null,
     });
 
     if (memberError) {
-      await supabase.from("circle_members").insert(memberPayload);
+      await client.from("circle_members").insert(memberPayload);
     }
 
     setModalVisible(false);

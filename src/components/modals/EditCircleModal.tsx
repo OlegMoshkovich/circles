@@ -371,7 +371,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     color: colors.textMuted,
   },
   categoryPillTextActive: {
-    color: isOnboarding ? colors.text : colors.card,
+    color: isOnboarding ? colors.text : colors.background,
   },
   toggleRow: { flexDirection: "row", gap: 8 },
   toggleButton: {

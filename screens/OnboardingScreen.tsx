@@ -18,14 +18,14 @@ import {
 import { BlurView } from "expo-blur";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useUser } from "@clerk/clerk-expo";
+import { useAuth, useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import MapView, { Region } from "react-native-maps";
 import * as Location from "expo-location";
 import { colors, glassColors, lightColors, onboardingColors, Colors } from "../src/theme/colors";
 import { BgOption, useBackground } from "../src/contexts/BackgroundContext";
 import { fetchReportedHiddenContentIds } from "../lib/contentReports";
-import { supabase, Circle } from "../lib/supabase";
+import { supabase, getAuthClient, Circle } from "../lib/supabase";
 
 const DEFAULT_MAP_REGION: Region = {
   latitude: 46.8,
@@ -267,6 +267,7 @@ function TermsStep({
   onNext: () => void;
   onBack: () => void;
 }) {
+  const { getToken } = useAuth();
   const [agreed, setAgreed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -278,7 +279,9 @@ function TermsStep({
     }
     setSubmitting(true);
     try {
-      const { error } = await supabase.from("terms_acceptances").upsert(
+      const token = await getToken({ template: "supabase" });
+      const client = token ? getAuthClient(token) : supabase;
+      const { error } = await client.from("terms_acceptances").upsert(
         {
           user_id: userId,
           terms_version: TERMS_AND_EULA_VERSION,
@@ -667,13 +670,17 @@ function CircleSuggestionsStep({
   onBack: () => void;
   onSkip: () => void;
 }) {
+  const { getToken } = useAuth();
   const [circles, setCircles] = useState<Circle[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data: rows } = await supabase
+      // Read through the Clerk-authed client so RLS returns public circles.
+      const token = await getToken({ template: "supabase" });
+      const client = token ? getAuthClient(token) : supabase;
+      const { data: rows } = await client
         .from("circles")
         .select("*")
         .eq("visibility", "public")
@@ -696,7 +703,7 @@ function CircleSuggestionsStep({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [getToken]);
 
   function toggle(id: string) {
     const next = data.joinedCircleIds.includes(id)
@@ -837,6 +844,7 @@ type Props = { onComplete: () => void };
 
 export default function OnboardingScreen({ onComplete }: Props) {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const { setBgOption } = useBackground();
   const [step, setStep] = useState(0);
   const [data, setData] = useState<OnboardingData>(() =>
@@ -875,7 +883,9 @@ export default function OnboardingScreen({ onComplete }: Props) {
     const profileDisplayName =
       data.displayName.trim() || getClerkOnboardingDisplayName(user) || null;
     try {
-      await supabase.from("user_profiles").upsert(
+      const token = await getToken({ template: "supabase" });
+      const client = token ? getAuthClient(token) : supabase;
+      await client.from("user_profiles").upsert(
         {
           user_id: user.id,
           display_name: profileDisplayName,
@@ -895,7 +905,7 @@ export default function OnboardingScreen({ onComplete }: Props) {
           role: "member" as const,
           status: "active" as const,
         }));
-        const { error: upsertError } = await supabase.from("circle_members").upsert(rows, { onConflict: "circle_id,user_id" });
+        const { error: upsertError } = await client.from("circle_members").upsert(rows, { onConflict: "circle_id,user_id" });
         if (upsertError) {
           // Fallback without display_name in case that column doesn't exist yet
           const baseRows = data.joinedCircleIds.map((circleId) => ({
@@ -904,7 +914,7 @@ export default function OnboardingScreen({ onComplete }: Props) {
             role: "member" as const,
             status: "active" as const,
           }));
-          await supabase.from("circle_members").upsert(baseRows, { onConflict: "circle_id,user_id" });
+          await client.from("circle_members").upsert(baseRows, { onConflict: "circle_id,user_id" });
         }
       }
       await AsyncStorage.setItem(`onboarding_v1_${user.id}`, "1");

@@ -99,7 +99,6 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
   const [location, setLocation] = useState("");
   const [showMap, setShowMap] = useState(false);
   const [description, setDescription] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
   const [maxParticipants, setMaxParticipants] = useState("");
   const [contactInfo, setContactInfo] = useState("");
   const [priceInfo, setPriceInfo] = useState("");
@@ -169,7 +168,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
       duration,
       location: location.trim(),
       description: description.trim(),
-      image_url: imageUrl.trim(),
+      image_url: "",
       max_participants: maxParticipants.trim() ? Number(maxParticipants.trim()) : null,
       contact_info: contactInfo.trim(),
       price_info: priceInfo.trim(),
@@ -202,7 +201,6 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
     setLocation("");
     setShowMap(false);
     setDescription("");
-    setImageUrl("");
     setMaxParticipants("");
     setContactInfo("");
     setPriceInfo("");
@@ -368,7 +366,6 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                 </View>
 
                 <Field label="Description" value={description} onChangeText={setDescription} placeholder="A few words about the event…" multiline />
-                <Field label="Image URL" value={imageUrl} onChangeText={setImageUrl} placeholder="https://example.com/event.jpg" keyboardType="url" />
                 <Field
                   label="Maximum Participants"
                   value={maxParticipants}

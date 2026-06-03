@@ -56,35 +56,22 @@ export default function EventsScreen() {
     }
     if (!silent) setLoading(true);
 
-    if (user) {
-      const { data: dismissedData } = await supabase
-        .from("dismissed_items")
-        .select("item_id")
-        .eq("user_id", user.id)
-        .eq("item_type", "event");
-      if (dismissedData) setDismissedIds(new Set(dismissedData.map((r: any) => r.item_id)));
-    }
+    // Dismissed items, RSVPs and memberships are independent -- fetch in one round-trip.
+    const [dismissedRes, rsvpRes, membershipRes] = await Promise.all([
+      supabase.from("dismissed_items").select("item_id").eq("user_id", user.id).eq("item_type", "event"),
+      supabase.from("event_rsvps").select("event_id, status").eq("user_id", user.id),
+      supabase.from("circle_members").select("circle_id").eq("user_id", user.id).eq("status", "active"),
+    ]);
 
-    // Fetch user's RSVPs for badge display
-    const { data: rsvps } = await supabase
-      .from("event_rsvps")
-      .select("event_id, status")
-      .eq("user_id", user.id);
+    if (dismissedRes.data) setDismissedIds(new Set((dismissedRes.data as any[]).map((r) => r.item_id)));
 
     const statusMap: Record<string, "going" | "maybe"> = {};
-    for (const r of (rsvps ?? []) as any[]) {
+    for (const r of (rsvpRes.data ?? []) as any[]) {
       statusMap[r.event_id] = r.status;
     }
     setRsvpStatusMap(statusMap);
 
-    // Fetch circles the user belongs to
-    const { data: memberships } = await supabase
-      .from("circle_members")
-      .select("circle_id")
-      .eq("user_id", user.id)
-      .eq("status", "active");
-
-    const circleIds: string[] = memberships?.map((m: any) => m.circle_id) ?? [];
+    const circleIds: string[] = (membershipRes.data as any[])?.map((m) => m.circle_id) ?? [];
 
     let query = supabase.from("events").select("*, circles(name)");
 

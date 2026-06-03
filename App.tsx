@@ -3,7 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import useCachedResources from "./hooks/useCachedResources";
 import Navigation from "./navigation";
-import { ClerkProvider, useUser, useAuth } from "@clerk/clerk-expo";
+import { ClerkProvider, useAuth, useUser } from "@clerk/clerk-expo";
 import { tokenCache } from "./cache";
 import * as SplashScreen from "expo-splash-screen";
 import { LanguageProvider } from "./src/i18n/LanguageContext";
@@ -137,8 +137,8 @@ export default function App() {
         <BackgroundProvider>
         <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
           <SafeAreaProvider>
+            <SupabaseAuthBridge />
             <NotificationProvider>
-              <SupabaseAuthBridge />
               <ProfileSync />
               <OnboardingGate>
                 <Navigation />
