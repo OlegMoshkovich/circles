@@ -1,0 +1,31 @@
+# EAS Build archive excludes (overrides .gitignore for EAS).
+# Keep this in sync with .gitignore for anything that must NOT ship to the build.
+
+# Dependencies (restored on the build server)
+node_modules/
+
+# Version control internals (huge; never needed in the build)
+.git/
+
+# Docs / marketing assets (not part of the app bundle)
+docs/
+
+# Logs & caches
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.expo/
+web-build/
+dist/
+
+# Native build artifacts (managed workflow regenerates these)
+ios/
+android/
+
+# OS / editor cruft
+.DS_Store
+*.pem
+
+# Env files
+.env*.local

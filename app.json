@@ -13,7 +13,7 @@
       "backgroundColor": "#ffffff"
     },
     "updates": {
-      "url": "https://u.expo.dev/42bf8eed-9287-4e15-9c72-8d20b4475200"
+      "url": "https://u.expo.dev/802b5dcf-07a5-46e0-a5c4-e00382d5b214"
     },
     "runtimeVersion": {
       "policy": "appVersion"
@@ -72,10 +72,10 @@
     "web": {
       "favicon": "./assets/icon.png"
     },
-    "owner": "analogfuture",
+    "owner": "velmia",
     "extra": {
       "eas": {
-        "projectId": "42bf8eed-9287-4e15-9c72-8d20b4475200"
+        "projectId": "802b5dcf-07a5-46e0-a5c4-e00382d5b214"
       }
     },
     "plugins": [
