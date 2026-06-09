@@ -39,11 +39,11 @@ function getErrorMessage(e: unknown) {
   return anyErr?.message || anyErr?.errors?.[0]?.longMessage || "Something went wrong";
 }
 
-const LANGUAGES: { code: Language; flag: string; label: string }[] = [
-  { code: "de", flag: "🇨🇭", label: "DE" },
-  { code: "fr", flag: "🇫🇷", label: "FR" },
-  { code: "it", flag: "🇮🇹", label: "IT" },
-  { code: "en", flag: "🇬🇧", label: "EN" },
+const LANGUAGES: { code: Language; label: string }[] = [
+  { code: "de", label: "DE" },
+  { code: "fr", label: "FR" },
+  { code: "it", label: "IT" },
+  { code: "en", label: "EN" },
 ];
 
 const ALL_INTERESTS = [
@@ -608,7 +608,7 @@ async function handleAccept(notif: AppNotification) {
       {/* Language selector */}
       {/* <Text style={styles.sectionLabel}>{t.profile.language}</Text> */}
       <View style={styles.flagRow}>
-        {LANGUAGES.map(({ code, flag, label }) => {
+        {LANGUAGES.map(({ code, label }) => {
           const selected = language === code;
           return (
             <TouchableOpacity
@@ -617,7 +617,6 @@ async function handleAccept(notif: AppNotification) {
               style={[styles.flagButton, selected && styles.flagButtonSelected]}
               activeOpacity={0.7}
             >
-              <Text style={styles.flagEmoji}>{flag}</Text>
               <Text style={[styles.flagLabel, selected && styles.flagLabelSelected]}>
                 {label}
               </Text>
@@ -1119,9 +1118,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     flagButtonSelected: {
       borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.text,
       backgroundColor: colors.card,
-    },
-    flagEmoji: {
-      fontSize: 20,
     },
     flagLabel: {
       fontSize: 13,
