@@ -8,7 +8,10 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_APPLE_TEAM_ID": "Q8RCPVAZM5"
+        "EXPO_APPLE_TEAM_ID": "Q8RCPVAZM5",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_c2FmZS1tYXJtb3QtOTIuY2xlcmsuYWNjb3VudHMuZGV2JA",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ndmekncybayacusocbrp.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kbWVrbmN5YmF5YWN1c29jYnJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxODc2MzksImV4cCI6MjA4OTc2MzYzOX0.L3z8kEq9cEDUGvtqR2pdc9rGKV5n0QWgQYKuHOMc_iU"
       },
       "ios": {
         "simulator": false
@@ -17,7 +20,10 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_APPLE_TEAM_ID": "Q8RCPVAZM5"
+        "EXPO_APPLE_TEAM_ID": "Q8RCPVAZM5",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_c2FmZS1tYXJtb3QtOTIuY2xlcmsuYWNjb3VudHMuZGV2JA",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ndmekncybayacusocbrp.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kbWVrbmN5YmF5YWN1c29jYnJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxODc2MzksImV4cCI6MjA4OTc2MzYzOX0.L3z8kEq9cEDUGvtqR2pdc9rGKV5n0QWgQYKuHOMc_iU"
       },
       "ios": {
         "simulator": false
@@ -26,7 +32,10 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_APPLE_TEAM_ID": "Q8RCPVAZM5"
+        "EXPO_APPLE_TEAM_ID": "Q8RCPVAZM5",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_c2FmZS1tYXJtb3QtOTIuY2xlcmsuYWNjb3VudHMuZGV2JA",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ndmekncybayacusocbrp.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kbWVrbmN5YmF5YWN1c29jYnJwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxODc2MzksImV4cCI6MjA4OTc2MzYzOX0.L3z8kEq9cEDUGvtqR2pdc9rGKV5n0QWgQYKuHOMc_iU"
       },
       "ios": {
         "distribution": "store",
