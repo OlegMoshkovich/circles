@@ -3,6 +3,7 @@ import { View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GradientRingLoader } from "./src/components/loaders/GradientRingLoader";
+import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import useCachedResources from "./hooks/useCachedResources";
 import Navigation from "./navigation";
 import { ClerkProvider, useAuth, useUser } from "@clerk/clerk-expo";
@@ -135,9 +136,11 @@ export default function App() {
               <ReportProvider>
                 <NotificationProvider>
                   <ProfileSync />
-                  <OnboardingGate>
-                    <Navigation />
-                  </OnboardingGate>
+                  <ErrorBoundary>
+                    <OnboardingGate>
+                      <Navigation />
+                    </OnboardingGate>
+                  </ErrorBoundary>
                   <StatusBar />
                 </NotificationProvider>
               </ReportProvider>
