@@ -185,10 +185,10 @@ async function handleAccept(notif: AppNotification) {
     fetchNotifications();
   }
 
-  function startEdit(field: "bio" | "location" | "interests") {
+  function startEdit(field: "bio" | "location" | "interests" | "userType") {
     if (field === "interests") {
       setEditInterests(profileInterests);
-    } else {
+    } else if (field === "bio" || field === "location") {
       setEditText(field === "bio" ? (profileBio ?? "") : (profileLocation ?? ""));
       setTimeout(() => editInputRef.current?.focus(), 50);
     }
@@ -436,9 +436,9 @@ async function handleAccept(notif: AppNotification) {
               placeholder="Your neighbourhood or city"
               placeholderTextColor={colors.textMuted}
               returnKeyType="done"
-              onSubmitEditing={saveField}
+              onSubmitEditing={() => saveField()}
             />
-            <TouchableOpacity onPress={saveField} style={styles.inlineBtn}>
+            <TouchableOpacity onPress={() => saveField()} style={styles.inlineBtn}>
               <Ionicons name="checkmark" size={16} color={colors.text} />
             </TouchableOpacity>
             <TouchableOpacity onPress={cancelEdit} style={styles.inlineBtn}>
@@ -469,7 +469,7 @@ async function handleAccept(notif: AppNotification) {
               numberOfLines={3}
             />
             <View style={styles.inlineEditActions}>
-              <TouchableOpacity onPress={saveField} style={styles.inlineSaveBtn}>
+              <TouchableOpacity onPress={() => saveField()} style={styles.inlineSaveBtn}>
                 <Text style={styles.inlineSaveBtnText}>Save</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={cancelEdit}>
@@ -517,7 +517,7 @@ async function handleAccept(notif: AppNotification) {
               })}
             </View>
             <View style={styles.inlineEditActions}>
-              <TouchableOpacity onPress={saveField} style={styles.inlineSaveBtn}>
+              <TouchableOpacity onPress={() => saveField()} style={styles.inlineSaveBtn}>
                 <Text style={styles.inlineSaveBtnText}>Save</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={cancelEdit}>

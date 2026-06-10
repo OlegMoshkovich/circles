@@ -19,15 +19,30 @@ export default function VerifyCodeScreen({
 }: RootStackScreenProps<"VerifyCode">) {
   const { isLoaded, signUp, setActive } = useSignUp();
   const [code, setCode] = React.useState("");
+  const [error, setError] = React.useState<string | null>(null);
+  const [verifying, setVerifying] = React.useState(false);
 
   const onPress = async () => {
-    if (!isLoaded) return;
+    if (!isLoaded || verifying) return;
+    setError(null);
+    setVerifying(true);
     try {
-      const completeSignUp = await signUp.attemptEmailAddressVerification({ code });
-      await setActive({ session: completeSignUp.createdSessionId });
+      const completeSignUp = await signUp.attemptEmailAddressVerification({ code: code.trim() });
+      if (completeSignUp.status === "complete" && completeSignUp.createdSessionId) {
+        await setActive({ session: completeSignUp.createdSessionId });
+      } else {
+        setError("Verification is not complete. Please check the code and try again.");
+      }
     } catch (err: any) {
-      log("Error:> " + err?.status || "");
-      log("Error:> " + err?.errors ? JSON.stringify(err.errors) : err);
+      log("Error:> " + (err?.status ?? ""));
+      log("Error:> " + (err?.errors ? JSON.stringify(err.errors) : String(err)));
+      setError(
+        err?.errors?.[0]?.longMessage ??
+          err?.errors?.[0]?.message ??
+          "Could not verify the code. Please try again."
+      );
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -79,11 +94,13 @@ export default function VerifyCodeScreen({
           />
         </View>
 
-        <TouchableOpacity style={styles.primaryButton} onPress={onPress}>
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+        <TouchableOpacity style={styles.primaryButton} onPress={onPress} disabled={verifying}>
           <BlurView intensity={28} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(255,255,255,0.15)" }]} />
           <View style={[StyleSheet.absoluteFill, { borderRadius: 50, borderWidth: 1, borderColor: "rgba(255,255,255,0.35)" }]} />
-          <Text style={styles.primaryButtonText}>Verify Email</Text>
+          <Text style={styles.primaryButtonText}>{verifying ? "Verifying…" : "Verify Email"}</Text>
         </TouchableOpacity>
       </View>
     </ImageBackground>
@@ -139,6 +156,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     height: 36,
     letterSpacing: 4,
+  },
+  errorText: {
+    color: "#FFB4A2",
+    fontSize: 13,
+    fontFamily: "Lora_400Regular",
+    marginBottom: 16,
+    lineHeight: 18,
   },
   primaryButton: {
     borderRadius: 50,

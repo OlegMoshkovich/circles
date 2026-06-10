@@ -14,7 +14,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../../theme/colors";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
-import { MapPickerView } from "./LocationPickerModal";
+import { LazyMapPickerView } from "./LazyMapPickerView";
 import { supabase } from "../../../lib/supabase";
 
 export type EditCircleData = {
@@ -47,7 +47,10 @@ export function EditCircleModal({ visible, onClose, onSaved, circleId, initialVa
   const [description, setDescription] = useState(initialValues.description ?? "");
   const [categoryPreset, setCategoryPreset] = useState("");
   const [customCategoryText, setCustomCategoryText] = useState("");
-  const [visibility, setVisibility] = useState<"public" | "private">(initialValues.visibility === "request" ? "public" : initialValues.visibility);
+  // Full union so a "request" circle keeps its visibility unless the owner
+  // explicitly switches to Public/Private (the old code silently coerced
+  // "request" -> "public" on save).
+  const [visibility, setVisibility] = useState<"public" | "private" | "request">(initialValues.visibility);
   const [location, setLocation] = useState("");
   const [showMap, setShowMap] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -125,7 +128,7 @@ export function EditCircleModal({ visible, onClose, onSaved, circleId, initialVa
       <View style={styles.overlay}>
         {showMap ? (
           <View style={styles.mapSheet}>
-            <MapPickerView
+            <LazyMapPickerView
               onBack={() => setShowMap(false)}
               onConfirm={(addr) => { setLocation(addr); setShowMap(false); }}
             />

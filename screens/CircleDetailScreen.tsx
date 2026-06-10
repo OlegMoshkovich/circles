@@ -390,6 +390,9 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   // Load members
   useEffect(() => {
     if (activeTab !== "members") return;
+    // Cancellation guard: without it, switching tabs/circles while a fetch is
+    // in flight lets the older response overwrite newer state.
+    let cancelled = false;
     setLoadingMembers(true);
 
     Promise.all([
@@ -433,6 +436,8 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         }
       }
 
+      if (cancelled) return;
+
       if (!membersResult.error && membersResult.data) {
         setMembers(membersResult.data);
         setProfileMap(nameMap);
@@ -443,6 +448,10 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
       setLoadingMembers(false);
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [id, activeTab, user]);
 
   async function handleJoin() {
