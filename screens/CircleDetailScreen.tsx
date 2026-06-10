@@ -32,6 +32,7 @@ import {
   fetchReportedHiddenContentIds,
   fetchReportedHiddenNoteIds,
 } from "../lib/contentReports";
+import { fetchEventNoteStats } from "../lib/activityStats";
 import { useReport } from "../src/contexts/ReportProvider";
 import { CircleInviteModal } from "../src/components/modals/CircleInviteModal";
 import { EditCircleModal, EditCircleData } from "../src/components/modals/EditCircleModal";
@@ -238,13 +239,11 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         ...evs.map((e) => e.created_by).filter((c): c is string => !!c),
         ...rawNotes.map((n) => n.user_id).filter((uid): uid is string => !!uid),
       ];
-      const [reportedEv, hiddenNoteIds, hiddenAuthors, noteCountsRes] = await Promise.all([
+      const [reportedEv, hiddenNoteIds, hiddenAuthors, noteStats] = await Promise.all([
         fetchReportedHiddenContentIds("event", evs.map((e) => e.id)),
         fetchReportedHiddenNoteIds("circle_note", rawNotes.map((n) => n.id)),
         fetchHiddenAuthorIds(authorIds),
-        evs.length > 0
-          ? supabase.from("event_notes").select("event_id").in("event_id", evs.map((e) => e.id))
-          : Promise.resolve({ data: [] as any[] }),
+        fetchEventNoteStats(evs.map((e) => e.id)),
       ]);
 
       let eventRows: Event[] = [];
@@ -257,11 +256,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           return true;
         });
         setEvents(eventRows);
-        const map: Record<string, number> = {};
-        for (const row of (noteCountsRes.data ?? []) as any[]) {
-          map[row.event_id] = (map[row.event_id] ?? 0) + 1;
-        }
-        setEventNoteCountMap(map);
+        setEventNoteCountMap(noteStats.noteCountMap);
       }
       let noteRows: CircleNote[] = [];
       if (!notesResult.error) {

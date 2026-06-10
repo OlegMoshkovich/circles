@@ -1,5 +1,5 @@
 import React from "react";
-import { ImageBackground, ImageSourcePropType, RefreshControl, ScrollView, StyleSheet, View, ViewStyle } from "react-native";
+import { FlatList, ImageBackground, ImageSourcePropType, ListRenderItem, RefreshControl, ScrollView, StyleSheet, View, ViewStyle } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BlurView } from "expo-blur";
 import { spacing } from "../../theme/spacing";
@@ -8,7 +8,7 @@ import { ThemedBackground } from "./ThemedBackground";
 
 type ScreenLayoutProps = {
   header?: React.ReactNode;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   stickyTop?: React.ReactNode;
   contentStyle?: ViewStyle;
   backgroundImage?: ImageSourcePropType;
@@ -16,14 +16,27 @@ type ScreenLayoutProps = {
   backgroundColor?: string;
   onRefresh?: () => void;
   refreshing?: boolean;
+  /**
+   * List mode: when listData + renderItem are provided, the content area is
+   * a virtualized FlatList instead of a ScrollView (children are ignored).
+   * Use for screens that render long card lists so off-screen items don't
+   * stay mounted.
+   */
+  listData?: readonly any[];
+  renderItem?: ListRenderItem<any>;
+  keyExtractor?: (item: any, index: number) => string;
+  listEmptyComponent?: React.ReactElement | null;
 };
 
-export function ScreenLayout({ header, children, stickyTop, contentStyle, backgroundImage, backgroundBlurIntensity = 55, backgroundColor, onRefresh, refreshing = false }: ScreenLayoutProps) {
+export function ScreenLayout({ header, children, stickyTop, contentStyle, backgroundImage, backgroundBlurIntensity = 55, backgroundColor, onRefresh, refreshing = false, listData, renderItem, keyExtractor, listEmptyComponent }: ScreenLayoutProps) {
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const resolvedBg = backgroundColor ?? colors.background;
   const { bgOption } = useBackground();
   const shouldUseThemedBackground = backgroundImage == null && bgOption === "onboarding";
+
+  const contentContainerStyle = [styles.content, { paddingBottom: insets.bottom + 80 }, contentStyle];
+  const refreshControl = onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" colors={["#FFFFFF"]} /> : undefined;
 
   const inner = (
     <View
@@ -39,14 +52,27 @@ export function ScreenLayout({ header, children, stickyTop, contentStyle, backgr
     >
       {header != null && <View style={[styles.headerArea, !backgroundImage && { backgroundColor: resolvedBg }]}>{header}</View>}
       {stickyTop != null && <View>{stickyTop}</View>}
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 80 }, contentStyle]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" colors={["#FFFFFF"]} /> : undefined}
-      >
-        {children}
-      </ScrollView>
+      {listData != null && renderItem != null ? (
+        <FlatList
+          style={styles.scroll}
+          data={listData as any[]}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          ListEmptyComponent={listEmptyComponent}
+          contentContainerStyle={contentContainerStyle}
+          showsVerticalScrollIndicator={false}
+          refreshControl={refreshControl}
+        />
+      ) : (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={contentContainerStyle}
+          showsVerticalScrollIndicator={false}
+          refreshControl={refreshControl}
+        >
+          {children}
+        </ScrollView>
+      )}
       {/* <TabFocusOverlay /> */}
     </View>
   );

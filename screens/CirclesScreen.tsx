@@ -19,6 +19,7 @@ import { Colors } from "../src/theme/colors";
 import { useLanguage } from "../src/i18n/LanguageContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { fetchHiddenAuthorIds, fetchReportedHiddenContentIds } from "../lib/contentReports";
+import { fetchCircleLatestActivity } from "../lib/activityStats";
 import { supabase, getAuthClient, Circle } from "../lib/supabase";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -27,6 +28,55 @@ type PendingRequestsMap = Record<string, number>;
 type SortBy = "newest" | "members" | "new_activity";
 
 const PRESET_CATEGORIES = ["Culture", "Friends", "Nature", "Sport", "Food", "Travel"];
+
+type CircleWithCount = Circle & { member_count: number };
+
+const circleKeyExtractor = (item: CircleWithCount) => item.id;
+
+type CircleRowProps = {
+  circle: CircleWithCount;
+  /** True when shown in the "dismissed" view (restore action, no badges). */
+  dismissedView: boolean;
+  memberStatus: "owner" | "active" | "requested" | "invited" | null;
+  pendingRequests: number;
+  hasNewActivity: boolean;
+  onOpen: (circle: CircleWithCount, fromDismissed: boolean) => void;
+  onDismiss: (circle: CircleWithCount) => void;
+  onRestore: (circle: CircleWithCount) => void;
+};
+
+// Memoized so list-wide state changes (filter panel, unrelated rows) don't
+// re-render every card; only rows whose own props changed re-render.
+const CircleRow = React.memo(function CircleRow({
+  circle,
+  dismissedView,
+  memberStatus,
+  pendingRequests,
+  hasNewActivity,
+  onOpen,
+  onDismiss,
+  onRestore,
+}: CircleRowProps) {
+  return (
+    <CircleCard
+      name={circle.name}
+      description={circle.description}
+      category={circle.category}
+      visibility={circle.visibility}
+      memberCount={circle.member_count}
+      memberStatus={memberStatus}
+      location={circle.location}
+      organizer={circle.organizer}
+      pendingRequests={pendingRequests}
+      hasNewActivity={hasNewActivity}
+      actionIcon={dismissedView ? "refresh" : memberStatus === "owner" ? undefined : "close"}
+      onActionPress={
+        dismissedView ? () => onRestore(circle) : memberStatus === "owner" ? undefined : () => onDismiss(circle)
+      }
+      onPress={() => onOpen(circle, dismissedView)}
+    />
+  );
+});
 
 export default function CirclesScreen() {
   const navigation = useNavigation<Nav>();
@@ -89,8 +139,7 @@ export default function CirclesScreen() {
       circlesResult,
       membershipsResult,
       invitationsResult,
-      notesActivity,
-      eventsActivity,
+      latestActivityMap,
     ] = await Promise.all([
       user
         ? client.from("dismissed_items").select("item_id").eq("user_id", user.id).eq("item_type", "circle")
@@ -102,8 +151,9 @@ export default function CirclesScreen() {
       user
         ? client.from("notifications").select("data").eq("user_id", user.id).eq("type", "circle_invitation").eq("read", false)
         : Promise.resolve({ data: [], error: null }),
-      client.from("circle_notes").select("circle_id, created_at, user_id").order("created_at", { ascending: false }).limit(500),
-      client.from("events").select("circle_id, created_at, created_by").not("circle_id", "is", null).order("created_at", { ascending: false }).limit(500),
+      // Aggregated server-side (one row per circle) when the RPC exists;
+      // falls back to bounded notes/events scans otherwise.
+      fetchCircleLatestActivity(user?.id ?? null, client),
     ]);
 
     if (dismissedResult.data) {
@@ -165,18 +215,7 @@ export default function CirclesScreen() {
     }
 
     // Latest activity per circle (notes + events) -- fetched in the batch above
-    const newActivityMap: Record<string, number> = {};
-    for (const row of (notesActivity.data ?? []) as any[]) {
-      if (user?.id && row.user_id === user.id) continue;
-      const t = new Date(row.created_at).getTime();
-      if (!newActivityMap[row.circle_id] || t > newActivityMap[row.circle_id]) newActivityMap[row.circle_id] = t;
-    }
-    for (const row of (eventsActivity.data ?? []) as any[]) {
-      if (user?.id && row.created_by === user.id) continue;
-      const t = new Date(row.created_at).getTime();
-      if (!newActivityMap[row.circle_id] || t > newActivityMap[row.circle_id]) newActivityMap[row.circle_id] = t;
-    }
-    setActivityMap(newActivityMap);
+    setActivityMap(latestActivityMap);
 
     // Read last-viewed timestamps from AsyncStorage
     const circleIds = (circlesResult.data ?? []).map((c: any) => c.id);
@@ -290,13 +329,86 @@ export default function CirclesScreen() {
     [circles, dismissedIds, roleFilter, categoryFilter, locationFilter, nearMe, nearMeCity, sortBy, memberStatusMap, activityMap, lastViewedMap]
   );
 
+  const handleOpenCircle = useCallback((circle: CircleWithCount, fromDismissed: boolean) => {
+    if (!fromDismissed) {
+      AsyncStorage.setItem(`lastViewed_circle_${circle.id}`, Date.now().toString());
+      setLastViewedMap((prev) => ({ ...prev, [circle.id]: Date.now() }));
+    }
+    navigation.navigate("CircleDetail", {
+      id: circle.id,
+      name: circle.name,
+      description: circle.description,
+      visibility: circle.visibility,
+      owner_id: circle.owner_id,
+      member_count: circle.member_count,
+      organizer: circle.organizer,
+    });
+  }, [navigation]);
+
+  const handleDismissCircle = useCallback((circle: CircleWithCount) => {
+    setDismissedIds((prev) => new Set(prev).add(circle.id));
+    if (user) {
+      supabase.from("dismissed_items").insert({
+        user_id: user.id,
+        item_type: "circle",
+        item_id: circle.id,
+      }).then(() => {});
+    }
+  }, [user?.id]);
+
+  const handleRestoreCircle = useCallback((circle: CircleWithCount) => {
+    setDismissedIds((prev) => { const next = new Set(prev); next.delete(circle.id); return next; });
+    if (user) {
+      supabase.from("dismissed_items").delete()
+        .eq("user_id", user.id).eq("item_type", "circle").eq("item_id", circle.id).then(() => {});
+    }
+  }, [user?.id]);
+
+  const showLoader = loading && circles.length === 0;
+  const listCircles = React.useMemo(
+    () => (showLoader ? [] : showDismissed ? dismissedCircles : displayedCircles),
+    [showLoader, showDismissed, dismissedCircles, displayedCircles]
+  );
+
+  const renderCircleRow = useCallback(
+    ({ item }: { item: CircleWithCount }) => (
+      <CircleRow
+        circle={item}
+        dismissedView={showDismissed}
+        memberStatus={memberStatusMap[item.id] ?? null}
+        pendingRequests={showDismissed ? 0 : pendingRequestsMap[item.id] ?? 0}
+        hasNewActivity={
+          !showDismissed && !!lastViewedMap[item.id] && (activityMap[item.id] ?? 0) > lastViewedMap[item.id]
+        }
+        onOpen={handleOpenCircle}
+        onDismiss={handleDismissCircle}
+        onRestore={handleRestoreCircle}
+      />
+    ),
+    [showDismissed, memberStatusMap, pendingRequestsMap, lastViewedMap, activityMap, handleOpenCircle, handleDismissCircle, handleRestoreCircle]
+  );
+
   return (
     <>
       <ScreenLayout
         backgroundColor={screenBgColor}
-        contentStyle={loading && circles.length === 0 ? styles.scrollContentLoader : undefined}
+        contentStyle={showLoader ? styles.scrollContentLoader : undefined}
         onRefresh={async () => { setRefreshing(true); await fetchCircles(true); setRefreshing(false); }}
         refreshing={refreshing}
+        listData={listCircles}
+        renderItem={renderCircleRow}
+        keyExtractor={circleKeyExtractor}
+        listEmptyComponent={
+          showLoader ? (
+            <View style={styles.loader}>
+              <GradientRingLoader size={40} strokeWidth={7} />
+            </View>
+          ) : showDismissed ? (
+            <View style={styles.loader}>
+              <Text style={{ fontSize: 14, fontFamily: "Lora_400Regular", color: colors.textMuted }}>{t.circles.noDismissed}</Text>
+            </View>
+          ) : null
+        }
         stickyTop={<ScreenHeaderCard>
           <NavbarTitle
             title={t.nav.circles}
@@ -424,100 +536,7 @@ export default function CirclesScreen() {
             </View>
           )}
         </ScreenHeaderCard>}
-      >
-        {loading && circles.length === 0 ? (
-          <View style={styles.loader}>
-            <GradientRingLoader size={40} strokeWidth={7} />
-          </View>
-        ) : showDismissed ? (
-          dismissedCircles.length === 0 ? (
-            <View style={styles.loader}>
-              <Text style={{ fontSize: 14, fontFamily: "Lora_400Regular", color: colors.textMuted }}>{t.circles.noDismissed}</Text>
-            </View>
-          ) : (
-            dismissedCircles.map((circle) => (
-              <CircleCard
-                key={circle.id}
-                name={circle.name}
-                description={circle.description}
-                category={circle.category}
-                visibility={circle.visibility}
-                memberCount={circle.member_count}
-                memberStatus={memberStatusMap[circle.id] ?? null}
-                location={circle.location}
-                organizer={circle.organizer}
-                pendingRequests={0}
-                hasNewActivity={false}
-                actionIcon="refresh"
-                onActionPress={() => {
-                  setDismissedIds((prev) => { const next = new Set(prev); next.delete(circle.id); return next; });
-                  if (user) {
-                    supabase.from("dismissed_items").delete()
-                      .eq("user_id", user.id).eq("item_type", "circle").eq("item_id", circle.id).then(() => {});
-                  }
-                }}
-                onPress={() => {
-                  navigation.navigate("CircleDetail", {
-                    id: circle.id,
-                    name: circle.name,
-                    description: circle.description,
-                    visibility: circle.visibility,
-                    owner_id: circle.owner_id,
-                    member_count: circle.member_count,
-                    organizer: circle.organizer,
-                  });
-                }}
-              />
-            ))
-          )
-        ) : (
-          displayedCircles.map((circle) => (
-            <CircleCard
-              key={circle.id}
-              name={circle.name}
-              description={circle.description}
-              category={circle.category}
-              visibility={circle.visibility}
-              memberCount={circle.member_count}
-              memberStatus={memberStatusMap[circle.id] ?? null}
-              location={circle.location}
-              organizer={circle.organizer}
-              pendingRequests={pendingRequestsMap[circle.id] ?? 0}
-              hasNewActivity={
-                !!lastViewedMap[circle.id] && (activityMap[circle.id] ?? 0) > lastViewedMap[circle.id]
-              }
-              actionIcon={memberStatusMap[circle.id] === "owner" ? undefined : "close"}
-              onActionPress={
-                memberStatusMap[circle.id] === "owner"
-                  ? undefined
-                  : () => {
-                      setDismissedIds((prev) => new Set(prev).add(circle.id));
-                      if (user) {
-                        supabase.from("dismissed_items").insert({
-                          user_id: user.id,
-                          item_type: "circle",
-                          item_id: circle.id,
-                        }).then(() => {});
-                      }
-                    }
-              }
-              onPress={() => {
-                AsyncStorage.setItem(`lastViewed_circle_${circle.id}`, Date.now().toString());
-                setLastViewedMap((prev) => ({ ...prev, [circle.id]: Date.now() }));
-                navigation.navigate("CircleDetail", {
-                  id: circle.id,
-                  name: circle.name,
-                  description: circle.description,
-                  visibility: circle.visibility,
-                  owner_id: circle.owner_id,
-                  member_count: circle.member_count,
-                  organizer: circle.organizer,
-                });
-              }}
-            />
-          ))
-        )}
-      </ScreenLayout>
+      />
 
       <CreateCircleModal
         visible={modalVisible}

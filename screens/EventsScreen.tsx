@@ -18,6 +18,7 @@ import { useUser } from "@clerk/clerk-expo";
 import { useLanguage } from "../src/i18n/LanguageContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { fetchHiddenAuthorIds, fetchReportedHiddenContentIds } from "../lib/contentReports";
+import { fetchEventNoteStats } from "../lib/activityStats";
 import { supabase, Event } from "../lib/supabase";
 import { getCachedScreenData, setCachedScreenData } from "../lib/screenCache";
 
@@ -109,6 +110,62 @@ function parseEventDateTime(dateLabel: string, timeLabel: string): number {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
+const eventKeyExtractor = (item: EventWithCircle) => item.id;
+
+type EventRowProps = {
+  event: EventWithCircle;
+  /** True when shown in the "dismissed" view (restore action, no badges). */
+  dismissedView: boolean;
+  rsvp?: "going" | "maybe";
+  isOwner: boolean;
+  noteCount: number;
+  hasNewActivity: boolean;
+  onOpen: (event: EventWithCircle, fromDismissed: boolean) => void;
+  onShare: (event: EventWithCircle) => void;
+  onDismiss: (event: EventWithCircle) => void;
+  onRestore: (event: EventWithCircle) => void;
+};
+
+// Memoized so list-wide state changes (filter panel, unrelated rows) don't
+// re-render every card; only rows whose own props changed re-render.
+const EventRow = React.memo(function EventRow({
+  event,
+  dismissedView,
+  rsvp,
+  isOwner,
+  noteCount,
+  hasNewActivity,
+  onOpen,
+  onShare,
+  onDismiss,
+  onRestore,
+}: EventRowProps) {
+  return (
+    <EventCard
+      title={event.title}
+      organizer={event.organizer}
+      date={event.date_label}
+      time={event.time_label}
+      location={event.location}
+      going={event.going}
+      maybe={event.maybe}
+      maxParticipants={event.max_participants ?? null}
+      isActivity={event.is_activity ?? false}
+      rsvp={rsvp}
+      isOwner={isOwner}
+      circleName={event.circles?.name ?? null}
+      noteCount={noteCount}
+      hasNewActivity={hasNewActivity}
+      onSharePress={() => onShare(event)}
+      actionIcon={dismissedView ? "refresh" : isOwner ? undefined : "close"}
+      onActionPress={
+        dismissedView ? () => onRestore(event) : isOwner ? undefined : () => onDismiss(event)
+      }
+      onPress={() => onOpen(event, dismissedView)}
+    />
+  );
+});
+
 export default function EventsScreen() {
   const navigation = useNavigation<Nav>();
   const { t } = useLanguage();
@@ -198,15 +255,14 @@ export default function EventsScreen() {
     }
 
     const rows = data as EventWithCircle[];
-    // Moderation filters and note counts only depend on the event rows --
+    // Moderation filters and note stats only depend on the event rows --
     // run all three in a single round-trip instead of the previous
-    // reported -> hidden -> notes sequence.
-    const [reportedEventIds, hiddenAuthorIds, noteCountsRes] = await Promise.all([
+    // reported -> hidden -> notes sequence. Note stats are aggregated
+    // server-side (one row per event) when the RPC is available.
+    const [reportedEventIds, hiddenAuthorIds, noteStats] = await Promise.all([
       fetchReportedHiddenContentIds("event", rows.map((e) => e.id)),
       fetchHiddenAuthorIds(rows.map((e) => e.created_by).filter((id): id is string => !!id)),
-      rows.length > 0
-        ? supabase.from("event_notes").select("event_id, created_at, user_id").in("event_id", rows.map((e) => e.id))
-        : Promise.resolve({ data: [] as any[] }),
+      fetchEventNoteStats(rows.map((e) => e.id), user.id),
     ]);
 
     const visible = rows.filter((e) => {
@@ -217,14 +273,8 @@ export default function EventsScreen() {
       return true;
     });
 
-    const noteMap: Record<string, number> = {};
-    const latestMap: Record<string, number> = {};
-    for (const row of (noteCountsRes.data ?? []) as any[]) {
-      noteMap[row.event_id] = (noteMap[row.event_id] ?? 0) + 1;
-      if (user?.id && row.user_id === user.id) continue;
-      const t = new Date(row.created_at).getTime();
-      if (!latestMap[row.event_id] || t > latestMap[row.event_id]) latestMap[row.event_id] = t;
-    }
+    const noteMap = noteStats.noteCountMap;
+    const latestMap = noteStats.latestOtherNoteMap;
 
     // Read last-viewed timestamps (local storage, fast)
     const lvMap: Record<string, number> = {};
@@ -294,7 +344,7 @@ export default function EventsScreen() {
     return false;
   }
 
-  async function handleShareEvent(event: EventWithCircle) {
+  const handleShareEvent = useCallback(async (event: EventWithCircle) => {
     const shareUrl = "https://valmia.ch";
     const lines = [
       event.title,
@@ -314,7 +364,7 @@ export default function EventsScreen() {
     } catch {
       Alert.alert("Error", "Could not open share menu.");
     }
-  }
+  }, [t]);
 
   // Parse each event's date string once per fetched list instead of inside
   // filter/sort callbacks on every render (the sort comparator alone used to
@@ -358,6 +408,83 @@ export default function EventsScreen() {
     [visibleEvents, rsvpFilter, contentType, sortBy, rsvpStatusMap, activityMap, lastViewedMap, noteCountMap, eventTimeMap]
   );
 
+  const handleOpenEvent = useCallback((event: EventWithCircle, fromDismissed: boolean) => {
+    const hasNew =
+      !fromDismissed && !!lastViewedMap[event.id] && (activityMap[event.id] ?? 0) > lastViewedMap[event.id];
+    if (!fromDismissed) {
+      AsyncStorage.setItem(`lastViewed_event_${event.id}`, Date.now().toString());
+      setLastViewedMap((prev) => ({ ...prev, [event.id]: Date.now() }));
+    }
+    navigation.navigate("EventDetail", {
+      id: event.id,
+      title: event.title,
+      organizer: event.organizer,
+      date: event.date_label,
+      time: event.time_label,
+      location: event.location,
+      going: event.going,
+      maybe: event.maybe,
+      rsvp: rsvpStatusMap[event.id],
+      description: event.description,
+      image_url: event.image_url ?? null,
+      max_participants: event.max_participants ?? null,
+      contact_info: event.contact_info ?? null,
+      price_info: event.price_info ?? null,
+      created_by: event.created_by,
+      circleName: event.circles?.name ?? null,
+      circle_id: event.circle_id,
+      ...(fromDismissed ? {} : { hasNewActivity: hasNew }),
+    });
+  }, [navigation, rsvpStatusMap, lastViewedMap, activityMap]);
+
+  const handleDismissEvent = useCallback((event: EventWithCircle) => {
+    setDismissedIds((prev) => new Set(prev).add(event.id));
+    if (user) {
+      supabase.from("dismissed_items").insert({
+        user_id: user.id,
+        item_type: "event",
+        item_id: event.id,
+      }).then(() => {});
+    }
+  }, [user?.id]);
+
+  const handleRestoreEvent = useCallback((event: EventWithCircle) => {
+    setDismissedIds((prev) => { const next = new Set(prev); next.delete(event.id); return next; });
+    if (user) {
+      supabase.from("dismissed_items").delete()
+        .eq("user_id", user.id).eq("item_type", "event").eq("item_id", event.id).then(() => {});
+    }
+  }, [user?.id]);
+
+  // The rows the virtualized list actually shows.
+  const listEvents = React.useMemo(
+    () =>
+      showDismissed
+        ? visibleEvents.filter((e) => dismissedIds.has(e.id))
+        : displayedEvents.filter((e) => !dismissedIds.has(e.id)),
+    [showDismissed, visibleEvents, displayedEvents, dismissedIds]
+  );
+
+  const renderEventRow = useCallback(
+    ({ item }: { item: EventWithCircle }) => (
+      <EventRow
+        event={item}
+        dismissedView={showDismissed}
+        rsvp={rsvpStatusMap[item.id]}
+        isOwner={!!user && item.created_by === user.id}
+        noteCount={noteCountMap[item.id] ?? 0}
+        hasNewActivity={
+          !showDismissed && !!lastViewedMap[item.id] && (activityMap[item.id] ?? 0) > lastViewedMap[item.id]
+        }
+        onOpen={handleOpenEvent}
+        onShare={handleShareEvent}
+        onDismiss={handleDismissEvent}
+        onRestore={handleRestoreEvent}
+      />
+    ),
+    [showDismissed, rsvpStatusMap, noteCountMap, lastViewedMap, activityMap, user?.id, handleOpenEvent, handleShareEvent, handleDismissEvent, handleRestoreEvent]
+  );
+
   const filterActive = sortBy !== "newest" || rsvpFilter !== "all" || showDismissed || showPastEvents || contentType !== "all";
 
   const { bgOption } = useBackground();
@@ -372,6 +499,26 @@ export default function EventsScreen() {
         contentStyle={loading ? styles.scrollContentLoader : undefined}
         onRefresh={async () => { setRefreshing(true); await fetchEvents(true); setRefreshing(false); }}
         refreshing={refreshing}
+        listData={loading ? [] : listEvents}
+        renderItem={renderEventRow}
+        keyExtractor={eventKeyExtractor}
+        listEmptyComponent={
+          loading ? (
+            <View style={styles.loader}>
+              <GradientRingLoader size={40} strokeWidth={7} />
+            </View>
+          ) : (
+            <View style={styles.empty}>
+              <Text style={styles.emptyText}>
+                {showDismissed
+                  ? t.events.noDismissed
+                  : filter === "circles"
+                    ? t.events.noEventsCircles
+                    : t.events.noEventsDefault}
+              </Text>
+            </View>
+          )
+        }
         stickyTop={<ScreenHeaderCard>
           <NavbarTitle
             title={t.nav.events}
@@ -491,137 +638,7 @@ export default function EventsScreen() {
             </View>
           )}
         </ScreenHeaderCard>}
-      >
-        {loading ? (
-          <View style={styles.loader}>
-            <GradientRingLoader size={40} strokeWidth={7} />
-          </View>
-        ) : showDismissed ? (
-          visibleEvents.filter((e) => dismissedIds.has(e.id)).length === 0 ? (
-            <View style={styles.empty}>
-              <Text style={styles.emptyText}>{t.events.noDismissed}</Text>
-            </View>
-          ) : (
-            visibleEvents.filter((e) => dismissedIds.has(e.id)).map((event) => (
-              <EventCard
-                key={event.id}
-                title={event.title}
-                organizer={event.organizer}
-                date={event.date_label}
-                time={event.time_label}
-                location={event.location}
-                going={event.going}
-                maybe={event.maybe}
-                maxParticipants={event.max_participants ?? null}
-                isActivity={event.is_activity ?? false}
-                rsvp={rsvpStatusMap[event.id]}
-                isOwner={!!user && event.created_by === user.id}
-                circleName={event.circles?.name ?? null}
-                noteCount={noteCountMap[event.id] ?? 0}
-                hasNewActivity={false}
-                onSharePress={() => handleShareEvent(event)}
-                actionIcon="refresh"
-                onActionPress={() => {
-                  setDismissedIds((prev) => { const next = new Set(prev); next.delete(event.id); return next; });
-                  if (user) {
-                    supabase.from("dismissed_items").delete()
-                      .eq("user_id", user.id).eq("item_type", "event").eq("item_id", event.id).then(() => {});
-                  }
-                }}
-                onPress={() => {
-                  navigation.navigate("EventDetail", {
-                    id: event.id,
-                    title: event.title,
-                    organizer: event.organizer,
-                    date: event.date_label,
-                    time: event.time_label,
-                    location: event.location,
-                    going: event.going,
-                    maybe: event.maybe,
-                    rsvp: rsvpStatusMap[event.id],
-                    description: event.description,
-                    image_url: event.image_url ?? null,
-                    max_participants: event.max_participants ?? null,
-                    contact_info: event.contact_info ?? null,
-                    price_info: event.price_info ?? null,
-                    created_by: event.created_by,
-                    circleName: event.circles?.name ?? null,
-                    circle_id: event.circle_id,
-                  });
-                }}
-              />
-            ))
-          )
-        ) : displayedEvents.filter((e) => !dismissedIds.has(e.id)).length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>
-              {filter === "circles" ? t.events.noEventsCircles : t.events.noEventsDefault}
-            </Text>
-          </View>
-        ) : (
-          displayedEvents
-            .filter((e) => !dismissedIds.has(e.id))
-            .map((event) => (
-            <EventCard
-              key={event.id}
-              title={event.title}
-              organizer={event.organizer}
-              date={event.date_label}
-              time={event.time_label}
-              location={event.location}
-              going={event.going}
-              maybe={event.maybe}
-              maxParticipants={event.max_participants ?? null}
-              isActivity={event.is_activity ?? false}
-              rsvp={rsvpStatusMap[event.id]}
-              isOwner={!!user && event.created_by === user.id}
-              circleName={event.circles?.name ?? null}
-              noteCount={noteCountMap[event.id] ?? 0}
-              hasNewActivity={!!lastViewedMap[event.id] && (activityMap[event.id] ?? 0) > lastViewedMap[event.id]}
-              onSharePress={() => handleShareEvent(event)}
-              actionIcon={!!user && event.created_by === user.id ? undefined : "close"}
-              onActionPress={
-                !!user && event.created_by === user.id
-                  ? undefined
-                  : () => {
-                      setDismissedIds((prev) => new Set(prev).add(event.id));
-                      if (user) {
-                        supabase.from("dismissed_items").insert({
-                          user_id: user.id,
-                          item_type: "event",
-                          item_id: event.id,
-                        }).then(() => {});
-                      }
-                    }
-              }
-              onPress={() => {
-                AsyncStorage.setItem(`lastViewed_event_${event.id}`, Date.now().toString());
-                setLastViewedMap((prev) => ({ ...prev, [event.id]: Date.now() }));
-                navigation.navigate("EventDetail", {
-                  id: event.id,
-                  title: event.title,
-                  organizer: event.organizer,
-                  date: event.date_label,
-                  time: event.time_label,
-                  location: event.location,
-                  going: event.going,
-                  maybe: event.maybe,
-                  rsvp: rsvpStatusMap[event.id],
-                  description: event.description,
-                  image_url: event.image_url ?? null,
-                  max_participants: event.max_participants ?? null,
-                  contact_info: event.contact_info ?? null,
-                  price_info: event.price_info ?? null,
-                  created_by: event.created_by,
-                  circleName: event.circles?.name ?? null,
-                  circle_id: event.circle_id,
-                  hasNewActivity: !!lastViewedMap[event.id] && (activityMap[event.id] ?? 0) > lastViewedMap[event.id],
-                });
-              }}
-            />
-          ))
-        )}
-      </ScreenLayout>
+      />
 
       <CreateEventModal
         visible={modalVisible}

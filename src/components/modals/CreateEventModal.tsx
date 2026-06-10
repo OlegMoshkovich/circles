@@ -19,7 +19,7 @@ import { useUser } from "@clerk/clerk-expo";
 import { Colors } from "../../theme/colors";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { supabase, Circle } from "../../../lib/supabase";
-import { MapPickerView } from "./LocationPickerModal";
+import { LazyMapPickerView } from "./LazyMapPickerView";
 
 export type NewEventData = {
   title: string;
@@ -228,7 +228,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
       <View style={styles.overlay}>
         {showMap ? (
           <View style={styles.mapSheet}>
-            <MapPickerView
+            <LazyMapPickerView
               onBack={() => setShowMap(false)}
               onConfirm={(addr) => { setLocation(addr); setShowMap(false); }}
             />
