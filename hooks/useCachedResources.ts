@@ -1,4 +1,3 @@
-import { FontAwesome } from "@expo/vector-icons";
 import * as Font from "expo-font";
 import * as React from "react";
 import { Lora_400Regular, Lora_700Bold } from "@expo-google-fonts/lora";
@@ -11,10 +10,10 @@ export default function useCachedResources() {
   React.useEffect(() => {
     async function loadResourcesAndDataAsync() {
       try {
-        // Load fonts
+        // Load only the fonts the app actually renders with. Icon fonts
+        // (Ionicons) load lazily on first use; FontAwesome/space-mono were
+        // loaded here historically but are not used anywhere.
         await Font.loadAsync({
-          ...FontAwesome.font,
-          "space-mono": require("../assets/fonts/SpaceMono-Regular.ttf"),
           Lora_400Regular,
           Lora_700Bold,
           CormorantGaramond_300Light,

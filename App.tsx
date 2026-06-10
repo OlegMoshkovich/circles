@@ -12,7 +12,11 @@ import { BackgroundProvider } from "./src/contexts/BackgroundContext";
 import { ReportProvider } from "./src/contexts/ReportProvider";
 import { supabase, setSupabaseTokenGetter } from "./lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import OnboardingScreen from "./screens/OnboardingScreen";
+import {
+  SessionBootstrapProvider,
+  useSessionBootstrap,
+  onboardingStorageKey,
+} from "./src/contexts/SessionBootstrapContext";
 import {
   OnboardingRestartContext,
   OnboardingRestartOptions,
@@ -22,74 +26,49 @@ SplashScreen.preventAutoHideAsync();
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 
-// Shows OnboardingScreen for new users; renders children once complete
+// Loaded lazily: the onboarding bundle (incl. react-native-maps) is only
+// parsed for users who actually need onboarding, keeping it off the cold
+// start path for everyone else.
+const OnboardingScreen = React.lazy(() => import("./screens/OnboardingScreen"));
+
+// Shows OnboardingScreen for new users; renders children once complete.
+// The actual onboarding/ban checks run in SessionBootstrapProvider as one
+// parallel batch.
 function OnboardingGate({ children }: { children: React.ReactNode }) {
-  const { user, isSignedIn } = useUser();
-  const [ready, setReady] = React.useState(false);
-  const [needsOnboarding, setNeedsOnboarding] = React.useState(false);
+  const { user } = useUser();
+  const { ready, needsOnboarding, setNeedsOnboarding } = useSessionBootstrap();
 
+  // Navigation (which normally hides the splash) doesn't mount on the
+  // onboarding path, so release the splash screen here.
   React.useEffect(() => {
-    if (!isSignedIn || !user) {
-      setNeedsOnboarding(false);
-      setReady(true);
-      return;
+    if (ready && needsOnboarding) {
+      SplashScreen.hideAsync();
     }
-    let cancelled = false;
-    (async () => {
-      const onboardingKey = `onboarding_v1_${user.id}`;
-      const localFlag = await AsyncStorage.getItem(onboardingKey);
-      if (cancelled) return;
+  }, [ready, needsOnboarding]);
 
-      if (localFlag === "1") {
-        setNeedsOnboarding(false);
-        setReady(true);
-        return;
+  const restart = React.useCallback(
+    async (options?: OnboardingRestartOptions) => {
+      if (!user) return;
+      if (options?.clearTermsAcceptance) {
+        await supabase.from("terms_acceptances").delete().eq("user_id", user.id);
       }
-
-      // Fallback for reinstalls/new devices where local AsyncStorage is empty.
-      // If we already have server-side onboarding traces, treat onboarding as done.
-      const [termsRes, profileRes] = await Promise.all([
-        supabase
-          .from("terms_acceptances")
-          .select("user_id")
-          .eq("user_id", user.id)
-          .maybeSingle(),
-        supabase
-          .from("user_profiles")
-          .select("user_id")
-          .eq("user_id", user.id)
-          .maybeSingle(),
-      ]);
-      if (cancelled) return;
-
-      const completedOnServer = !!termsRes.data || !!profileRes.data;
-      if (completedOnServer) {
-        await AsyncStorage.setItem(onboardingKey, "1");
-      }
-      setNeedsOnboarding(!completedOnServer);
-      setReady(true);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isSignedIn, user?.id]);
-
-  async function restart(options?: OnboardingRestartOptions) {
-    if (!user) return;
-    if (options?.clearTermsAcceptance) {
-      await supabase.from("terms_acceptances").delete().eq("user_id", user.id);
-    }
-    await AsyncStorage.removeItem(`onboarding_v1_${user.id}`);
-    setNeedsOnboarding(true);
-  }
+      await AsyncStorage.removeItem(onboardingStorageKey(user.id));
+      setNeedsOnboarding(true);
+    },
+    [user, setNeedsOnboarding]
+  );
+  const restartValue = React.useMemo(() => ({ restart }), [restart]);
 
   if (!ready) return null;
   return (
-    <OnboardingRestartContext.Provider value={{ restart }}>
-      {needsOnboarding
-        ? <OnboardingScreen onComplete={() => setNeedsOnboarding(false)} />
-        : children}
+    <OnboardingRestartContext.Provider value={restartValue}>
+      {needsOnboarding ? (
+        <React.Suspense fallback={null}>
+          <OnboardingScreen onComplete={() => setNeedsOnboarding(false)} />
+        </React.Suspense>
+      ) : (
+        children
+      )}
     </OnboardingRestartContext.Provider>
   );
 }
@@ -105,7 +84,8 @@ function SupabaseAuthBridge() {
   return null;
 }
 
-// Upserts the signed-in user's name to user_profiles on every app open
+// Upserts the signed-in user's name to user_profiles on every app open.
+// Deferred a few seconds so it doesn't compete with the startup queries.
 function ProfileSync() {
   const { user } = useUser();
   React.useEffect(() => {
@@ -113,22 +93,19 @@ function ProfileSync() {
     const displayName = user.fullName ?? user.firstName ?? null;
     if (!displayName) return;
     const avatarUrl = (user.externalAccounts?.find((a: any) => a.provider === "oauth_google" || a.provider === "google") as any)?.imageUrl ?? user.imageUrl ?? null;
-    supabase.from("user_profiles").upsert(
-      { user_id: user.id, display_name: displayName, avatar_url: avatarUrl, updated_at: new Date().toISOString() },
-      { onConflict: "user_id" }
-    ).then(() => {});
+    const timer = setTimeout(() => {
+      supabase.from("user_profiles").upsert(
+        { user_id: user.id, display_name: displayName, avatar_url: avatarUrl, updated_at: new Date().toISOString() },
+        { onConflict: "user_id" }
+      ).then(() => {});
+    }, 3000);
+    return () => clearTimeout(timer);
   }, [user?.id]);
   return null;
 }
 
 export default function App() {
   const isLoadingComplete = useCachedResources();
-
-  React.useEffect(() => {
-    if (isLoadingComplete) {
-      SplashScreen.hideAsync();
-    }
-  }, [isLoadingComplete]);
 
   if (!isLoadingComplete) {
     return null;
@@ -139,15 +116,17 @@ export default function App() {
         <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
           <SafeAreaProvider>
             <SupabaseAuthBridge />
-            <ReportProvider>
-              <NotificationProvider>
-                <ProfileSync />
-                <OnboardingGate>
-                  <Navigation />
-                </OnboardingGate>
-                <StatusBar />
-              </NotificationProvider>
-            </ReportProvider>
+            <SessionBootstrapProvider>
+              <ReportProvider>
+                <NotificationProvider>
+                  <ProfileSync />
+                  <OnboardingGate>
+                    <Navigation />
+                  </OnboardingGate>
+                  <StatusBar />
+                </NotificationProvider>
+              </ReportProvider>
+            </SessionBootstrapProvider>
           </SafeAreaProvider>
         </ClerkProvider>
         </BackgroundProvider>

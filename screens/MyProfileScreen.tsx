@@ -103,17 +103,14 @@ const { language, setLanguage, t } = useLanguage();
       setNotifications(data as AppNotification[]);
       setUnreadCount(data.length);
     }
-  }, [user, setUnreadCount]);
+  }, [user?.id, setUnreadCount]);
 
   const fetchProfileCounts = useCallback(async () => {
     if (!user) return;
 
-    const [circlesResult, eventsResult, profileResult, circleNamesResult] = await Promise.all([
-      supabase
-        .from("circle_members")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("status", "active"),
+    // The circle count is derived from the memberships query below -- no
+    // separate head/count query needed.
+    const [eventsResult, profileResult, circleNamesResult] = await Promise.all([
       supabase
         .from("event_rsvps")
         .select("event_id, events(id, title, date_label, time_label)")
@@ -129,8 +126,6 @@ const { language, setLanguage, t } = useLanguage();
         .eq("user_id", user.id)
         .eq("status", "active"),
     ]);
-
-    setCircleCount(circlesResult.count ?? 0);
 
     if (eventsResult.data) {
       const evts = eventsResult.data
@@ -152,8 +147,9 @@ const { language, setLanguage, t } = useLanguage();
         .map((row: any) => row.circles)
         .filter(Boolean) as { id: string; name: string }[];
       setProfileCircles(circles);
+      setCircleCount(circleNamesResult.data.length);
     }
-  }, [user]);
+  }, [user?.id]);
 
   useFocusEffect(useCallback(() => {
     fetchNotifications();

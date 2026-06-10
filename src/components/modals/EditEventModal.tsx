@@ -14,7 +14,7 @@ import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/dat
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../../theme/colors";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
-import { MapPickerView } from "./LocationPickerModal";
+import { LazyMapPickerView } from "./LazyMapPickerView";
 import { supabase } from "../../../lib/supabase";
 
 export type EditEventData = {
@@ -158,7 +158,7 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
       <View style={styles.overlay}>
         {showMap ? (
           <View style={styles.mapSheet}>
-            <MapPickerView
+            <LazyMapPickerView
               onBack={() => setShowMap(false)}
               onConfirm={(addr) => { setLocation(addr); setShowMap(false); }}
             />

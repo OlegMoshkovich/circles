@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useMemo, useState } from "react";
 
 type Ctx = {
   unreadCount: number;
@@ -12,8 +12,9 @@ const NotificationContext = createContext<Ctx>({
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [unreadCount, setUnreadCount] = useState(0);
+  const value = useMemo(() => ({ unreadCount, setUnreadCount }), [unreadCount]);
   return (
-    <NotificationContext.Provider value={{ unreadCount, setUnreadCount }}>
+    <NotificationContext.Provider value={value}>
       {children}
     </NotificationContext.Provider>
   );
