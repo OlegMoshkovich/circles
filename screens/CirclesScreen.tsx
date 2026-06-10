@@ -127,112 +127,118 @@ export default function CirclesScreen() {
   const fetchCircles = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
 
-    // Read through the Clerk-authed client so RLS evaluates with the user's
-    // identity (reveals their memberships and any private circles they own/joined).
-    const token = await getToken({ template: "supabase" });
-    const client = token ? getAuthClient(token) : supabase;
+    try {
+      // Read through the Clerk-authed client so RLS evaluates with the user's
+      // identity (reveals their memberships and any private circles they own/joined).
+      const token = await getToken({ template: "supabase" });
+      const client = token ? getAuthClient(token) : supabase;
 
-    // All of these are independent of each other, so fetch them in one round-trip
-    // instead of chaining awaits (dismissed → circles → activity were 3 hops).
-    const [
-      dismissedResult,
-      circlesResult,
-      membershipsResult,
-      invitationsResult,
-      latestActivityMap,
-    ] = await Promise.all([
-      user
-        ? client.from("dismissed_items").select("item_id").eq("user_id", user.id).eq("item_type", "circle")
-        : Promise.resolve({ data: [], error: null }),
-      client.from("circles").select("*, circle_members(count)").order("created_at", { ascending: false }),
-      user
-        ? client.from("circle_members").select("circle_id, role, status").eq("user_id", user.id)
-        : Promise.resolve({ data: [], error: null }),
-      user
-        ? client.from("notifications").select("data").eq("user_id", user.id).eq("type", "circle_invitation").eq("read", false)
-        : Promise.resolve({ data: [], error: null }),
-      // Aggregated server-side (one row per circle) when the RPC exists;
-      // falls back to bounded notes/events scans otherwise.
-      fetchCircleLatestActivity(user?.id ?? null, client),
-    ]);
-
-    if (dismissedResult.data) {
-      setDismissedIds(new Set((dismissedResult.data as any[]).map((r) => r.item_id)));
-    }
-
-    // Build membership map first so we can filter private circles
-    const map: MemberStatusMap = {};
-    if (!membershipsResult.error && membershipsResult.data) {
-      for (const m of membershipsResult.data as any[]) {
-        map[m.circle_id] = m.role === "owner" ? "owner" : m.status;
-      }
-    }
-    // Add invited status from pending notifications
-    if (!invitationsResult.error && invitationsResult.data) {
-      for (const n of invitationsResult.data as any[]) {
-        const circleId = n.data?.circle_id;
-        if (circleId && !map[circleId]) {
-          map[circleId] = "invited";
-        }
-      }
-    }
-    setMemberStatusMap(map);
-
-    // Post-filtering (reported/hidden) and owner pending-request counts both depend
-    // on the batch above but not on each other -- run them in one more round-trip.
-    const ownedIds = Object.entries(map).filter(([, v]) => v === "owner").map(([k]) => k);
-    if (!circlesResult.error && circlesResult.data) {
-      const mapped = (circlesResult.data as any[])
-        .map((row) => ({
-          ...row,
-          member_count: row.circle_members?.[0]?.count ?? 0,
-        }))
-        // Hide private circles unless the user is already a member/owner
-        .filter((circle) => circle.visibility !== "private" || map[circle.id] != null);
-      const [reportedCircleIds, hiddenAuthorIds, pendingResult] = await Promise.all([
-        fetchReportedHiddenContentIds("circle", mapped.map((c: any) => c.id)),
-        fetchHiddenAuthorIds(mapped.map((c: any) => c.owner_id).filter((id: any): id is string => !!id)),
-        ownedIds.length > 0
-          ? client.from("circle_members").select("circle_id").in("circle_id", ownedIds).eq("status", "requested")
+      // All of these are independent of each other, so fetch them in one round-trip
+      // instead of chaining awaits (dismissed → circles → activity were 3 hops).
+      const [
+        dismissedResult,
+        circlesResult,
+        membershipsResult,
+        invitationsResult,
+        latestActivityMap,
+      ] = await Promise.all([
+        user
+          ? client.from("dismissed_items").select("item_id").eq("user_id", user.id).eq("item_type", "circle")
           : Promise.resolve({ data: [], error: null }),
+        client.from("circles").select("*, circle_members(count)").order("created_at", { ascending: false }),
+        user
+          ? client.from("circle_members").select("circle_id, role, status").eq("user_id", user.id)
+          : Promise.resolve({ data: [], error: null }),
+        user
+          ? client.from("notifications").select("data").eq("user_id", user.id).eq("type", "circle_invitation").eq("read", false)
+          : Promise.resolve({ data: [], error: null }),
+        // Aggregated server-side (one row per circle) when the RPC exists;
+        // falls back to bounded notes/events scans otherwise.
+        fetchCircleLatestActivity(user?.id ?? null, client),
       ]);
-      const visibleCircles = mapped.filter((c: any) => {
-        const isOwn = c.owner_id === user?.id;
-        if (isOwn) return true;
-        if (reportedCircleIds.has(c.id)) return false;
-        if (c.owner_id && hiddenAuthorIds.has(c.owner_id)) return false;
-        return true;
-      });
-      setCircles(visibleCircles);
 
-      const reqMap: PendingRequestsMap = {};
-      for (const row of (pendingResult.data ?? []) as any[]) {
-        reqMap[row.circle_id] = (reqMap[row.circle_id] ?? 0) + 1;
+      if (dismissedResult.data) {
+        setDismissedIds(new Set((dismissedResult.data as any[]).map((r) => r.item_id)));
       }
-      setPendingRequestsMap(reqMap);
-    } else {
-      setPendingRequestsMap({});
-    }
 
-    // Latest activity per circle (notes + events) -- fetched in the batch above
-    setActivityMap(latestActivityMap);
-
-    // Read last-viewed timestamps from AsyncStorage
-    const circleIds = (circlesResult.data ?? []).map((c: any) => c.id);
-    if (circleIds.length > 0) {
-      const keys = circleIds.map((id: string) => `lastViewed_circle_${id}`);
-      const pairs = await AsyncStorage.multiGet(keys);
-      const lvMap: Record<string, number> = {};
-      for (const [key, val] of pairs) {
-        if (val) {
-          const id = key.replace("lastViewed_circle_", "");
-          lvMap[id] = parseInt(val, 10);
+      // Build membership map first so we can filter private circles
+      const map: MemberStatusMap = {};
+      if (!membershipsResult.error && membershipsResult.data) {
+        for (const m of membershipsResult.data as any[]) {
+          map[m.circle_id] = m.role === "owner" ? "owner" : m.status;
         }
       }
-      setLastViewedMap(lvMap);
-    }
+      // Add invited status from pending notifications
+      if (!invitationsResult.error && invitationsResult.data) {
+        for (const n of invitationsResult.data as any[]) {
+          const circleId = n.data?.circle_id;
+          if (circleId && !map[circleId]) {
+            map[circleId] = "invited";
+          }
+        }
+      }
+      setMemberStatusMap(map);
 
-    setLoading(false);
+      // Post-filtering (reported/hidden) and owner pending-request counts both depend
+      // on the batch above but not on each other -- run them in one more round-trip.
+      const ownedIds = Object.entries(map).filter(([, v]) => v === "owner").map(([k]) => k);
+      if (!circlesResult.error && circlesResult.data) {
+        const mapped = (circlesResult.data as any[])
+          .map((row) => ({
+            ...row,
+            member_count: row.circle_members?.[0]?.count ?? 0,
+          }))
+          // Hide private circles unless the user is already a member/owner
+          .filter((circle) => circle.visibility !== "private" || map[circle.id] != null);
+        const [reportedCircleIds, hiddenAuthorIds, pendingResult] = await Promise.all([
+          fetchReportedHiddenContentIds("circle", mapped.map((c: any) => c.id)),
+          fetchHiddenAuthorIds(mapped.map((c: any) => c.owner_id).filter((id: any): id is string => !!id)),
+          ownedIds.length > 0
+            ? client.from("circle_members").select("circle_id").in("circle_id", ownedIds).eq("status", "requested")
+            : Promise.resolve({ data: [], error: null }),
+        ]);
+        const visibleCircles = mapped.filter((c: any) => {
+          const isOwn = c.owner_id === user?.id;
+          if (isOwn) return true;
+          if (reportedCircleIds.has(c.id)) return false;
+          if (c.owner_id && hiddenAuthorIds.has(c.owner_id)) return false;
+          return true;
+        });
+        setCircles(visibleCircles);
+
+        const reqMap: PendingRequestsMap = {};
+        for (const row of (pendingResult.data ?? []) as any[]) {
+          reqMap[row.circle_id] = (reqMap[row.circle_id] ?? 0) + 1;
+        }
+        setPendingRequestsMap(reqMap);
+      } else {
+        setPendingRequestsMap({});
+      }
+
+      // Latest activity per circle (notes + events) -- fetched in the batch above
+      setActivityMap(latestActivityMap);
+
+      // Read last-viewed timestamps from AsyncStorage
+      const circleIds = (circlesResult.data ?? []).map((c: any) => c.id);
+      if (circleIds.length > 0) {
+        const keys = circleIds.map((id: string) => `lastViewed_circle_${id}`);
+        const pairs = await AsyncStorage.multiGet(keys);
+        const lvMap: Record<string, number> = {};
+        for (const [key, val] of pairs) {
+          if (val) {
+            const id = key.replace("lastViewed_circle_", "");
+            lvMap[id] = parseInt(val, 10);
+          }
+        }
+        setLastViewedMap(lvMap);
+      }
+    } catch (e) {
+      // Any failure (network, auth token, AsyncStorage) must still clear the
+      // spinner -- otherwise the screen is stuck loading forever.
+      console.error("fetchCircles failed:", e);
+    } finally {
+      setLoading(false);
+    }
   }, [user, getToken]);
 
   useFocusEffect(
@@ -393,7 +399,7 @@ export default function CirclesScreen() {
       <ScreenLayout
         backgroundColor={screenBgColor}
         contentStyle={showLoader ? styles.scrollContentLoader : undefined}
-        onRefresh={async () => { setRefreshing(true); await fetchCircles(true); setRefreshing(false); }}
+        onRefresh={async () => { setRefreshing(true); try { await fetchCircles(true); } finally { setRefreshing(false); } }}
         refreshing={refreshing}
         listData={listCircles}
         renderItem={renderCircleRow}

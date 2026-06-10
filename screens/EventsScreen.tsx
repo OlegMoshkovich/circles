@@ -207,93 +207,101 @@ export default function EventsScreen() {
     }
     if (!silent) setLoading(true);
 
-    const key = `events_${user.id}_${filter}`;
-    const finish = (snap: EventsSnapshot) => {
-      setCachedScreenData(key, snap);
-      applySnapshot(snap);
-    };
+    try {
+      const key = `events_${user.id}_${filter}`;
+      const finish = (snap: EventsSnapshot) => {
+        setCachedScreenData(key, snap);
+        applySnapshot(snap);
+      };
 
-    // Dismissed items, RSVPs and memberships are independent -- fetch in one round-trip.
-    const [dismissedRes, rsvpRes, membershipRes] = await Promise.all([
-      supabase.from("dismissed_items").select("item_id").eq("user_id", user.id).eq("item_type", "event"),
-      supabase.from("event_rsvps").select("event_id, status").eq("user_id", user.id),
-      supabase.from("circle_members").select("circle_id").eq("user_id", user.id).eq("status", "active"),
-    ]);
+      // Dismissed items, RSVPs and memberships are independent -- fetch in one round-trip.
+      const [dismissedRes, rsvpRes, membershipRes] = await Promise.all([
+        supabase.from("dismissed_items").select("item_id").eq("user_id", user.id).eq("item_type", "event"),
+        supabase.from("event_rsvps").select("event_id, status").eq("user_id", user.id),
+        supabase.from("circle_members").select("circle_id").eq("user_id", user.id).eq("status", "active"),
+      ]);
 
-    const dismissed: string[] = ((dismissedRes.data ?? []) as any[]).map((r) => r.item_id);
+      const dismissed: string[] = ((dismissedRes.data ?? []) as any[]).map((r) => r.item_id);
 
-    const statusMap: Record<string, "going" | "maybe"> = {};
-    for (const r of (rsvpRes.data ?? []) as any[]) {
-      statusMap[r.event_id] = r.status;
-    }
+      const statusMap: Record<string, "going" | "maybe"> = {};
+      for (const r of (rsvpRes.data ?? []) as any[]) {
+        statusMap[r.event_id] = r.status;
+      }
 
-    const circleIds: string[] = (membershipRes.data as any[])?.map((m) => m.circle_id) ?? [];
+      const circleIds: string[] = (membershipRes.data as any[])?.map((m) => m.circle_id) ?? [];
 
-    let query = supabase.from("events").select("*, circles(name)");
+      let query = supabase.from("events").select("*, circles(name)");
 
-    if (filter === "circles") {
-      if (circleIds.length === 0) {
-        finish({ events: [], rsvpStatusMap: statusMap, noteCountMap: {}, activityMap: {}, lastViewedMap: {}, dismissedIds: dismissed });
+      if (filter === "circles") {
+        if (circleIds.length === 0) {
+          finish({ events: [], rsvpStatusMap: statusMap, noteCountMap: {}, activityMap: {}, lastViewedMap: {}, dismissedIds: dismissed });
+          return;
+        }
+        query = query.in("circle_id", circleIds);
+      } else if (filter === "hosting") {
+        query = query.eq("created_by", user.id);
+      } else {
+        // All: public events + events in user's circles + own events (any visibility)
+        if (circleIds.length > 0) {
+          query = query.or(`visibility.eq.public,circle_id.in.(${circleIds.join(",")}),created_by.eq.${user.id}`);
+        } else {
+          query = query.or(`visibility.eq.public,created_by.eq.${user.id}`);
+        }
+      }
+
+      const { data, error } = await query.order("created_at", { ascending: false });
+      if (error || !data) {
+        setLoading(false);
         return;
       }
-      query = query.in("circle_id", circleIds);
-    } else if (filter === "hosting") {
-      query = query.eq("created_by", user.id);
-    } else {
-      // All: public events + events in user's circles + own events (any visibility)
-      if (circleIds.length > 0) {
-        query = query.or(`visibility.eq.public,circle_id.in.(${circleIds.join(",")}),created_by.eq.${user.id}`);
-      } else {
-        query = query.or(`visibility.eq.public,created_by.eq.${user.id}`);
-      }
-    }
 
-    const { data, error } = await query.order("created_at", { ascending: false });
-    if (error || !data) {
+      const rows = data as EventWithCircle[];
+      // Moderation filters and note stats only depend on the event rows --
+      // run all three in a single round-trip instead of the previous
+      // reported -> hidden -> notes sequence. Note stats are aggregated
+      // server-side (one row per event) when the RPC is available.
+      const [reportedEventIds, hiddenAuthorIds, noteStats] = await Promise.all([
+        fetchReportedHiddenContentIds("event", rows.map((e) => e.id)),
+        fetchHiddenAuthorIds(rows.map((e) => e.created_by).filter((id): id is string => !!id)),
+        fetchEventNoteStats(rows.map((e) => e.id), user.id),
+      ]);
+
+      const visible = rows.filter((e) => {
+        const isOwn = e.created_by === user?.id;
+        if (isOwn) return true;
+        if (reportedEventIds.has(e.id)) return false;
+        if (e.created_by && hiddenAuthorIds.has(e.created_by)) return false;
+        return true;
+      });
+
+      const noteMap = noteStats.noteCountMap;
+      const latestMap = noteStats.latestOtherNoteMap;
+
+      // Read last-viewed timestamps (local storage, fast)
+      const lvMap: Record<string, number> = {};
+      const keys = Object.keys(latestMap).map((id) => `lastViewed_event_${id}`);
+      if (keys.length > 0) {
+        const pairs = await AsyncStorage.multiGet(keys);
+        for (const [k, val] of pairs) {
+          if (val) lvMap[k.replace("lastViewed_event_", "")] = parseInt(val, 10);
+        }
+      }
+
+      finish({
+        events: visible,
+        rsvpStatusMap: statusMap,
+        noteCountMap: noteMap,
+        activityMap: latestMap,
+        lastViewedMap: lvMap,
+        dismissedIds: dismissed,
+      });
+    } catch (e) {
+      // Any failure (network, auth token, AsyncStorage) must still clear the
+      // spinner -- otherwise the screen is stuck loading forever.
+      console.error("fetchEvents failed:", e);
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const rows = data as EventWithCircle[];
-    // Moderation filters and note stats only depend on the event rows --
-    // run all three in a single round-trip instead of the previous
-    // reported -> hidden -> notes sequence. Note stats are aggregated
-    // server-side (one row per event) when the RPC is available.
-    const [reportedEventIds, hiddenAuthorIds, noteStats] = await Promise.all([
-      fetchReportedHiddenContentIds("event", rows.map((e) => e.id)),
-      fetchHiddenAuthorIds(rows.map((e) => e.created_by).filter((id): id is string => !!id)),
-      fetchEventNoteStats(rows.map((e) => e.id), user.id),
-    ]);
-
-    const visible = rows.filter((e) => {
-      const isOwn = e.created_by === user?.id;
-      if (isOwn) return true;
-      if (reportedEventIds.has(e.id)) return false;
-      if (e.created_by && hiddenAuthorIds.has(e.created_by)) return false;
-      return true;
-    });
-
-    const noteMap = noteStats.noteCountMap;
-    const latestMap = noteStats.latestOtherNoteMap;
-
-    // Read last-viewed timestamps (local storage, fast)
-    const lvMap: Record<string, number> = {};
-    const keys = Object.keys(latestMap).map((id) => `lastViewed_event_${id}`);
-    if (keys.length > 0) {
-      const pairs = await AsyncStorage.multiGet(keys);
-      for (const [k, val] of pairs) {
-        if (val) lvMap[k.replace("lastViewed_event_", "")] = parseInt(val, 10);
-      }
-    }
-
-    finish({
-      events: visible,
-      rsvpStatusMap: statusMap,
-      noteCountMap: noteMap,
-      activityMap: latestMap,
-      lastViewedMap: lvMap,
-      dismissedIds: dismissed,
-    });
   }, [user, filter, applySnapshot]);
 
   useFocusEffect(
@@ -497,7 +505,7 @@ export default function EventsScreen() {
       <ScreenLayout
         backgroundColor={screenBgColor}
         contentStyle={loading ? styles.scrollContentLoader : undefined}
-        onRefresh={async () => { setRefreshing(true); await fetchEvents(true); setRefreshing(false); }}
+        onRefresh={async () => { setRefreshing(true); try { await fetchEvents(true); } finally { setRefreshing(false); } }}
         refreshing={refreshing}
         listData={loading ? [] : listEvents}
         renderItem={renderEventRow}
