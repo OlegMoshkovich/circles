@@ -27,6 +27,9 @@ function GlassBackground() {
   );
 }
 
+// Note: tab button components are created once at module scope (below).
+// Creating them inside render would give each render a new component type,
+// remounting the buttons every time the navigator re-renders.
 function makeTabButton(getLabel: (t: Translations) => string, showBadge = false) {
   return function TabButton({ onPress, accessibilityState }: any) {
     const { t } = useLanguage();
@@ -54,6 +57,11 @@ function makeTabButton(getLabel: (t: Translations) => string, showBadge = false)
   };
 }
 
+const CirclesTabButton = makeTabButton((t) => t.nav.circles);
+const EventsTabButton = makeTabButton((t) => t.nav.events);
+const ProfileTabButton = makeTabButton((t) => t.nav.profile, true);
+const renderGlassBackground = () => <GlassBackground />;
+
 export default function TabNavigator() {
   const insets = useSafeAreaInsets();
   const tabBarBottom = insets.bottom > 0 ? insets.bottom - 8 : 16;
@@ -78,28 +86,28 @@ export default function TabNavigator() {
           shadowOpacity: 0.08,
           shadowRadius: 20,
         },
-        tabBarBackground: () => <GlassBackground />,
+        tabBarBackground: renderGlassBackground,
       }}
     >
       <Tab.Screen
         name="Circles"
         component={CirclesScreen}
         options={{
-          tabBarButton: makeTabButton((t) => t.nav.circles),
+          tabBarButton: CirclesTabButton,
         }}
       />
       <Tab.Screen
         name="Events"
         component={EventsScreen}
         options={{
-          tabBarButton: makeTabButton((t) => t.nav.events),
+          tabBarButton: EventsTabButton,
         }}
       />
       <Tab.Screen
         name="Profile"
         component={MyProfileScreen}
         options={{
-          tabBarButton: makeTabButton((t) => t.nav.profile, true),
+          tabBarButton: ProfileTabButton,
         }}
       />
     </Tab.Navigator>

@@ -227,47 +227,46 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       supabase.from("events").select("*").eq("circle_id", id).order("created_at", { ascending: false }),
       supabase.from("circle_notes").select("*").eq("circle_id", id).order("created_at", { ascending: false }),
     ]).then(async ([eventsResult, notesResult]) => {
+      const evs = !eventsResult.error && eventsResult.data ? (eventsResult.data as Event[]) : [];
+      const rawNotes = !notesResult.error ? ((notesResult.data ?? []) as CircleNote[]) : [];
+
+      // All moderation lookups and the note counts only depend on the rows
+      // above -- one parallel batch instead of the previous serial chain
+      // (events filters -> note counts -> notes filters). Author hiding is
+      // also resolved once for event creators and note authors combined.
+      const authorIds = [
+        ...evs.map((e) => e.created_by).filter((c): c is string => !!c),
+        ...rawNotes.map((n) => n.user_id).filter((uid): uid is string => !!uid),
+      ];
+      const [reportedEv, hiddenNoteIds, hiddenAuthors, noteCountsRes] = await Promise.all([
+        fetchReportedHiddenContentIds("event", evs.map((e) => e.id)),
+        fetchReportedHiddenNoteIds("circle_note", rawNotes.map((n) => n.id)),
+        fetchHiddenAuthorIds(authorIds),
+        evs.length > 0
+          ? supabase.from("event_notes").select("event_id").in("event_id", evs.map((e) => e.id))
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+
       let eventRows: Event[] = [];
       if (!eventsResult.error && eventsResult.data) {
-        const evs = eventsResult.data as Event[];
-        const [reportedEv, hiddenEvAuthors] = await Promise.all([
-          fetchReportedHiddenContentIds("event", evs.map((e) => e.id)),
-          fetchHiddenAuthorIds(evs.map((e) => e.created_by).filter((c): c is string => !!c)),
-        ]);
         eventRows = evs.filter((e) => {
           const isOwn = e.created_by === user?.id;
           if (isOwn) return true;
           if (reportedEv.has(e.id)) return false;
-          if (e.created_by && hiddenEvAuthors.has(e.created_by)) return false;
+          if (e.created_by && hiddenAuthors.has(e.created_by)) return false;
           return true;
         });
         setEvents(eventRows);
-        const eventIds = eventRows.map((e: any) => e.id);
-        if (eventIds.length > 0) {
-          const { data: noteCounts } = await supabase
-            .from("event_notes")
-            .select("event_id")
-            .in("event_id", eventIds);
-          if (noteCounts) {
-            const map: Record<string, number> = {};
-            for (const row of noteCounts as any[]) {
-              map[row.event_id] = (map[row.event_id] ?? 0) + 1;
-            }
-            setEventNoteCountMap(map);
-          }
-        } else {
-          setEventNoteCountMap({});
+        const map: Record<string, number> = {};
+        for (const row of (noteCountsRes.data ?? []) as any[]) {
+          map[row.event_id] = (map[row.event_id] ?? 0) + 1;
         }
+        setEventNoteCountMap(map);
       }
       let noteRows: CircleNote[] = [];
       if (!notesResult.error) {
-        const raw = (notesResult.data ?? []) as CircleNote[];
-        const [hidden, hiddenAuthors] = await Promise.all([
-          fetchReportedHiddenNoteIds("circle_note", raw.map((n) => n.id)),
-          fetchHiddenAuthorIds(raw.map((n) => n.user_id).filter((uid): uid is string => !!uid)),
-        ]);
-        noteRows = raw.filter((n) => {
-          if (hidden.has(n.id)) return false;
+        noteRows = rawNotes.filter((n) => {
+          if (hiddenNoteIds.has(n.id)) return false;
           if (n.user_id && n.user_id !== user?.id && hiddenAuthors.has(n.user_id)) return false;
           return true;
         });
@@ -288,11 +287,9 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     });
   }, [didAutoSelectInitialTab, id, user?.id]);
 
-  // Load circle events + feed items
-  useEffect(() => {
-    if (activeTab !== "events" && activeTab !== "feed") return;
-    loadFeed();
-  }, [activeTab, loadFeed]);
+  // Circle events + feed items load via the useFocusEffect below, which
+  // covers both mount and re-focus (a separate useEffect here used to
+  // duplicate the whole feed fetch on every mount).
 
   // Track last-viewed timestamp for new event dots
   // Read previous visit time on mount, then update to now when events tab is viewed
@@ -409,67 +406,44 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         .filter("data->>circle_id", "eq", id)
         .eq("read", false),
     ]).then(async ([membersResult, notifsResult]) => {
-      if (!membersResult.error && membersResult.data) {
-        setMembers(membersResult.data);
+      // Collect every user id we need a display name for (active members +
+      // invited users) and resolve them in ONE profiles query instead of the
+      // previous two sequential ones. The current user's profile upsert is
+      // handled once per app open by ProfileSync (App.tsx).
+      const memberIds: string[] =
+        !membersResult.error && membersResult.data
+          ? membersResult.data.map((m: CircleMember) => m.user_id)
+          : [];
 
-        // Fetch profiles for active members
-        const userIds = membersResult.data.map((m: CircleMember) => m.user_id);
-        if (userIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from("user_profiles")
-            .select("user_id, display_name")
-            .in("user_id", userIds);
-
-          if (profiles) {
-            const map: Record<string, string> = {};
-            for (const p of profiles as UserProfile[]) {
-              if (p.display_name) map[p.user_id] = p.display_name;
-            }
-            setProfileMap(map);
-          }
-        }
-
-        // Upsert current user's profile so others can see their name
-        if (user) {
-          const displayName = user.fullName ?? user.firstName ?? null;
-          if (displayName) {
-            supabase.from("user_profiles").upsert(
-              { user_id: user.id, display_name: displayName, updated_at: new Date().toISOString() },
-              { onConflict: "user_id" }
-            ).then(() => {});
-          }
-        }
-      }
-
-      // Extract invited users from pending notifications
+      let invited: { user_id: string; name: string }[] = [];
       if (!notifsResult.error && notifsResult.data) {
         const seen = new Set<string>();
-        const invited = (notifsResult.data as any[])
+        invited = (notifsResult.data as any[])
           .filter((n) => n.data?.invitee_id && !seen.has(n.data.invitee_id) && seen.add(n.data.invitee_id))
           .map((n) => ({
             user_id: n.data.invitee_id as string,
             name: n.data.invitee_id as string,
           }));
+      }
 
-        // Resolve names for invited users
-        const invitedIds = invited.map((u) => u.user_id);
-        if (invitedIds.length > 0) {
-          const { data: profiles } = await supabase
-            .from("user_profiles")
-            .select("user_id, display_name")
-            .in("user_id", invitedIds);
-          if (profiles) {
-            const nameMap: Record<string, string> = {};
-            for (const p of profiles as UserProfile[]) {
-              if (p.display_name) nameMap[p.user_id] = p.display_name;
-            }
-            setInvitedUsers(invited.map((u) => ({ ...u, name: nameMap[u.user_id] ?? u.user_id })));
-          } else {
-            setInvitedUsers(invited);
-          }
-        } else {
-          setInvitedUsers([]);
+      const allIds = Array.from(new Set([...memberIds, ...invited.map((u) => u.user_id)]));
+      const nameMap: Record<string, string> = {};
+      if (allIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("user_profiles")
+          .select("user_id, display_name")
+          .in("user_id", allIds);
+        for (const p of (profiles ?? []) as UserProfile[]) {
+          if (p.display_name) nameMap[p.user_id] = p.display_name;
         }
+      }
+
+      if (!membersResult.error && membersResult.data) {
+        setMembers(membersResult.data);
+        setProfileMap(nameMap);
+      }
+      if (!notifsResult.error && notifsResult.data) {
+        setInvitedUsers(invited.map((u) => ({ ...u, name: nameMap[u.user_id] ?? u.user_id })));
       }
 
       setLoadingMembers(false);

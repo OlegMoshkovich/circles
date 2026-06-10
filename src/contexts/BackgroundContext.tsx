@@ -73,15 +73,21 @@ export function BackgroundProvider({ children }: { children: React.ReactNode }) 
     });
   }, []);
 
-  const colors =
-    bgOption === "light"
-      ? lightColors
-      : bgOption === "onboarding"
-        ? onboardingColors
-        : createGlassColors(glassBackground);
+  // Memoized so consumers (every themed card/screen) only re-render when the
+  // theme actually changes, and so `colors` keeps a stable identity for
+  // downstream useMemo(makeStyles) caches.
+  const value = React.useMemo(() => {
+    const colors =
+      bgOption === "light"
+        ? lightColors
+        : bgOption === "onboarding"
+          ? onboardingColors
+          : createGlassColors(glassBackground);
+    return { bgOption, setBgOption, glassBackground, setGlassBackground, colors };
+  }, [bgOption, glassBackground, setBgOption, setGlassBackground]);
 
   return (
-    <BackgroundContext.Provider value={{ bgOption, setBgOption, glassBackground, setGlassBackground, colors }}>
+    <BackgroundContext.Provider value={value}>
       {children}
     </BackgroundContext.Provider>
   );

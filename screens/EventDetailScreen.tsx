@@ -179,7 +179,9 @@ export default function EventDetailScreen({ route, navigation }: Props) {
       if (m !== null) setMaybe(m);
       if (rsvpData) setRsvp(rsvpData.status as "going" | "maybe");
     });
-  }, [id, user]);
+    // Depend on the stable user id, not the Clerk user object (its identity
+    // can change on refresh, which used to refire all three queries).
+  }, [id, user?.id]);
 
   useEffect(() => {
     let cancelled = false;

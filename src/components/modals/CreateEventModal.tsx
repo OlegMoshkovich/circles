@@ -118,16 +118,17 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
   useEffect(() => {
     if (!visible || !user) return;
     setOrganizer((prev) => prev || defaultOrganizer());
+    // Join memberships -> circles in one query (was two sequential requests).
     supabase
       .from("circle_members")
-      .select("circle_id")
+      .select("circles(*)")
       .eq("user_id", user.id)
       .eq("status", "active")
-      .then(async ({ data: memberships }) => {
-        const circleIds = memberships?.map((m: any) => m.circle_id) ?? [];
-        if (circleIds.length === 0) { setMyCircles([]); return; }
-        const { data: circles } = await supabase.from("circles").select("*").in("id", circleIds);
-        if (circles) setMyCircles(circles as Circle[]);
+      .then(({ data: memberships }) => {
+        const circles = ((memberships ?? []) as any[])
+          .map((m) => m.circles)
+          .filter(Boolean) as Circle[];
+        setMyCircles(circles);
       });
   }, [visible, user]);
 

@@ -10,7 +10,7 @@ import { View } from "react-native";
 
 import AccountReviewBanner from "../components/AccountReviewBanner";
 import BannedScreen from "../screens/BannedScreen";
-import { useBanStatus } from "../hooks/useBanStatus";
+import { useSessionBootstrap } from "../src/contexts/SessionBootstrapContext";
 import SignUpScreen from "../screens/SignUpScreen";
 import SignInScreen from "../screens/SignInScreen";
 import VerifyCodeScreen from "../screens/VerifyCodeScreen";
@@ -43,7 +43,9 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
  */
 const RootNavigator = () => {
   const { isSignedIn, isLoaded } = useUser();
-  const { banned, reason, bannedAt, resolved: banResolved } = useBanStatus();
+  // Ban status is resolved in SessionBootstrapProvider (one batched startup
+  // query); by the time this mounts it is already available.
+  const { banned, banReason, bannedAt } = useSessionBootstrap();
 
   React.useEffect(() => {
     if (isLoaded) {
@@ -51,20 +53,12 @@ const RootNavigator = () => {
     }
   }, [isLoaded]);
 
-  if (isSignedIn && !banResolved) {
-    return (
-      <ClerkLoaded>
-        <View style={{ flex: 1 }} />
-      </ClerkLoaded>
-    );
-  }
-
   if (isSignedIn && banned) {
     return (
       <ClerkLoaded>
         <Stack.Navigator>
           <Stack.Screen name="Banned" options={{ headerShown: false }}>
-            {() => <BannedScreen reason={reason} bannedAt={bannedAt} />}
+            {() => <BannedScreen reason={banReason} bannedAt={bannedAt} />}
           </Stack.Screen>
         </Stack.Navigator>
       </ClerkLoaded>

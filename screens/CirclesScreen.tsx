@@ -202,26 +202,11 @@ export default function CirclesScreen() {
       void fetchCircles(silent).then(() => {
         hasLoadedOnceRef.current = true;
       });
-      // Keep this user's profile up to date so others can see their name
-      if (user) {
-        const displayName = user.fullName ?? user.firstName ?? null;
-        if (displayName) {
-          authedClient().then((client) =>
-            client.from("user_profiles").upsert(
-              { user_id: user.id, display_name: displayName, updated_at: new Date().toISOString() },
-              { onConflict: "user_id" }
-            )
-          );
-        }
-      }
-    }, [fetchCircles, user])
+      // Note: the user's profile upsert happens once per app open in
+      // ProfileSync (App.tsx) -- doing it here too meant an extra token
+      // fetch + network write on every tab focus.
+    }, [fetchCircles])
   );
-
-  // Writes must carry the Clerk JWT so RLS (owner_id = requesting_user_id()) passes.
-  async function authedClient() {
-    const token = await getToken({ template: "supabase" });
-    return token ? getAuthClient(token) : supabase;
-  }
 
   async function handleSave(data: NewCircleData) {
     if (!user) throw new Error("Not signed in.");
@@ -271,6 +256,39 @@ export default function CirclesScreen() {
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const screenBgColor = colors.background;
+
+  // Derived lists are memoized so toggling UI state (filter panel, modals)
+  // doesn't re-filter/re-sort the whole array on every render.
+  const dismissedCircles = React.useMemo(
+    () => circles.filter((c) => dismissedIds.has(c.id)),
+    [circles, dismissedIds]
+  );
+
+  const displayedCircles = React.useMemo(
+    () =>
+      circles
+        .filter((circle) => {
+          if (dismissedIds.has(circle.id)) return false;
+          if (roleFilter === "owner" && memberStatusMap[circle.id] !== "owner") return false;
+          if (roleFilter === "active" && memberStatusMap[circle.id] !== "active") return false;
+          if (roleFilter === "invited" && memberStatusMap[circle.id] !== "invited") return false;
+          if (categoryFilter !== null && circle.category !== categoryFilter) return false;
+          if (locationFilter !== null && circle.location !== locationFilter) return false;
+          if (nearMe && nearMeCity && !(circle.location ?? "").toLowerCase().includes(nearMeCity.toLowerCase())) return false;
+          return true;
+        })
+        .sort((a, b) => {
+          if (sortBy === "new_activity") {
+            const aNew = (activityMap[a.id] ?? 0) > (lastViewedMap[a.id] ?? 0) ? 1 : 0;
+            const bNew = (activityMap[b.id] ?? 0) > (lastViewedMap[b.id] ?? 0) ? 1 : 0;
+            return bNew - aNew;
+          }
+          return sortBy === "members"
+            ? b.member_count - a.member_count
+            : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        }),
+    [circles, dismissedIds, roleFilter, categoryFilter, locationFilter, nearMe, nearMeCity, sortBy, memberStatusMap, activityMap, lastViewedMap]
+  );
 
   return (
     <>
@@ -412,12 +430,12 @@ export default function CirclesScreen() {
             <GradientRingLoader size={40} strokeWidth={7} />
           </View>
         ) : showDismissed ? (
-          circles.filter((c) => dismissedIds.has(c.id)).length === 0 ? (
+          dismissedCircles.length === 0 ? (
             <View style={styles.loader}>
               <Text style={{ fontSize: 14, fontFamily: "Lora_400Regular", color: colors.textMuted }}>{t.circles.noDismissed}</Text>
             </View>
           ) : (
-            circles.filter((c) => dismissedIds.has(c.id)).map((circle) => (
+            dismissedCircles.map((circle) => (
               <CircleCard
                 key={circle.id}
                 name={circle.name}
@@ -453,28 +471,7 @@ export default function CirclesScreen() {
             ))
           )
         ) : (
-          circles
-            .filter((circle) => {
-              if (dismissedIds.has(circle.id)) return false;
-              if (roleFilter === "owner" && memberStatusMap[circle.id] !== "owner") return false;
-              if (roleFilter === "active" && memberStatusMap[circle.id] !== "active") return false;
-              if (roleFilter === "invited" && memberStatusMap[circle.id] !== "invited") return false;
-              if (categoryFilter !== null && circle.category !== categoryFilter) return false;
-              if (locationFilter !== null && circle.location !== locationFilter) return false;
-              if (nearMe && nearMeCity && !(circle.location ?? "").toLowerCase().includes(nearMeCity.toLowerCase())) return false;
-              return true;
-            })
-            .sort((a, b) => {
-              if (sortBy === "new_activity") {
-                const aNew = (activityMap[a.id] ?? 0) > (lastViewedMap[a.id] ?? 0) ? 1 : 0;
-                const bNew = (activityMap[b.id] ?? 0) > (lastViewedMap[b.id] ?? 0) ? 1 : 0;
-                return bNew - aNew;
-              }
-              return sortBy === "members"
-                ? b.member_count - a.member_count
-                : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-            })
-            .map((circle) => (
+          displayedCircles.map((circle) => (
             <CircleCard
               key={circle.id}
               name={circle.name}
