@@ -57,6 +57,12 @@ export function SessionBootstrapProvider({ children }: { children: React.ReactNo
       return;
     }
 
+    // A user just became signed in (or switched): the previous `ready`/
+    // `needsOnboarding` reflect the old (often signed-out) state. Mark not-ready
+    // until this user's checks resolve, otherwise the gate would render the main
+    // app for a beat before flipping to onboarding for a brand-new user.
+    setReady(false);
+
     let cancelled = false;
     const onboardingKey = onboardingStorageKey(userId);
 

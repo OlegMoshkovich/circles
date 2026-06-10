@@ -1,6 +1,8 @@
 import React from "react";
+import { View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { GradientRingLoader } from "./src/components/loaders/GradientRingLoader";
 import useCachedResources from "./hooks/useCachedResources";
 import Navigation from "./navigation";
 import { ClerkProvider, useAuth, useUser } from "@clerk/clerk-expo";
@@ -8,7 +10,7 @@ import { tokenCache } from "./cache";
 import * as SplashScreen from "expo-splash-screen";
 import { LanguageProvider } from "./src/i18n/LanguageContext";
 import { NotificationProvider } from "./src/contexts/NotificationContext";
-import { BackgroundProvider } from "./src/contexts/BackgroundContext";
+import { BackgroundProvider, useColors } from "./src/contexts/BackgroundContext";
 import { ReportProvider } from "./src/contexts/ReportProvider";
 import { supabase, setSupabaseTokenGetter } from "./lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -30,6 +32,19 @@ const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 // parsed for users who actually need onboarding, keeping it off the cold
 // start path for everyone else.
 const OnboardingScreen = React.lazy(() => import("./screens/OnboardingScreen"));
+
+// Shown while SessionBootstrap resolves the signed-in user's onboarding/ban
+// state. On cold start the native splash sits on top of this; it's only
+// actually visible during the sign-in transition, where it replaces the brief
+// flash of the main app a new user used to see before onboarding appeared.
+function SessionLoadingScreen() {
+  const colors = useColors();
+  return (
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
+      <GradientRingLoader size={40} strokeWidth={7} />
+    </View>
+  );
+}
 
 // Shows OnboardingScreen for new users; renders children once complete.
 // The actual onboarding/ban checks run in SessionBootstrapProvider as one
@@ -59,7 +74,7 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
   );
   const restartValue = React.useMemo(() => ({ restart }), [restart]);
 
-  if (!ready) return null;
+  if (!ready) return <SessionLoadingScreen />;
   return (
     <OnboardingRestartContext.Provider value={restartValue}>
       {needsOnboarding ? (
