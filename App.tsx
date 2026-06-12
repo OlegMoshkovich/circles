@@ -99,7 +99,12 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
   return (
     <OnboardingRestartContext.Provider value={restartValue}>
       {needsOnboarding ? (
-        <React.Suspense fallback={null}>
+        // The onboarding bundle is lazy (it pulls in react-native-maps), so the
+        // chunk can take a beat -- or stall -- to load. A null fallback shows a
+        // blank white screen during that window (the native splash is already
+        // hidden by the effect above); render the branded splash instead so the
+        // wait looks intentional and a slow load never looks like a frozen app.
+        <React.Suspense fallback={<SplashLoadingView />}>
           <OnboardingScreen onComplete={() => setNeedsOnboarding(false)} />
         </React.Suspense>
       ) : (
@@ -147,7 +152,11 @@ export default function App() {
     return null;
   } else {
     return (
-      <LanguageProvider>
+      // Outermost so a render-time throw in ANY provider below (Clerk session
+      // restore, bootstrap, notifications, ...) surfaces the recoverable error
+      // UI instead of unmounting the whole tree to a blank white screen.
+      <ErrorBoundary>
+        <LanguageProvider>
         <BackgroundProvider>
         <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
           <SafeAreaProvider>
@@ -157,11 +166,9 @@ export default function App() {
                 <NotificationProvider>
                   <HomeReadyProvider>
                     <ProfileSync />
-                    <ErrorBoundary>
-                      <OnboardingGate>
-                        <Navigation />
-                      </OnboardingGate>
-                    </ErrorBoundary>
+                    <OnboardingGate>
+                      <Navigation />
+                    </OnboardingGate>
                     <StatusBar />
                   </HomeReadyProvider>
                 </NotificationProvider>
@@ -170,7 +177,8 @@ export default function App() {
           </SafeAreaProvider>
         </ClerkProvider>
         </BackgroundProvider>
-      </LanguageProvider>
+        </LanguageProvider>
+      </ErrorBoundary>
     );
   }
 }
