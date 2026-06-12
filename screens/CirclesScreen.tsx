@@ -18,6 +18,7 @@ import { Colors } from "../src/theme/colors";
 
 import { useLanguage } from "../src/i18n/LanguageContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
+import { useHomeReady } from "../src/contexts/HomeReadyContext";
 import { fetchHiddenAuthorIds, fetchReportedHiddenContentIds } from "../lib/contentReports";
 import { fetchCircleLatestActivity } from "../lib/activityStats";
 import { supabase, getAuthClient, Circle } from "../lib/supabase";
@@ -110,6 +111,7 @@ export default function CirclesScreen() {
   const { t } = useLanguage();
   const { user } = useUser();
   const { getToken } = useAuth();
+  const { markHomeReady } = useHomeReady();
   const [modalVisible, setModalVisible] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("newest");
@@ -163,6 +165,7 @@ export default function CirclesScreen() {
         setPendingRequestsMap(cached.pendingRequestsMap);
         setActivityMap(cached.activityMap);
         setLoading(false);
+        markHomeReady();
       } else {
         setLoading(true);
       }
@@ -289,8 +292,11 @@ export default function CirclesScreen() {
       console.error("fetchCircles failed:", e);
     } finally {
       setLoading(false);
+      // First load settled (success or failure) -- let the App lift the splash
+      // overlay so a stalled fetch can't strand the user on the splash screen.
+      markHomeReady();
     }
-  }, [user, getToken]);
+  }, [user, getToken, markHomeReady]);
 
   useFocusEffect(
     useCallback(() => {

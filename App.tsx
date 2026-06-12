@@ -1,8 +1,9 @@
 import React from "react";
-import { Image, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { GradientRingLoader } from "./src/components/loaders/GradientRingLoader";
+import { SplashLoadingView } from "./src/components/loaders/SplashLoadingView";
+import { HomeReadyProvider, useHomeReady } from "./src/contexts/HomeReadyContext";
 import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import useCachedResources from "./hooks/useCachedResources";
 import Navigation from "./navigation";
@@ -34,23 +35,34 @@ const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 // start path for everyone else.
 const OnboardingScreen = React.lazy(() => import("./screens/OnboardingScreen"));
 
-// Shown while SessionBootstrap resolves the signed-in user's onboarding/ban
-// state. On cold start the native splash sits on top of this; it's most
-// visible right after onboarding, where the new account's startup checks can
-// take a while. Rendering the same splash image (full-screen cover) keeps that
-// "setting up" wait looking like a seamless continuation of the splash rather
-// than a bare spinner, with a subtle loader near the bottom to signal progress.
-function SessionLoadingScreen() {
+// Keeps the branded splash overlay up until the home tab has loaded its first
+// batch of data. Without this, `ready` flips true as soon as the onboarding/ban
+// checks resolve and the home screen mounts -- but its own (slower) data fetch
+// then shows the themed app background with a lone spinner, a jarring foggy
+// intermediate between the splash and the populated home. Overlaying the splash
+// until home is ready makes the cold start go straight from splash to content.
+// A safety timeout reveals the app regardless so a stalled/failed home load can
+// never leave the user stranded on the splash.
+function HomeLoadingGate({ children }: { children: React.ReactNode }) {
+  const { isSignedIn } = useUser();
+  const { homeReady, markHomeReady } = useHomeReady();
+  // Only signed-in users land on the home tab; for the auth screens there is no
+  // home load to wait on, so never overlay the splash there (CirclesScreen --
+  // which clears the gate -- never mounts).
+  const showOverlay = !!isSignedIn && !homeReady;
+  React.useEffect(() => {
+    if (!showOverlay) return;
+    const timer = setTimeout(markHomeReady, 8000);
+    return () => clearTimeout(timer);
+  }, [showOverlay, markHomeReady]);
   return (
-    <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
-      <Image
-        source={require("./assets/splash.png")}
-        style={StyleSheet.absoluteFill}
-        resizeMode="cover"
-      />
-      <View style={{ position: "absolute", left: 0, right: 0, bottom: 64, alignItems: "center" }}>
-        <GradientRingLoader size={32} strokeWidth={6} />
-      </View>
+    <View style={{ flex: 1 }}>
+      {children}
+      {showOverlay && (
+        <View style={StyleSheet.absoluteFill}>
+          <SplashLoadingView />
+        </View>
+      )}
     </View>
   );
 }
@@ -83,7 +95,7 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
   );
   const restartValue = React.useMemo(() => ({ restart }), [restart]);
 
-  if (!ready) return <SessionLoadingScreen />;
+  if (!ready) return <SplashLoadingView />;
   return (
     <OnboardingRestartContext.Provider value={restartValue}>
       {needsOnboarding ? (
@@ -91,7 +103,7 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
           <OnboardingScreen onComplete={() => setNeedsOnboarding(false)} />
         </React.Suspense>
       ) : (
-        children
+        <HomeLoadingGate>{children}</HomeLoadingGate>
       )}
     </OnboardingRestartContext.Provider>
   );
@@ -143,13 +155,15 @@ export default function App() {
             <SessionBootstrapProvider>
               <ReportProvider>
                 <NotificationProvider>
-                  <ProfileSync />
-                  <ErrorBoundary>
-                    <OnboardingGate>
-                      <Navigation />
-                    </OnboardingGate>
-                  </ErrorBoundary>
-                  <StatusBar />
+                  <HomeReadyProvider>
+                    <ProfileSync />
+                    <ErrorBoundary>
+                      <OnboardingGate>
+                        <Navigation />
+                      </OnboardingGate>
+                    </ErrorBoundary>
+                    <StatusBar />
+                  </HomeReadyProvider>
                 </NotificationProvider>
               </ReportProvider>
             </SessionBootstrapProvider>
