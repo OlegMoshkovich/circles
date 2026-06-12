@@ -3,6 +3,7 @@ import {
   Alert,
   Animated,
   ImageBackground,
+  Keyboard,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -560,8 +561,22 @@ function LocationStep({
   const [address, setAddress] = useState<string | null>(null);
   const [geocoding, setGeocoding] = useState(false);
   const geocodeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // True while the user is typing the address by hand, so a pending/in-flight
+  // map reverse-geocode doesn't overwrite what they typed.
+  const editingRef = useRef(false);
+  // Lift the bottom panel above the keyboard so the address input and the
+  // Confirm button stay reachable while typing.
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => { centerOnUser(); }, []);
+
+  useEffect(() => {
+    const showEvt = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvt = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const showSub = Keyboard.addListener(showEvt, (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = Keyboard.addListener(hideEvt, () => setKeyboardHeight(0));
+    return () => { showSub.remove(); hideSub.remove(); };
+  }, []);
 
   async function centerOnUser() {
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -578,6 +593,8 @@ function LocationStep({
     setGeocoding(true);
     try {
       const results = await Location.reverseGeocodeAsync({ latitude: lat, longitude: lng });
+      // The user started typing while this was in flight -- keep their text.
+      if (editingRef.current) return;
       if (results.length > 0) {
         const r = results[0];
         const street = [r.streetNumber, r.street].filter(Boolean).join(" ");
@@ -585,14 +602,25 @@ function LocationStep({
         const parts = [street, locality].filter(Boolean);
         setAddress(parts.join(", ") || ((r as any).formattedAddress ?? null));
       }
-    } catch { setAddress(null); }
+    } catch { if (!editingRef.current) setAddress(null); }
     finally { setGeocoding(false); }
   }
 
   function handleRegionChangeComplete(r: Region) {
     setRegion(r);
+    // Moving the map is an explicit "use this spot" gesture, so let the
+    // reverse-geocode result take over the field again.
+    editingRef.current = false;
     if (geocodeTimeout.current) clearTimeout(geocodeTimeout.current);
     geocodeTimeout.current = setTimeout(() => reverseGeocode(r.latitude, r.longitude), 400);
+  }
+
+  function handleAddressChange(text: string) {
+    // Typing wins: cancel any pending map geocode and hold this exact text.
+    editingRef.current = true;
+    if (geocodeTimeout.current) clearTimeout(geocodeTimeout.current);
+    setGeocoding(false);
+    setAddress(text);
   }
 
   async function handleMyLocation() {
@@ -630,17 +658,26 @@ function LocationStep({
           <Ionicons name="locate" size={20} color={colors.text} />
         </TouchableOpacity>
       </View>
-      <View style={locStyles.bottomPanel}>
-        <Text style={locStyles.hint}>Move the map to place the pin</Text>
+      <View style={[locStyles.bottomPanel, keyboardHeight > 0 && { bottom: keyboardHeight }]}>
+        <Text style={locStyles.hint}>Move the map or type your city</Text>
         <View style={locStyles.addressRow}>
-          {geocoding
-            ? <Spinner size="small" color="rgba(239,237,225,0.6)" />
-            : <Text style={locStyles.addressText} numberOfLines={2}>{address ?? "Locating…"}</Text>}
+          <TextInput
+            style={locStyles.addressInput}
+            value={address ?? ""}
+            onChangeText={handleAddressChange}
+            placeholder="Type a city or address"
+            placeholderTextColor="rgba(239,237,225,0.4)"
+            returnKeyType="done"
+            autoCorrect={false}
+          />
+          {geocoding ? (
+            <Spinner size="small" color="rgba(239,237,225,0.6)" style={locStyles.addressSpinner} />
+          ) : null}
         </View>
         <GlassButton
           label="Confirm Location"
-          onPress={() => { if (address) { onUpdate({ location: address }); onNext(); } }}
-          disabled={!address || geocoding}
+          onPress={() => { const v = address?.trim(); if (v) { onUpdate({ location: v }); onNext(); } }}
+          disabled={!address || !address.trim()}
         />
         <TouchableOpacity style={styles.skipLink} onPress={onSkip}>
           <Text style={styles.skipLinkText}>Skip for now</Text>
@@ -1590,13 +1627,18 @@ const locStyles = StyleSheet.create({
   },
   addressRow: {
     minHeight: 44,
-    justifyContent: "center",
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 4,
   },
-  addressText: {
+  addressInput: {
+    flex: 1,
     fontSize: 17,
     fontFamily: "Lora_400Regular",
     color: "#efede1",
-    lineHeight: 24,
+    paddingVertical: 0,
+  },
+  addressSpinner: {
+    marginLeft: 8,
   },
 });

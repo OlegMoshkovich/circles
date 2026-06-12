@@ -6,3 +6,9 @@
 
 [functions.content-report-email]
 verify_jwt = false
+
+# The caller sends a Clerk-issued JWT (not a Supabase-issued one), so the
+# gateway's built-in verification is disabled and the function verifies the
+# token itself with SUPABASE_JWT_SECRET.
+[functions.delete-account]
+verify_jwt = false
