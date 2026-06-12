@@ -5,7 +5,7 @@ import { useAuth, useUser } from "@clerk/clerk-expo";
 import { ScreenLayout } from "../src/components/layout/ScreenLayout";
 import { ScreenHeaderCard } from "../src/components/layout/ScreenHeaderCard";
 import { RootStackScreenProps } from "../types";
-import { supabase, getAuthClient } from "../lib/supabase";
+import { deleteAccount } from "../lib/deleteAccount";
 import { useColors } from "../src/contexts/BackgroundContext";
 import { spacing } from "../src/theme/spacing";
 
@@ -36,77 +36,9 @@ export default function DeleteAccountScreen({ navigation }: RootStackScreenProps
 
     setSubmitting(true);
     try {
-      const userId = user.id;
-
-      // Use an authenticated Supabase client so RLS allows us to delete user-owned data.
-      let client = supabase;
-      try {
-        const token = await getToken({ template: "supabase" });
-        if (token) client = getAuthClient(token);
-      } catch (_) {}
-
-      const runDelete = async (query: any) => {
-        const { error } = await query;
-        if (error) throw error;
-      };
-
-      const { data: ownedCircles, error: ownedCirclesError } = await client
-        .from("circles")
-        .select("id")
-        .eq("owner_id", userId);
-      if (ownedCirclesError) throw ownedCirclesError;
-      const ownedCircleIds = (ownedCircles ?? []).map((c: any) => c.id);
-
-      const { data: createdEvents, error: createdEventsError } = await client
-        .from("events")
-        .select("id")
-        .eq("created_by", userId);
-      if (createdEventsError) throw createdEventsError;
-
-      let ownedCircleEventIds: string[] = [];
-      if (ownedCircleIds.length > 0) {
-        const { data, error } = await client
-          .from("events")
-          .select("id")
-          .in("circle_id", ownedCircleIds);
-        if (error) throw error;
-        ownedCircleEventIds = (data ?? []).map((e: any) => e.id);
-      }
-
-      const allEventIds = Array.from(
-        new Set([...(createdEvents ?? []).map((e: any) => e.id), ...ownedCircleEventIds])
-      );
-
-      await runDelete(client.from("notifications").delete().eq("user_id", userId));
-      await runDelete(client.from("dismissed_items").delete().eq("user_id", userId));
-      await runDelete(client.from("event_rsvps").delete().eq("user_id", userId));
-      await runDelete(client.from("event_notes").delete().eq("user_id", userId));
-      await runDelete(client.from("circle_notes").delete().eq("user_id", userId));
-      await runDelete(client.from("circle_members").delete().eq("user_id", userId));
-      await runDelete(client.from("user_profiles").delete().eq("user_id", userId));
-
-      if (allEventIds.length > 0) {
-        await runDelete(client.from("dismissed_items").delete().eq("item_type", "event").in("item_id", allEventIds));
-        await runDelete(client.from("event_rsvps").delete().in("event_id", allEventIds));
-        await runDelete(client.from("event_notes").delete().in("event_id", allEventIds));
-        await runDelete(client.from("events").delete().in("id", allEventIds));
-      }
-
-      if (ownedCircleIds.length > 0) {
-        await runDelete(client.from("dismissed_items").delete().eq("item_type", "circle").in("item_id", ownedCircleIds));
-        await runDelete(client.from("circle_notes").delete().in("circle_id", ownedCircleIds));
-        await runDelete(client.from("circle_members").delete().in("circle_id", ownedCircleIds));
-        await runDelete(client.from("circles").delete().in("id", ownedCircleIds));
-      }
-
-      // Permanently delete the Clerk user (this is the required “account deletion” flow).
-      await user.delete();
-
-      // Ensure the app returns to the signed-out experience.
-      try {
-        await signOut();
-      } catch (_) {}
-
+      // Deletes the user's Supabase data AND the Clerk user (server-side when
+      // the delete-account function is deployed; client-side fallback otherwise).
+      await deleteAccount({ user, getToken, signOut });
       // Auth flow will switch to the signed-out stack automatically.
     } catch (e) {
       setError(getErrorMessage(e));
