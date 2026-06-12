@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Image,
   KeyboardAvoidingView,
@@ -14,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Spinner } from "../src/components/loaders/Spinner";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAuth, useUser } from "@clerk/clerk-expo";
@@ -502,7 +502,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
                   disabled={postingNote}
                 >
                   {postingNote ? (
-                    <ActivityIndicator size="small" color={colors.card} />
+                    <Spinner size="small" color={colors.card} />
                   ) : (
                     <Text style={styles.postButtonText}>{t.common.post}</Text>
                   )}

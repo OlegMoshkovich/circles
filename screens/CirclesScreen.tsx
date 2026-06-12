@@ -13,7 +13,7 @@ import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { TextBlock } from "../src/components/blocks/TextBlock";
 import { CircleCard } from "../src/components/cards/CircleCard";
 import { CreateCircleModal, NewCircleData } from "../src/components/modals/CreateCircleModal";
-import { GradientRingLoader } from "../src/components/loaders/GradientRingLoader";
+import { Spinner } from "../src/components/loaders/Spinner";
 import { SplashLoadingView } from "../src/components/loaders/SplashLoadingView";
 import { Colors } from "../src/theme/colors";
 
@@ -485,7 +485,7 @@ export default function CirclesScreen() {
         listEmptyComponent={
           showLoader ? (
             <View style={styles.loader}>
-              <GradientRingLoader size={40} strokeWidth={7} />
+              <Spinner size="large" />
             </View>
           ) : showDismissed ? (
             <View style={styles.loader}>

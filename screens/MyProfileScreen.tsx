@@ -1,6 +1,5 @@
 import React, { useCallback, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Image,
   Platform,
@@ -15,6 +14,7 @@ import { useAuth, useUser } from "@clerk/clerk-expo";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { ScreenLayout } from "../src/components/layout/ScreenLayout";
 import { ScreenHeaderCard } from "../src/components/layout/ScreenHeaderCard";
+import { Spinner } from "../src/components/loaders/Spinner";
 import { Colors } from "../src/theme/colors";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
@@ -690,7 +690,7 @@ async function handleAccept(notif: AppNotification) {
               onPress={handleDeleteAccount}
               disabled={deleteSubmitting}
             >
-              {deleteSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.deleteConfirmButtonText}>Confirm deletion</Text>}
+              {deleteSubmitting ? <Spinner size="small" color="#fff" /> : <Text style={styles.deleteConfirmButtonText}>Confirm deletion</Text>}
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.deleteCancelButton}

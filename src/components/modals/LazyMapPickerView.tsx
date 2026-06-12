@@ -1,5 +1,6 @@
 import React from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { Spinner } from "../loaders/Spinner";
 
 // Defers evaluation of LocationPickerModal (and its react-native-maps
 // import) until the map is actually shown, keeping the heavy maps module
@@ -19,7 +20,7 @@ export function LazyMapPickerView(props: Props) {
     <React.Suspense
       fallback={
         <View style={styles.fallback}>
-          <ActivityIndicator />
+          <Spinner size="large" />
         </View>
       }
     >

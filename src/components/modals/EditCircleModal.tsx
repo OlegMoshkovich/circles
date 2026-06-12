@@ -9,10 +9,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../../theme/colors";
+import { Spinner } from "../loaders/Spinner";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { LazyMapPickerView } from "./LazyMapPickerView";
 import { supabase } from "../../../lib/supabase";
@@ -151,7 +151,7 @@ export function EditCircleModal({ visible, onClose, onSaved, circleId, initialVa
 
               {loading ? (
                 <View style={styles.loader}>
-                  <ActivityIndicator size="small" color={colors.textMuted} />
+                  <Spinner size="small" />
                 </View>
               ) : (
                 <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
