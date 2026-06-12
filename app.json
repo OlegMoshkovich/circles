@@ -8,9 +8,9 @@
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/splash-bg.png",
       "resizeMode": "cover",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#37412C"
     },
     "updates": {
       "url": "https://u.expo.dev/802b5dcf-07a5-46e0-a5c4-e00382d5b214"
