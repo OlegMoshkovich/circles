@@ -31,6 +31,33 @@ const PRESET_CATEGORIES = ["Culture", "Friends", "Nature", "Sport", "Food", "Tra
 
 type CircleWithCount = Circle & { member_count: number };
 
+// Stale-while-revalidate cache for the Circles list. The first network load on
+// a fresh login is two sequential round-trips; persisting the last result lets
+// every subsequent open paint instantly from disk while the refresh runs
+// silently in the background.
+const circlesCacheKey = (userId: string) => `circles_cache_v1_${userId}`;
+
+type CirclesCache = {
+  circles: CircleWithCount[];
+  memberStatusMap: MemberStatusMap;
+  pendingRequestsMap: PendingRequestsMap;
+  activityMap: Record<string, number>;
+};
+
+async function readCirclesCache(userId: string): Promise<CirclesCache | null> {
+  try {
+    const raw = await AsyncStorage.getItem(circlesCacheKey(userId));
+    return raw ? (JSON.parse(raw) as CirclesCache) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeCirclesCache(userId: string, payload: CirclesCache) {
+  // Fire-and-forget: never block the UI on persistence.
+  void AsyncStorage.setItem(circlesCacheKey(userId), JSON.stringify(payload)).catch(() => {});
+}
+
 const circleKeyExtractor = (item: CircleWithCount) => item.id;
 
 type CircleRowProps = {
@@ -125,7 +152,21 @@ export default function CirclesScreen() {
   }
 
   const fetchCircles = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+    if (!silent) {
+      // On the very first load, paint instantly from the cached snapshot (if
+      // any) and let the network refresh run silently underneath -- only fall
+      // back to the spinner when there's nothing cached to show.
+      const cached = !hasLoadedOnceRef.current && user ? await readCirclesCache(user.id) : null;
+      if (cached) {
+        setCircles(cached.circles);
+        setMemberStatusMap(cached.memberStatusMap);
+        setPendingRequestsMap(cached.pendingRequestsMap);
+        setActivityMap(cached.activityMap);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
+    }
 
     try {
       // Read through the Clerk-authed client so RLS evaluates with the user's
@@ -211,6 +252,16 @@ export default function CirclesScreen() {
           reqMap[row.circle_id] = (reqMap[row.circle_id] ?? 0) + 1;
         }
         setPendingRequestsMap(reqMap);
+
+        // Persist this snapshot so the next open paints instantly from disk.
+        if (user) {
+          writeCirclesCache(user.id, {
+            circles: visibleCircles,
+            memberStatusMap: map,
+            pendingRequestsMap: reqMap,
+            activityMap: latestActivityMap,
+          });
+        }
       } else {
         setPendingRequestsMap({});
       }
