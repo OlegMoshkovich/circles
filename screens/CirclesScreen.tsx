@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -131,6 +131,16 @@ export default function CirclesScreen() {
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [showDismissed, setShowDismissed] = useState(false);
   const hasLoadedOnceRef = useRef(false);
+  // Guards markHomeReady against a brief premature mount during the login
+  // transition that immediately unmounts -- without this its in-flight fetch
+  // could lift the splash overlay before the real (final) mount is ready.
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   async function handleNearMe() {
     if (nearMe) {
@@ -165,7 +175,7 @@ export default function CirclesScreen() {
         setPendingRequestsMap(cached.pendingRequestsMap);
         setActivityMap(cached.activityMap);
         setLoading(false);
-        markHomeReady();
+        if (isMountedRef.current) markHomeReady();
       } else {
         setLoading(true);
       }
@@ -294,7 +304,7 @@ export default function CirclesScreen() {
       setLoading(false);
       // First load settled (success or failure) -- let the App lift the splash
       // overlay so a stalled fetch can't strand the user on the splash screen.
-      markHomeReady();
+      if (isMountedRef.current) markHomeReady();
     }
   }, [user, getToken, markHomeReady]);
 
