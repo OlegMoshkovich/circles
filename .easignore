@@ -23,6 +23,12 @@ dist/
 ios/
 android/
 
+# Compiled app binaries (never part of the source upload)
+*.ipa
+*.apk
+*.aab
+build-*.ipa
+
 # OS / editor cruft
 .DS_Store
 *.pem

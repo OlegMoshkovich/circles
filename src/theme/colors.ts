@@ -1,6 +1,5 @@
 export const GLASS_BACKGROUND_OPTIONS = [
   "#35412A",
-  "#213127",
   "#2B30AF",
 ] as const;
 

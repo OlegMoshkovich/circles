@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { Animated, StyleSheet, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { SplashLoadingView } from "./src/components/loaders/SplashLoadingView";
@@ -53,11 +53,22 @@ const OnboardingScreen = React.lazy(() => import("./screens/OnboardingScreen"));
 //
 // A safety timeout reveals whatever is underneath so a stalled startup can never
 // strand the user on the splash.
+const SPLASH_FADE_DURATION = 400;
+
 function AppGate({ children }: { children: React.ReactNode }) {
   const { user, isSignedIn, isLoaded } = useUser();
   const { ready, needsOnboarding, setNeedsOnboarding, banned } = useSessionBootstrap();
   const { homeReady, markHomeReady } = useHomeReady();
   const [forceReveal, setForceReveal] = React.useState(false);
+  // Splash overlay is kept mounted across one extra render so we can fade it
+  // out (instead of cutting to the destination) when loading finishes, and
+  // fade it back in if a later transition (e.g. sign-out -> sign-in) makes it
+  // reappear.
+  const splashOpacity = React.useRef(new Animated.Value(1)).current;
+  const [splashMounted, setSplashMounted] = React.useState(true);
+  // Skip the fade-in on cold start: the native splash is still painted under
+  // us at that moment, and fading in would leave a one-frame gap of bare app.
+  const isInitialSplash = React.useRef(true);
 
   // Hand the native splash off to our own (identical) JS splash overlay as soon
   // as Clerk has restored. The overlay is already mounted underneath at that
@@ -123,14 +134,50 @@ function AppGate({ children }: { children: React.ReactNode }) {
     splashVisible = !(homeReady || forceReveal); // home tab's first load
   }
 
+  // Drive the fade in both directions. When loading ends we animate to 0 then
+  // unmount; when it starts again we mount at 0 and animate to 1. The very
+  // first appearance skips the fade-in so the JS splash takes over the native
+  // splash without a flicker.
+  React.useEffect(() => {
+    if (splashVisible) {
+      setSplashMounted(true);
+      if (isInitialSplash.current) {
+        isInitialSplash.current = false;
+        splashOpacity.setValue(1);
+        return;
+      }
+      splashOpacity.setValue(0);
+      const animation = Animated.timing(splashOpacity, {
+        toValue: 1,
+        duration: SPLASH_FADE_DURATION,
+        useNativeDriver: true,
+      });
+      animation.start();
+      return () => animation.stop();
+    }
+    isInitialSplash.current = false;
+    const animation = Animated.timing(splashOpacity, {
+      toValue: 0,
+      duration: SPLASH_FADE_DURATION,
+      useNativeDriver: true,
+    });
+    animation.start(({ finished }) => {
+      if (finished) setSplashMounted(false);
+    });
+    return () => animation.stop();
+  }, [splashVisible, splashOpacity]);
+
   return (
     <OnboardingRestartContext.Provider value={restartValue}>
       <View style={{ flex: 1 }}>
         {content}
-        {splashVisible && (
-          <View style={StyleSheet.absoluteFill}>
+        {splashMounted && (
+          <Animated.View
+            style={[StyleSheet.absoluteFill, { opacity: splashOpacity }]}
+            pointerEvents={splashVisible ? "auto" : "none"}
+          >
             <SplashLoadingView />
-          </View>
+          </Animated.View>
         )}
       </View>
     </OnboardingRestartContext.Provider>

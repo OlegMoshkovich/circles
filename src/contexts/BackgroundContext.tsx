@@ -27,14 +27,14 @@ type BackgroundContextType = {
 const BackgroundContext = createContext<BackgroundContextType>({
   bgOption: "onboarding",
   setBgOption: () => {},
-  glassBackground: GLASS_BACKGROUND_OPTIONS[1],
+  glassBackground: GLASS_BACKGROUND_OPTIONS[0],
   setGlassBackground: () => {},
   colors: onboardingColors,
 });
 
 export function BackgroundProvider({ children }: { children: React.ReactNode }) {
   const [bgOption, setBgOptionState] = useState<BgOption>("onboarding");
-  const [glassBackground, setGlassBackgroundState] = useState<GlassBackgroundColor>(GLASS_BACKGROUND_OPTIONS[1]);
+  const [glassBackground, setGlassBackgroundState] = useState<GlassBackgroundColor>(GLASS_BACKGROUND_OPTIONS[0]);
 
   useEffect(() => {
     AsyncStorage.getItem(BG_STORAGE_KEY).then((val) => {
@@ -49,6 +49,12 @@ export function BackgroundProvider({ children }: { children: React.ReactNode }) 
       }
     });
     AsyncStorage.getItem(GLASS_BG_STORAGE_KEY).then((val) => {
+      if (val === "#213127") {
+        // Removed option: migrate to the new default.
+        setGlassBackgroundState(GLASS_BACKGROUND_OPTIONS[0]);
+        void AsyncStorage.setItem(GLASS_BG_STORAGE_KEY, GLASS_BACKGROUND_OPTIONS[0]);
+        return;
+      }
       if (val && /^#[0-9A-Fa-f]{3,8}$/.test(val)) {
         setGlassBackgroundState(val);
       } else if (val && GLASS_BACKGROUND_OPTIONS.includes(val as any)) {
