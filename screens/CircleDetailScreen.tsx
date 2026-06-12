@@ -439,7 +439,15 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       if (cancelled) return;
 
       if (!membersResult.error && membersResult.data) {
-        setMembers(membersResult.data);
+        // Collapse duplicate membership rows: leaving and rejoining (or any
+        // double insert -- there's no unique constraint on circle_members)
+        // leaves multiple active rows for the same user, which otherwise show
+        // up as the same person listed several times.
+        const seen = new Set<string>();
+        const uniqueMembers = (membersResult.data as CircleMember[]).filter(
+          (m) => !seen.has(m.user_id) && seen.add(m.user_id)
+        );
+        setMembers(uniqueMembers);
         setProfileMap(nameMap);
       }
       if (!notifsResult.error && notifsResult.data) {
