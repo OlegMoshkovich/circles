@@ -1,7 +1,6 @@
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import React from "react";
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -14,6 +13,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "../lib/supabase";
+import { Spinner } from "../src/components/loaders/Spinner";
 
 type Props = {
   reason: string | null;
@@ -184,7 +184,7 @@ export default function BannedScreen({ reason, bannedAt }: Props) {
               ]}
             >
               {submitting ? (
-                <ActivityIndicator color="#ffffff" />
+                <Spinner size="small" color="#ffffff" />
               ) : (
                 <Text style={styles.buttonText}>Send message</Text>
               )}

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
-  ActivityIndicator,
   Alert,
   Image,
   KeyboardAvoidingView,
@@ -40,6 +39,7 @@ import { CreateEventModal, NewEventData } from "../src/components/modals/CreateE
 import { PublicProfileModal } from "../src/components/modals/PublicProfileModal";
 import { EventCard } from "../src/components/cards/EventCard";
 import { ThemedBackground } from "../src/components/layout/ThemedBackground";
+import { Spinner } from "../src/components/loaders/Spinner";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CircleDetail">;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -712,7 +712,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         <View style={styles.feedContainer}>
           {loadingFeed && notes.length === 0 ? (
             <View style={styles.loader}>
-              <ActivityIndicator size="small" color={colors.textMuted} />
+              <Spinner size="small" />
             </View>
           ) : (() => {
             const sortedNotes = [...notes].sort(
@@ -741,7 +741,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                         disabled={postingNote}
                       >
                         {postingNote ? (
-                          <ActivityIndicator size="small" color={colors.card} />
+                          <Spinner size="small" color={colors.card} />
                         ) : (
                           <Text style={styles.postButtonText}>{t.common.post}</Text>
                         )}
@@ -836,7 +836,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
             <>
               {loadingFeed && events.length === 0 ? (
                 <View style={styles.loader}>
-                  <ActivityIndicator size="small" color={colors.textMuted} />
+                  <Spinner size="small" />
                 </View>
               ) : (() => {
                 const sortedEvents = [...events].sort(
@@ -902,7 +902,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           {activeTab === "members" && (
             loadingMembers ? (
               <View style={styles.loader}>
-                <ActivityIndicator size="small" color={colors.textMuted} />
+                <Spinner size="small" />
               </View>
             ) : members.length === 0 && invitedUsers.length === 0 ? (
               <Text style={styles.emptyText}>{t.circles.noMembers}</Text>
@@ -943,7 +943,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           {activeTab === "description" && (
             loadingRequests ? (
               <View style={styles.loader}>
-                <ActivityIndicator size="small" color={colors.textMuted} />
+                <Spinner size="small" />
               </View>
             ) : (
               <View style={styles.descriptionPanel}>

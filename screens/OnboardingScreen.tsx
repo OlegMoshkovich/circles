@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Animated,
   ImageBackground,
@@ -26,6 +25,7 @@ import { colors, glassColors, lightColors, onboardingColors, Colors } from "../s
 import { BgOption, useBackground } from "../src/contexts/BackgroundContext";
 import { fetchReportedHiddenContentIds } from "../lib/contentReports";
 import { supabase, getAuthClient, Circle } from "../lib/supabase";
+import { Spinner } from "../src/components/loaders/Spinner";
 import {
   COMMUNITY_TAGLINE,
   COMMUNITY_MISSION,
@@ -427,7 +427,7 @@ function TermsStep({
         </TouchableOpacity>
         {submitting ? (
           <View style={{ marginTop: 16, alignItems: "center" }}>
-            <ActivityIndicator color="#efede1" />
+            <Spinner size="small" color="#efede1" />
           </View>
         ) : (
           <GlassButton
@@ -634,7 +634,7 @@ function LocationStep({
         <Text style={locStyles.hint}>Move the map to place the pin</Text>
         <View style={locStyles.addressRow}>
           {geocoding
-            ? <ActivityIndicator size="small" color="rgba(239,237,225,0.6)" />
+            ? <Spinner size="small" color="rgba(239,237,225,0.6)" />
             : <Text style={locStyles.addressText} numberOfLines={2}>{address ?? "Locating…"}</Text>}
         </View>
         <GlassButton
@@ -793,7 +793,7 @@ function CircleSuggestionsStep({
         <StepHeader title="Join your community" subtitle="Connect with circles that interest you." onBack={onBack} />
         <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 8 }}>
           {loading ? (
-            <ActivityIndicator color="rgba(239,237,225,0.6)" style={{ marginTop: 32 }} />
+            <Spinner size="small" color="rgba(239,237,225,0.6)" style={{ marginTop: 32 }} />
           ) : circles.length === 0 ? (
             <Text style={styles.emptyText}>No circles available yet.</Text>
           ) : (
@@ -1031,7 +1031,7 @@ export default function OnboardingScreen({ onComplete }: Props) {
       <Animated.View style={[{ flex: 1 }, { opacity: fadeAnim }]}>
         {saving ? (
           <View style={styles.savingOverlay}>
-            <ActivityIndicator color="#2C2A26" size="large" />
+            <Spinner size="large" color="#2C2A26" />
           </View>
         ) : (
           steps[step]

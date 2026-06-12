@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  ActivityIndicator,
   Platform,
   StyleSheet,
   Text,
@@ -11,6 +10,7 @@ import MapView, { Region } from "react-native-maps";
 import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
 import { colors } from "../../theme/colors";
+import { Spinner } from "../loaders/Spinner";
 
 type MapPickerViewProps = {
   onBack: () => void;
@@ -147,7 +147,7 @@ export function MapPickerView({ onBack, onConfirm }: MapPickerViewProps) {
         <Text style={styles.hint}>Move the map to place the pin</Text>
         <View style={styles.addressRow}>
           {geocoding ? (
-            <ActivityIndicator size="small" color={colors.textMuted} />
+            <Spinner size="small" />
           ) : (
             <Text style={styles.addressText} numberOfLines={2}>
               {address ?? "Locating…"}

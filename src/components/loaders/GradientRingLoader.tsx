@@ -19,6 +19,12 @@ type Props = {
    * Defaults from theme: light paper → darker ramp; dark/glass → lighter ramp.
    */
   darkBackground?: boolean;
+  /**
+   * Override the ramp color. Defaults to the theme's `text` color. Pass an
+   * explicit color when the loader sits on a fixed-color surface (e.g. a tinted
+   * button) where the theme text color wouldn't read.
+   */
+  color?: string;
 };
 
 /** degCW: 0° = top, increases clockwise; y-down coordinates */
@@ -63,9 +69,11 @@ export function GradientRingLoader({
   durationMs = 900,
   style,
   darkBackground: darkBackgroundProp,
+  color,
 }: Props) {
   const { bgOption } = useBackground();
   const colors = useColors();
+  const ringColor = color ?? colors.text;
   const rampDark = darkBackgroundProp ?? bgOption !== "light";
   const spin = useRef(new Animated.Value(0)).current;
 
@@ -109,13 +117,13 @@ export function GradientRingLoader({
         <Path
           key={i}
           d={donutSectorPath(cx, cy, rOut, rIn, d0, d1)}
-          fill={colors.text}
+          fill={ringColor}
           fillOpacity={fillOpacity}
         />,
       );
     }
     return items;
-  }, [seg, step, cx, cy, rOut, rIn, colors.text, rampDark]);
+  }, [seg, step, cx, cy, rOut, rIn, ringColor, rampDark]);
 
   return (
     <Animated.View

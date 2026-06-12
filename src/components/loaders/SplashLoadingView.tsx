@@ -1,6 +1,6 @@
 import React from "react";
 import { Image, StyleSheet, View } from "react-native";
-import { GradientRingLoader } from "./GradientRingLoader";
+import { Spinner } from "./Spinner";
 
 /**
  * Full-screen branded loading view: the same splash image the native splash
@@ -18,7 +18,7 @@ export function SplashLoadingView() {
         resizeMode="cover"
       />
       <View style={styles.loader}>
-        <GradientRingLoader size={32} strokeWidth={6} />
+        <Spinner size={32} />
       </View>
     </View>
   );

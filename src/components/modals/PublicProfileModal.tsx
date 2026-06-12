@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Image,
   Modal,
   ScrollView,
@@ -12,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@clerk/clerk-expo";
 import { Colors } from "../../theme/colors";
+import { Spinner } from "../loaders/Spinner";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { useReport } from "../../contexts/ReportProvider";
 import { supabase, UserProfile } from "../../../lib/supabase";
@@ -90,7 +90,7 @@ export function PublicProfileModal({ visible, onClose, userId, displayName }: Pr
 
             {loading ? (
               <View style={styles.loader}>
-                <ActivityIndicator size="small" color={colors.textMuted} />
+                <Spinner size="small" />
               </View>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>

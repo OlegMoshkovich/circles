@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  ActivityIndicator,
   Text,
   TextInput,
   TouchableOpacity,
@@ -18,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { log } from "../logger";
 import { RootStackScreenProps } from "../types";
 import { OAuthButtons } from "../components/OAuth";
+import { Spinner } from "../src/components/loaders/Spinner";
 import { BlurView } from "expo-blur";
 import Svg, { Path } from "react-native-svg";
 
@@ -266,7 +266,7 @@ export default function SignInScreen({
           <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(255,255,255,0.15)" }]} />
           <View style={[StyleSheet.absoluteFill, { borderRadius: 50, borderWidth: 1, borderColor: "rgba(255,255,255,0.35)" }]} />
           {submitting ? (
-            <ActivityIndicator color="#efede1" />
+            <Spinner size="small" color="#efede1" />
           ) : (
             <Text style={styles.primaryButtonText}>Log In</Text>
           )}
@@ -293,7 +293,7 @@ export default function SignInScreen({
               <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(255,255,255,0.15)" }]} />
               <View style={[StyleSheet.absoluteFill, { borderRadius: 50, borderWidth: 1, borderColor: "rgba(255,255,255,0.35)" }]} />
               {submitting ? (
-                <ActivityIndicator color="#efede1" />
+                <Spinner size="small" color="#efede1" />
               ) : (
                 <Text style={styles.primaryButtonText}>Verify Code</Text>
               )}

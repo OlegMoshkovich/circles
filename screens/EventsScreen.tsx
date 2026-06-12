@@ -11,7 +11,7 @@ import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { TextBlock } from "../src/components/blocks/TextBlock";
 import { EventCard } from "../src/components/cards/EventCard";
 import { CreateEventModal, NewEventData } from "../src/components/modals/CreateEventModal";
-import { GradientRingLoader } from "../src/components/loaders/GradientRingLoader";
+import { Spinner } from "../src/components/loaders/Spinner";
 import { Colors } from "../src/theme/colors";
 
 import { useUser } from "@clerk/clerk-expo";
@@ -513,7 +513,7 @@ export default function EventsScreen() {
         listEmptyComponent={
           loading ? (
             <View style={styles.loader}>
-              <GradientRingLoader size={40} strokeWidth={7} />
+              <Spinner size="large" />
             </View>
           ) : (
             <View style={styles.empty}>

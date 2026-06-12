@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -15,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@clerk/clerk-expo";
 import * as Linking from "expo-linking";
 import { Colors } from "../../theme/colors";
+import { Spinner } from "../loaders/Spinner";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { supabase, UserProfile } from "../../../lib/supabase";
 
@@ -168,7 +168,7 @@ export function CircleInviteModal({ visible, onClose, circleId, circleName }: Pr
 
               {loading ? (
                 <View style={styles.loader}>
-                  <ActivityIndicator size="small" color={colors.textMuted} />
+                  <Spinner size="small" />
                 </View>
               ) : candidates.length === 0 ? (
                 <Text style={styles.emptyText}>No users available to invite.</Text>

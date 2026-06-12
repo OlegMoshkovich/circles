@@ -1,8 +1,9 @@
 import React from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import { ScreenLayout } from "../src/components/layout/ScreenLayout";
+import { Spinner } from "../src/components/loaders/Spinner";
 import { ScreenHeaderCard } from "../src/components/layout/ScreenHeaderCard";
 import { RootStackScreenProps } from "../types";
 import { supabase, getAuthClient } from "../lib/supabase";
@@ -166,7 +167,7 @@ export default function DeleteAccountScreen({ navigation }: RootStackScreenProps
                     onPress={handleDelete}
                     disabled={submitting}
                   >
-                    {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.confirmButtonText}>Confirm deletion</Text>}
+                    {submitting ? <Spinner size="small" color="#fff" /> : <Text style={styles.confirmButtonText}>Confirm deletion</Text>}
                   </TouchableOpacity>
 
                   <TouchableOpacity
