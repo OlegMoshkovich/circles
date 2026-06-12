@@ -27,6 +27,7 @@ import { useLanguage } from "../src/i18n/LanguageContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, CircleMember, CircleNote, Event, UserProfile } from "../lib/supabase";
+import { isPastEvent } from "../lib/events";
 import {
   fetchHiddenAuthorIds,
   fetchReportedHiddenContentIds,
@@ -839,9 +840,11 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                   <ActivityIndicator size="small" color={colors.textMuted} />
                 </View>
               ) : (() => {
-                const sortedEvents = [...events].sort(
-                  (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-                );
+                // Hide events that have already happened -- the Events tab only
+                // surfaces upcoming events. (Unparseable dates are kept.)
+                const sortedEvents = [...events]
+                  .filter((e) => !isPastEvent(e))
+                  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
                 return (
                   <View style={styles.tabContentCard}>
