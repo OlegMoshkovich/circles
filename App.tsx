@@ -1,5 +1,5 @@
 import React from "react";
-import { View } from "react-native";
+import { Image, StyleSheet, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GradientRingLoader } from "./src/components/loaders/GradientRingLoader";
@@ -11,7 +11,7 @@ import { tokenCache } from "./cache";
 import * as SplashScreen from "expo-splash-screen";
 import { LanguageProvider } from "./src/i18n/LanguageContext";
 import { NotificationProvider } from "./src/contexts/NotificationContext";
-import { BackgroundProvider, useColors } from "./src/contexts/BackgroundContext";
+import { BackgroundProvider } from "./src/contexts/BackgroundContext";
 import { ReportProvider } from "./src/contexts/ReportProvider";
 import { supabase, setSupabaseTokenGetter } from "./lib/supabase";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -35,14 +35,22 @@ const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 const OnboardingScreen = React.lazy(() => import("./screens/OnboardingScreen"));
 
 // Shown while SessionBootstrap resolves the signed-in user's onboarding/ban
-// state. On cold start the native splash sits on top of this; it's only
-// actually visible during the sign-in transition, where it replaces the brief
-// flash of the main app a new user used to see before onboarding appeared.
+// state. On cold start the native splash sits on top of this; it's most
+// visible right after onboarding, where the new account's startup checks can
+// take a while. Rendering the same splash image (full-screen cover) keeps that
+// "setting up" wait looking like a seamless continuation of the splash rather
+// than a bare spinner, with a subtle loader near the bottom to signal progress.
 function SessionLoadingScreen() {
-  const colors = useColors();
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
-      <GradientRingLoader size={40} strokeWidth={7} />
+    <View style={{ flex: 1, backgroundColor: "#ffffff" }}>
+      <Image
+        source={require("./assets/splash.png")}
+        style={StyleSheet.absoluteFill}
+        resizeMode="cover"
+      />
+      <View style={{ position: "absolute", left: 0, right: 0, bottom: 64, alignItems: "center" }}>
+        <GradientRingLoader size={32} strokeWidth={6} />
+      </View>
     </View>
   );
 }
