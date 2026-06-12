@@ -35,52 +35,46 @@ const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
 // start path for everyone else.
 const OnboardingScreen = React.lazy(() => import("./screens/OnboardingScreen"));
 
-// Keeps the branded splash overlay up until the home tab has loaded its first
-// batch of data. Without this, `ready` flips true as soon as the onboarding/ban
-// checks resolve and the home screen mounts -- but its own (slower) data fetch
-// then shows the themed app background with a lone spinner, a jarring foggy
-// intermediate between the splash and the populated home. Overlaying the splash
-// until home is ready makes the cold start go straight from splash to content.
-// A safety timeout reveals the app regardless so a stalled/failed home load can
-// never leave the user stranded on the splash.
-function HomeLoadingGate({ children }: { children: React.ReactNode }) {
-  const { isSignedIn } = useUser();
+// Single source of truth for the cold-start / login loading experience.
+//
+// The previous design spread the splash across two separate gates (one that
+// *returned* the splash, one that *overlaid* it). During the login transition
+// those gates mounted and unmounted, and because the native splash is already
+// gone by then, any frame where neither gate painted showed through as a blank
+// white screen. This collapses everything into ONE persistent overlay node that
+// stays mounted continuously until the first real screen is ready, so there is
+// never an unpainted frame:
+//
+//   - signed out                 -> auth screens, no overlay
+//   - signed in, bootstrapping   -> overlay (nothing else known yet)
+//   - signed in, needs onboarding-> onboarding (Suspense fallback = splash)
+//   - signed in, banned          -> banned screen, no overlay
+//   - signed in, home            -> overlay until the home tab's first load
+//
+// A safety timeout reveals whatever is underneath so a stalled startup can never
+// strand the user on the splash.
+function AppGate({ children }: { children: React.ReactNode }) {
+  const { user, isSignedIn, isLoaded } = useUser();
+  const { ready, needsOnboarding, setNeedsOnboarding, banned } = useSessionBootstrap();
   const { homeReady, markHomeReady } = useHomeReady();
-  // Only signed-in users land on the home tab; for the auth screens there is no
-  // home load to wait on, so never overlay the splash there (CirclesScreen --
-  // which clears the gate -- never mounts).
-  const showOverlay = !!isSignedIn && !homeReady;
-  React.useEffect(() => {
-    if (!showOverlay) return;
-    const timer = setTimeout(markHomeReady, 8000);
-    return () => clearTimeout(timer);
-  }, [showOverlay, markHomeReady]);
-  return (
-    <View style={{ flex: 1 }}>
-      {children}
-      {showOverlay && (
-        <View style={StyleSheet.absoluteFill}>
-          <SplashLoadingView />
-        </View>
-      )}
-    </View>
-  );
-}
+  const [forceReveal, setForceReveal] = React.useState(false);
 
-// Shows OnboardingScreen for new users; renders children once complete.
-// The actual onboarding/ban checks run in SessionBootstrapProvider as one
-// parallel batch.
-function OnboardingGate({ children }: { children: React.ReactNode }) {
-  const { user } = useUser();
-  const { ready, needsOnboarding, setNeedsOnboarding } = useSessionBootstrap();
-
-  // Navigation (which normally hides the splash) doesn't mount on the
-  // onboarding path, so release the splash screen here.
+  // Hand the native splash off to our own (identical) JS splash overlay as soon
+  // as Clerk has restored. The overlay is already mounted underneath at that
+  // point, so the handoff is seamless and nothing white shows through.
   React.useEffect(() => {
-    if (ready && needsOnboarding) {
-      SplashScreen.hideAsync();
+    if (isLoaded) SplashScreen.hideAsync();
+  }, [isLoaded]);
+
+  // Never let a hung network / failed home fetch trap the user on the splash.
+  React.useEffect(() => {
+    if (!isSignedIn) {
+      setForceReveal(false);
+      return;
     }
-  }, [ready, needsOnboarding]);
+    const timer = setTimeout(() => setForceReveal(true), 10000);
+    return () => clearTimeout(timer);
+  }, [isSignedIn]);
 
   const restart = React.useCallback(
     async (options?: OnboardingRestartOptions) => {
@@ -95,21 +89,50 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
   );
   const restartValue = React.useMemo(() => ({ restart }), [restart]);
 
-  if (!ready) return <SplashLoadingView />;
+  // What to paint underneath the overlay. While signed in but not yet
+  // bootstrapped the destination (onboarding vs home) is unknown, so render
+  // nothing and let the overlay cover it.
+  let content: React.ReactNode;
+  if (!isSignedIn) {
+    content = children; // Navigation -> auth stack
+  } else if (!ready) {
+    content = null; // covered by the splash overlay
+  } else if (needsOnboarding) {
+    content = (
+      <React.Suspense fallback={<SplashLoadingView />}>
+        <OnboardingScreen onComplete={() => setNeedsOnboarding(false)} />
+      </React.Suspense>
+    );
+  } else {
+    content = children; // Navigation -> home (or banned)
+  }
+
+  // Whether the branded splash overlay is showing.
+  let splashVisible: boolean;
+  if (!isLoaded) {
+    splashVisible = true; // Clerk still restoring the session
+  } else if (!isSignedIn) {
+    splashVisible = false; // show the auth screen immediately
+  } else if (!ready) {
+    splashVisible = true; // bootstrapping onboarding/ban state
+  } else if (needsOnboarding) {
+    splashVisible = false; // the Suspense fallback already shows the splash
+  } else if (banned) {
+    splashVisible = false; // banned screen has no home load to wait on
+  } else {
+    splashVisible = !(homeReady || forceReveal); // home tab's first load
+  }
+
   return (
     <OnboardingRestartContext.Provider value={restartValue}>
-      {needsOnboarding ? (
-        // The onboarding bundle is lazy (it pulls in react-native-maps), so the
-        // chunk can take a beat -- or stall -- to load. A null fallback shows a
-        // blank white screen during that window (the native splash is already
-        // hidden by the effect above); render the branded splash instead so the
-        // wait looks intentional and a slow load never looks like a frozen app.
-        <React.Suspense fallback={<SplashLoadingView />}>
-          <OnboardingScreen onComplete={() => setNeedsOnboarding(false)} />
-        </React.Suspense>
-      ) : (
-        <HomeLoadingGate>{children}</HomeLoadingGate>
-      )}
+      <View style={{ flex: 1 }}>
+        {content}
+        {splashVisible && (
+          <View style={StyleSheet.absoluteFill}>
+            <SplashLoadingView />
+          </View>
+        )}
+      </View>
     </OnboardingRestartContext.Provider>
   );
 }
@@ -166,9 +189,9 @@ export default function App() {
                 <NotificationProvider>
                   <HomeReadyProvider>
                     <ProfileSync />
-                    <OnboardingGate>
+                    <AppGate>
                       <Navigation />
-                    </OnboardingGate>
+                    </AppGate>
                     <StatusBar />
                   </HomeReadyProvider>
                 </NotificationProvider>
