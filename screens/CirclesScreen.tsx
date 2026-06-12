@@ -14,6 +14,7 @@ import { TextBlock } from "../src/components/blocks/TextBlock";
 import { CircleCard } from "../src/components/cards/CircleCard";
 import { CreateCircleModal, NewCircleData } from "../src/components/modals/CreateCircleModal";
 import { GradientRingLoader } from "../src/components/loaders/GradientRingLoader";
+import { SplashLoadingView } from "../src/components/loaders/SplashLoadingView";
 import { Colors } from "../src/theme/colors";
 
 import { useLanguage } from "../src/i18n/LanguageContext";
@@ -463,6 +464,16 @@ export default function CirclesScreen() {
 
   return (
     <>
+      {/* Initial load (no circles yet): show the branded splash, not the themed
+          background + spinner. The "onboarding" background renders the foggy
+          mountain image, which looked like a scaled, off-brand loading screen
+          during the post-login setup wait; the splash keeps that wait visually
+          identical to the launch splash. Placed after all hooks so the early
+          return doesn't change hook order. */}
+      {showLoader ? (
+        <SplashLoadingView />
+      ) : (
+      <>
       <ScreenLayout
         backgroundColor={screenBgColor}
         contentStyle={showLoader ? styles.scrollContentLoader : undefined}
@@ -616,6 +627,8 @@ export default function CirclesScreen() {
         onClose={() => setModalVisible(false)}
         onSave={handleSave}
       />
+      </>
+      )}
     </>
   );
 }
