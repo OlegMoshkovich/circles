@@ -310,8 +310,9 @@ async function handleAccept(notif: AppNotification) {
   return (
     <>
     <ScreenLayout backgroundColor={screenBgColor} stickyTop={stickyHeader}>
-      {/* Neighbourhood card */}
-      {/* <Text style={styles.sectionLabel}>{t.profile.neighbourhood}</Text> */}
+      {/* All profile settings live in a single card, separated into line items
+          by dividers (Type / Location / Bio / Interests / Communities / Events /
+          Theme / Language / Mission / Replay). */}
       <View style={styles.card}>
         <TouchableOpacity style={styles.row} onPress={() => startEdit("userType")} activeOpacity={0.7}>
           <Text style={styles.rowLabel}>Type</Text>
@@ -358,6 +359,9 @@ async function handleAccept(notif: AppNotification) {
           </View>
         )}
 
+        <View style={styles.rowDivider} />
+
+        {/* Location row */}
         <TouchableOpacity style={styles.row} onPress={() => startEdit("location")} activeOpacity={0.7}>
           <Text style={styles.rowLabel}>{t.profile.location}</Text>
           <Text style={[styles.rowValue, !profileLocation && styles.rowValuePlaceholder]}>
@@ -417,6 +421,8 @@ async function handleAccept(notif: AppNotification) {
           </View>
         )}
 
+        <View style={styles.rowDivider} />
+
         {/* Interests row */}
         <TouchableOpacity style={styles.row} onPress={() => startEdit("interests")} activeOpacity={0.7}>
           <Text style={styles.rowLabel}>Interests</Text>
@@ -464,12 +470,10 @@ async function handleAccept(notif: AppNotification) {
             </View>
           </View>
         )}
-      </View>
-
-      {profileCircles.length > 0 ? (
-        <>
-          <View style={styles.sectionGap} />
-          <View style={styles.card}>
+        {/* Communities — only shown when the member belongs to some */}
+        {profileCircles.length > 0 ? (
+          <>
+            <View style={styles.rowDivider} />
             <TouchableOpacity
               style={styles.row}
               onPress={() => setCirclesExpanded((v) => !v)}
@@ -487,18 +491,17 @@ async function handleAccept(notif: AppNotification) {
               </View>
             </TouchableOpacity>
             {circlesExpanded && profileCircles.map((circle) => (
-              <View key={circle.id} style={styles.row}>
-                <Text style={styles.rowLabel}>{circle.name}</Text>
+              <View key={circle.id} style={styles.subRow}>
+                <Text style={styles.rowValue}>{circle.name}</Text>
               </View>
             ))}
-          </View>
-        </>
-      ) : null}
+          </>
+        ) : null}
 
-      {profileEvents.length > 0 ? (
-        <>
-          <View style={styles.sectionGap} />
-          <View style={styles.card}>
+        {/* Events — only shown when the member has RSVPed to some */}
+        {profileEvents.length > 0 ? (
+          <>
+            <View style={styles.rowDivider} />
             <TouchableOpacity
               style={styles.row}
               onPress={() => setEventsExpanded((v) => !v)}
@@ -516,18 +519,17 @@ async function handleAccept(notif: AppNotification) {
               </View>
             </TouchableOpacity>
             {eventsExpanded && profileEvents.map((event) => (
-              <View key={event.id} style={styles.row}>
-                <Text style={styles.rowLabel}>{event.title}</Text>
+              <View key={event.id} style={styles.subRow}>
+                <Text style={styles.rowValue}>{event.title}</Text>
                 <Text style={styles.rowValue}>{event.date_label}</Text>
               </View>
             ))}
-          </View>
-        </>
-      ) : null}
+          </>
+        ) : null}
 
-      <View style={styles.sectionGap} />
+        <View style={styles.rowDivider} />
 
-      <View style={styles.card}>
+        {/* Theme */}
         <TouchableOpacity style={styles.row} onPress={cycleTheme} activeOpacity={0.7}>
           <Text style={styles.rowLabel}>Theme</Text>
           <View style={styles.themeValue}>
@@ -535,33 +537,31 @@ async function handleAccept(notif: AppNotification) {
             <Ionicons name="chevron-forward" size={14} color={colors.textMuted} style={{ marginLeft: 6 }} />
           </View>
         </TouchableOpacity>
-      </View>
 
-      <View style={styles.sectionGap} />
+        <View style={styles.rowDivider} />
 
-      {/* Language selector */}
-      {/* <Text style={styles.sectionLabel}>{t.profile.language}</Text> */}
-      <View style={styles.flagRow}>
-        {LANGUAGES.map(({ code, label }) => {
-          const selected = language === code;
-          return (
-            <TouchableOpacity
-              key={code}
-              onPress={() => setLanguage(code)}
-              style={[styles.flagButton, selected && styles.flagButtonSelected]}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.flagLabel, selected && styles.flagLabelSelected]}>
-                {label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+        {/* Language */}
+        <View style={styles.languageRow}>
+          {LANGUAGES.map(({ code, label }) => {
+            const selected = language === code;
+            return (
+              <TouchableOpacity
+                key={code}
+                onPress={() => setLanguage(code)}
+                style={[styles.flagButton, selected && styles.flagButtonSelected]}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.flagLabel, selected && styles.flagLabelSelected]}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
-      <View style={styles.sectionGap} />
+        <View style={styles.rowDivider} />
 
-      <View style={styles.card}>
+        {/* Mission & values */}
         <TouchableOpacity
           style={styles.row}
           onPress={() => setValuesModalVisible(true)}
@@ -570,7 +570,10 @@ async function handleAccept(notif: AppNotification) {
           <Text style={styles.rowLabel}>Mission & values</Text>
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </TouchableOpacity>
+
         <View style={styles.rowDivider} />
+
+        {/* Replay onboarding */}
         <TouchableOpacity
           style={styles.row}
           onPress={() =>
@@ -927,6 +930,13 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       backgroundColor: colors.divider,
       marginHorizontal: spacing.cardPadding,
     },
+    subRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: spacing.cardPadding + spacing.sm,
+      paddingVertical: 10,
+    },
     rowLabel: {
       ...typography.body,
       color: colors.text,
@@ -1033,9 +1043,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       fontSize: 13,
       fontWeight: "600" as const,
     },
-    flagRow: {
+    languageRow: {
       flexDirection: "row",
       gap: spacing.sm,
+      paddingHorizontal: spacing.cardPadding,
+      paddingVertical: 12,
     },
     flagButton: {
       flex: 1,
@@ -1046,12 +1058,12 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       paddingVertical: 7,
       borderRadius: 16,
       borderWidth: 1,
-      borderColor: "transparent",
-      backgroundColor: colors.card,
+      borderColor: colors.cardBorder,
+      backgroundColor: colors.badgeBg,
     },
     flagButtonSelected: {
       borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.text,
-      backgroundColor: colors.card,
+      backgroundColor: colors.badgeBg,
     },
     flagLabel: {
       fontSize: 13,
