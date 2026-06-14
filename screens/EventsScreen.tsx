@@ -194,7 +194,7 @@ export default function EventsScreen() {
       // server-side (one row per event) when the RPC is available.
       const [reportedEventIds, hiddenAuthorIds, noteStats] = await Promise.all([
         fetchReportedHiddenContentIds("event", rows.map((e) => e.id)),
-        fetchHiddenAuthorIds(rows.map((e) => e.created_by).filter((id): id is string => !!id)),
+        fetchHiddenAuthorIds(rows.map((e) => e.created_by).filter((id): id is string => !!id), user.id),
         fetchEventNoteStats(rows.map((e) => e.id), user.id),
       ]);
 

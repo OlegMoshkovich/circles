@@ -86,10 +86,14 @@ export async function fetchReportedHiddenContentIds(
 }
 
 /**
- * User ids that should be hidden as content authors — banned users OR users with any
- * non-dismissed report against them. Used to filter out events/circles authored by them.
+ * User ids that should be hidden as content authors — banned users, users with any
+ * non-dismissed report against them, OR (when `viewerUserId` is given) users the
+ * viewer has blocked. Used to filter out events/circles/notes authored by them.
  */
-export async function fetchHiddenAuthorIds(authorIds: string[]): Promise<Set<string>> {
+export async function fetchHiddenAuthorIds(
+  authorIds: string[],
+  viewerUserId?: string | null
+): Promise<Set<string>> {
   const hidden = new Set<string>();
   if (authorIds.length === 0) return hidden;
 
@@ -97,7 +101,7 @@ export async function fetchHiddenAuthorIds(authorIds: string[]): Promise<Set<str
   if (unique.length === 0) return hidden;
 
   try {
-    const [reportedRes, bannedRes] = await Promise.all([
+    const [reportedRes, bannedRes, blockedRes] = await Promise.all([
       supabase
         .from("content_reports")
         .select("reported_user_id")
@@ -109,12 +113,22 @@ export async function fetchHiddenAuthorIds(authorIds: string[]): Promise<Set<str
         .select("user_id")
         .in("user_id", unique)
         .not("banned_at", "is", null),
+      viewerUserId
+        ? supabase
+            .from("user_blocks")
+            .select("blocked_user_id")
+            .eq("blocker_user_id", viewerUserId)
+            .in("blocked_user_id", unique)
+        : Promise.resolve({ data: null as { blocked_user_id: string }[] | null }),
     ]);
 
     (reportedRes.data as { reported_user_id: string | null }[] | null)?.forEach((r) => {
       if (r.reported_user_id) hidden.add(r.reported_user_id);
     });
     (bannedRes.data as { user_id: string }[] | null)?.forEach((r) => hidden.add(r.user_id));
+    (blockedRes.data as { blocked_user_id: string }[] | null)?.forEach((r) =>
+      hidden.add(r.blocked_user_id)
+    );
   } catch {
     // Fail open — return whatever we've gathered so far (likely empty).
   }

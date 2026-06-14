@@ -20,14 +20,17 @@ create index if not exists terms_acceptances_accepted_at_idx
 alter table public.terms_acceptances enable row level security;
 
 -- Apps using anon key from the client: mirror your existing pattern; restrict when you use JWT claims.
+drop policy if exists "terms_acceptances_select_own" on public.terms_acceptances;
 create policy "terms_acceptances_select_own"
   on public.terms_acceptances for select
   using (true);
 
+drop policy if exists "terms_acceptances_insert" on public.terms_acceptances;
 create policy "terms_acceptances_insert"
   on public.terms_acceptances for insert
   with check (true);
 
+drop policy if exists "terms_acceptances_update_own" on public.terms_acceptances;
 create policy "terms_acceptances_update_own"
   on public.terms_acceptances for update
   using (true)
@@ -52,14 +55,17 @@ create index if not exists user_blocks_blocked_idx on public.user_blocks (blocke
 
 alter table public.user_blocks enable row level security;
 
+drop policy if exists "user_blocks_select_own" on public.user_blocks;
 create policy "user_blocks_select_own"
   on public.user_blocks for select
   using (true);
 
+drop policy if exists "user_blocks_insert" on public.user_blocks;
 create policy "user_blocks_insert"
   on public.user_blocks for insert
   with check (true);
 
+drop policy if exists "user_blocks_delete_own" on public.user_blocks;
 create policy "user_blocks_delete_own"
   on public.user_blocks for delete
   using (true);
@@ -104,11 +110,13 @@ create index if not exists content_reports_target_idx
 
 alter table public.content_reports enable row level security;
 
+drop policy if exists "content_reports_insert" on public.content_reports;
 create policy "content_reports_insert"
   on public.content_reports for insert
   with check (true);
 
 -- Prefer: only service role can read all reports. Until then, open read for dashboard exports (tighten in production).
+drop policy if exists "content_reports_select" on public.content_reports;
 create policy "content_reports_select"
   on public.content_reports for select
   using (true);
@@ -124,13 +132,26 @@ returns trigger
 language plpgsql
 as $$
 declare
-  -- Add lowercase substrings to block (keep short; prefer Edge Function + external API for real moderation).
-  bad text[] := array[]::text[];
+  -- Lowercase substrings to block. Matched against a normalized form of the
+  -- content (lowercased, spacing/punctuation stripped, common leetspeak folded)
+  -- so simple obfuscation is caught. Keep in sync with BLOCKED_TERMS in
+  -- lib/contentModeration.ts. Prefer an Edge Function + external moderation API
+  -- for production-grade coverage.
+  bad text[] := array[
+    'nigger', 'nigga', 'faggot', 'retard', 'kike',
+    'spic', 'chink', 'wetback', 'tranny', 'cunt'
+  ];
   needle text;
+  normalized text;
 begin
+  normalized := lower(coalesce(new.content, ''));
+  -- Strip spacing/punctuation and fold leetspeak to mirror the client filter.
+  normalized := regexp_replace(normalized, '[[:space:]._\-*]+', '', 'g');
+  normalized := translate(normalized, '01345@$', 'oieasas');
+
   foreach needle in array bad
   loop
-    if needle is not null and needle <> '' and position(needle in lower(coalesce(new.content, ''))) > 0 then
+    if needle is not null and needle <> '' and position(needle in normalized) > 0 then
       raise exception 'Content violates community guidelines' using errcode = '23514';
     end if;
   end loop;
@@ -138,17 +159,17 @@ begin
 end;
 $$;
 
--- Uncomment to enforce on circle notes:
--- drop trigger if exists trg_circle_notes_filter on public.circle_notes;
--- create trigger trg_circle_notes_filter
---   before insert or update of content on public.circle_notes
---   for each row execute function public.reject_objectionable_note_content();
+-- Enforce on circle notes:
+drop trigger if exists trg_circle_notes_filter on public.circle_notes;
+create trigger trg_circle_notes_filter
+  before insert or update of content on public.circle_notes
+  for each row execute function public.reject_objectionable_note_content();
 
--- Uncomment to enforce on event notes:
--- drop trigger if exists trg_event_notes_filter on public.event_notes;
--- create trigger trg_event_notes_filter
---   before insert or update of content on public.event_notes
---   for each row execute function public.reject_objectionable_note_content();
+-- Enforce on event notes:
+drop trigger if exists trg_event_notes_filter on public.event_notes;
+create trigger trg_event_notes_filter
+  before insert or update of content on public.event_notes
+  for each row execute function public.reject_objectionable_note_content();
 
 comment on function public.reject_objectionable_note_content() is
   'Example DB-level filter; maintain a real blocklist or call a moderation API from an Edge Function instead.';

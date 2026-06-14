@@ -32,6 +32,10 @@ import {
   fetchReportedHiddenContentIds,
   fetchReportedHiddenNoteIds,
 } from "../lib/contentReports";
+import {
+  containsObjectionableContent,
+  OBJECTIONABLE_CONTENT_MESSAGE,
+} from "../lib/contentModeration";
 import { fetchEventNoteStats } from "../lib/activityStats";
 import { useReport } from "../src/contexts/ReportProvider";
 import { CircleInviteModal } from "../src/components/modals/CircleInviteModal";
@@ -69,7 +73,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     if (!owner_id || isOwner) return;
     let cancelled = false;
     (async () => {
-      const hidden = await fetchHiddenAuthorIds([owner_id]);
+      const hidden = await fetchHiddenAuthorIds([owner_id], user?.id);
       if (cancelled || !hidden.has(owner_id)) return;
       Alert.alert("Unavailable", "This circle is no longer available.");
       navigation.goBack();
@@ -243,7 +247,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       const [reportedEv, hiddenNoteIds, hiddenAuthors, noteStats] = await Promise.all([
         fetchReportedHiddenContentIds("event", evs.map((e) => e.id)),
         fetchReportedHiddenNoteIds("circle_note", rawNotes.map((n) => n.id)),
-        fetchHiddenAuthorIds(authorIds),
+        fetchHiddenAuthorIds(authorIds, user?.id),
         fetchEventNoteStats(evs.map((e) => e.id)),
       ]);
 
@@ -347,6 +351,10 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
   async function handlePostNote() {
     if (!user || !noteText.trim() || postingNote) return;
+    if (containsObjectionableContent(noteText)) {
+      Alert.alert("Can't post this", OBJECTIONABLE_CONTENT_MESSAGE);
+      return;
+    }
     setPostingNote(true);
     const { data, error } = await supabase
       .from("circle_notes")
@@ -1054,6 +1062,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         onClose={() => setProfileModalVisible(false)}
         userId={owner_id}
         displayName={organizer ?? name}
+        onBlocked={() => navigation.goBack()}
       />
 
       <CreateEventModal

@@ -28,6 +28,10 @@ import {
   fetchHiddenAuthorIds,
   fetchReportedHiddenNoteIds,
 } from "../lib/contentReports";
+import {
+  containsObjectionableContent,
+  OBJECTIONABLE_CONTENT_MESSAGE,
+} from "../lib/contentModeration";
 import { useReport } from "../src/contexts/ReportProvider";
 import { InviteModal } from "../src/components/modals/InviteModal";
 import { EditEventModal, EditEventData } from "../src/components/modals/EditEventModal";
@@ -54,7 +58,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
     if (!created_by || isCreator) return;
     let cancelled = false;
     (async () => {
-      const hidden = await fetchHiddenAuthorIds([created_by]);
+      const hidden = await fetchHiddenAuthorIds([created_by], user?.id);
       if (cancelled || !hidden.has(created_by)) return;
       Alert.alert("Unavailable", "This event is no longer available.");
       navigation.goBack();
@@ -198,7 +202,8 @@ export default function EventDetailScreen({ route, navigation }: Props) {
       const [hidden, hiddenAuthors] = await Promise.all([
         fetchReportedHiddenNoteIds("event_note", data.map((n: EventNote) => n.id)),
         fetchHiddenAuthorIds(
-          data.map((n: EventNote) => n.user_id).filter((uid): uid is string => !!uid)
+          data.map((n: EventNote) => n.user_id).filter((uid): uid is string => !!uid),
+          user?.id
         ),
       ]);
       if (!cancelled) {
@@ -218,6 +223,10 @@ export default function EventDetailScreen({ route, navigation }: Props) {
 
   async function handlePostNote() {
     if (!user || !noteText.trim() || postingNote) return;
+    if (containsObjectionableContent(noteText)) {
+      Alert.alert("Can't post this", OBJECTIONABLE_CONTENT_MESSAGE);
+      return;
+    }
     setPostingNote(true);
     const { data, error } = await supabase
       .from("event_notes")
@@ -645,6 +654,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
           onClose={() => setProfileModalVisible(false)}
           userId={created_by}
           displayName={organizer}
+          onBlocked={() => navigation.goBack()}
         />
       ) : null}
 

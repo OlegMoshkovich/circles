@@ -702,12 +702,16 @@ function ProfileStep({
   onBack: () => void;
   clerkDisplayName: string;
 }) {
-  const resolvedName = data.displayName.trim() || clerkDisplayName.trim();
-  const canContinue = !!resolvedName;
-  const subtitle =
-    clerkDisplayName.trim() && !data.displayName.trim()
-      ? "We already have a name from your sign-in (e.g. Sign in with Apple). You can edit it below, or tap Continue."
-      : "Let the community know who you are.";
+  // Apple's Sign in with Apple guidelines forbid asking the user to provide a
+  // name/email that the Authentication Services framework already supplied. So
+  // when sign-in already gave us a name we DON'T show a name field at all — we
+  // just use it. When sign-in withheld the name (e.g. Apple's private relay, or
+  // a returning user), the name field is shown but is OPTIONAL and never blocks
+  // the user; a default is derived at completion.
+  const hasSignInName = !!clerkDisplayName.trim();
+  const subtitle = hasSignInName
+    ? "Add a short bio if you like — you can always edit it later."
+    : "Tell the community a little about yourself. This is optional.";
   return (
     <KeyboardAvoidingView
       style={styles.formStep}
@@ -721,17 +725,32 @@ function ProfileStep({
         >
           <StepHeader title="Your profile" subtitle={subtitle} onBack={onBack} />
           <View style={{ paddingBottom: 8 }}>
-            <Text style={styles.fieldLabel}>Name</Text>
-            <View style={styles.inputRow}>
-              <TextInput
-                value={data.displayName}
-                onChangeText={(v) => onUpdate({ displayName: v })}
-                placeholder="Your name"
-                placeholderTextColor="rgba(239,237,225,0.35)"
-                style={styles.textInput}
-                autoCapitalize="words"
-              />
-            </View>
+            {hasSignInName ? (
+              <>
+                <Text style={styles.fieldLabel}>Name</Text>
+                <View style={[styles.inputRow, { opacity: 0.7 }]}>
+                  <Text style={[styles.textInput, { paddingVertical: 14 }]}>
+                    {clerkDisplayName.trim()}
+                  </Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={styles.fieldLabel}>
+                  Name <Text style={styles.optionalLabel}>(optional)</Text>
+                </Text>
+                <View style={styles.inputRow}>
+                  <TextInput
+                    value={data.displayName}
+                    onChangeText={(v) => onUpdate({ displayName: v })}
+                    placeholder="Your name"
+                    placeholderTextColor="rgba(239,237,225,0.35)"
+                    style={styles.textInput}
+                    autoCapitalize="words"
+                  />
+                </View>
+              </>
+            )}
             <Text style={[styles.fieldLabel, { marginTop: 20 }]}>
               Bio <Text style={styles.optionalLabel}>(optional)</Text>
             </Text>
@@ -749,16 +768,11 @@ function ProfileStep({
           </View>
           <GlassButton
             label="Continue"
-            onPress={
-              canContinue
-                ? () => {
-                    const name = data.displayName.trim() || clerkDisplayName.trim();
-                    if (name) onUpdate({ displayName: name });
-                    onNext();
-                  }
-                : undefined
-            }
-            disabled={!canContinue}
+            onPress={() => {
+              const name = data.displayName.trim() || clerkDisplayName.trim();
+              if (name) onUpdate({ displayName: name });
+              onNext();
+            }}
           />
         </ScrollView>
       </View>
@@ -991,8 +1005,17 @@ export default function OnboardingScreen({ onComplete }: Props) {
   async function handleComplete() {
     if (!user || saving) return;
     setSaving(true);
+    // Never require the user to type a name (Apple guideline 4): prefer what
+    // they typed, then the name sign-in gave us, then a friendly default derived
+    // from their email local-part, so onboarding can always complete.
+    const emailLocalPart = (user.primaryEmailAddress?.emailAddress ?? "")
+      .split("@")[0]
+      .trim();
     const profileDisplayName =
-      data.displayName.trim() || getClerkOnboardingDisplayName(user) || null;
+      data.displayName.trim() ||
+      getClerkOnboardingDisplayName(user) ||
+      emailLocalPart ||
+      "Member";
     try {
       const token = await getToken({ template: "supabase" });
       const client = token ? getAuthClient(token) : supabase;

@@ -247,7 +247,7 @@ export default function CirclesScreen() {
           .filter((circle) => circle.visibility !== "private" || map[circle.id] != null);
         const [reportedCircleIds, hiddenAuthorIds, pendingResult] = await Promise.all([
           fetchReportedHiddenContentIds("circle", mapped.map((c: any) => c.id)),
-          fetchHiddenAuthorIds(mapped.map((c: any) => c.owner_id).filter((id: any): id is string => !!id)),
+          fetchHiddenAuthorIds(mapped.map((c: any) => c.owner_id).filter((id: any): id is string => !!id), user?.id),
           ownedIds.length > 0
             ? client.from("circle_members").select("circle_id").in("circle_id", ownedIds).eq("status", "requested")
             : Promise.resolve({ data: [], error: null }),

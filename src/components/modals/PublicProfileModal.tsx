@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  Alert,
   Image,
   Modal,
   ScrollView,
@@ -15,12 +16,15 @@ import { Spinner } from "../loaders/Spinner";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { useReport } from "../../contexts/ReportProvider";
 import { supabase, UserProfile } from "../../../lib/supabase";
+import { blockUser, isUserBlocked, unblockUser } from "../../../lib/userBlocks";
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   userId: string;
   displayName: string;
+  /** Called after the viewer blocks this user, so the parent can drop their content immediately. */
+  onBlocked?: (userId: string) => void;
 };
 
 function initials(name: string): string {
@@ -30,7 +34,7 @@ function initials(name: string): string {
     : name.slice(0, 2).toUpperCase();
 }
 
-export function PublicProfileModal({ visible, onClose, userId, displayName }: Props) {
+export function PublicProfileModal({ visible, onClose, userId, displayName, onBlocked }: Props) {
   const { user } = useUser();
   const { report } = useReport();
   const { bgOption } = useBackground();
@@ -39,6 +43,8 @@ export function PublicProfileModal({ visible, onClose, userId, displayName }: Pr
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
+  const [blocked, setBlocked] = useState(false);
+  const [blockWorking, setBlockWorking] = useState(false);
 
   useEffect(() => {
     if (!visible || !userId) return;
@@ -55,7 +61,62 @@ export function PublicProfileModal({ visible, onClose, userId, displayName }: Pr
       });
   }, [visible, userId]);
 
+  useEffect(() => {
+    if (!visible || !user?.id || user.id === userId) {
+      setBlocked(false);
+      return;
+    }
+    let cancelled = false;
+    isUserBlocked(user.id, userId).then((b) => {
+      if (!cancelled) setBlocked(b);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, user?.id, userId]);
+
   const name = profile?.display_name ?? displayName;
+  const canModerate = !!user?.id && user.id !== userId;
+
+  async function confirmBlock() {
+    if (!user?.id || blockWorking) return;
+    Alert.alert(
+      `Block ${name}?`,
+      "You won't see their circles, events, or notes anymore, and our team will be notified to review them.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Block",
+          style: "destructive",
+          onPress: async () => {
+            setBlockWorking(true);
+            const { error } = await blockUser(user.id, userId);
+            setBlockWorking(false);
+            if (error) {
+              Alert.alert("Could not block", error.message);
+              return;
+            }
+            setBlocked(true);
+            onBlocked?.(userId);
+            onClose();
+            Alert.alert("Blocked", `You won't see content from ${name} anymore.`);
+          },
+        },
+      ]
+    );
+  }
+
+  async function handleUnblock() {
+    if (!user?.id || blockWorking) return;
+    setBlockWorking(true);
+    const { error } = await unblockUser(user.id, userId);
+    setBlockWorking(false);
+    if (error) {
+      Alert.alert("Could not unblock", error.message);
+      return;
+    }
+    setBlocked(false);
+  }
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
@@ -69,14 +130,23 @@ export function PublicProfileModal({ visible, onClose, userId, displayName }: Pr
               <View style={styles.headerActions}>
                 {user?.id && user.id !== userId ? (
                   <TouchableOpacity
-                    onPress={() =>
-                      report({
-                        reporterUserId: user.id,
-                        targetType: "user_profile",
-                        targetId: userId,
-                        reportedUserId: userId,
-                      })
-                    }
+                    onPress={() => {
+                      const reporterId = user.id;
+                      // Close this full-screen modal first, otherwise the report
+                      // modal (rendered higher in the tree) opens behind it and
+                      // is only visible after dismissing this sheet.
+                      onClose();
+                      setTimeout(
+                        () =>
+                          report({
+                            reporterUserId: reporterId,
+                            targetType: "user_profile",
+                            targetId: userId,
+                            reportedUserId: userId,
+                          }),
+                        350
+                      );
+                    }}
                     hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                   >
                     <Ionicons name="ellipsis-horizontal" size={18} color={colors.textMuted} />
@@ -133,6 +203,28 @@ export function PublicProfileModal({ visible, onClose, userId, displayName }: Pr
                 {!profile?.bio && !profile?.interests?.length ? (
                   <Text style={styles.emptyText}>No profile information yet.</Text>
                 ) : null}
+
+                {canModerate ? (
+                  <TouchableOpacity
+                    style={styles.blockButton}
+                    onPress={blocked ? handleUnblock : confirmBlock}
+                    disabled={blockWorking}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name={blocked ? "person-add-outline" : "ban-outline"}
+                      size={18}
+                      color="#ffffff"
+                    />
+                    <Text style={styles.blockButtonText}>
+                      {blockWorking
+                        ? "Working…"
+                        : blocked
+                        ? `Unblock ${name}`
+                        : `Block ${name}`}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
               </ScrollView>
             )}
           </View>
@@ -153,16 +245,16 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       backgroundColor: colors.background,
       borderTopLeftRadius: 28,
       borderTopRightRadius: 28,
-      height: "60%",
+      maxHeight: "85%",
     },
     sheet: {
       backgroundColor: isOnboarding ? "#3F4837" : colors.card,
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
       paddingHorizontal: 24,
-      paddingBottom: 40,
+      // Matches blockButton.marginTop so the gap above and below the button is equal.
+      paddingBottom: 24,
       paddingTop: 12,
-      flex: 1,
       borderWidth: 1,
       borderColor: colors.cardBorder,
     },
@@ -195,7 +287,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       alignItems: "center",
     },
     content: {
-      paddingBottom: 16,
+      paddingBottom: 0,
     },
     avatarRow: {
       flexDirection: "row",
@@ -276,6 +368,22 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       fontStyle: "italic",
       paddingVertical: 24,
       textAlign: "center",
+    },
+    blockButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      marginTop: 24,
+      paddingVertical: 14,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: "rgba(255, 255, 255, 0.6)",
+    },
+    blockButtonText: {
+      fontSize: 15,
+      fontFamily: "Lora_400Regular",
+      color: "#ffffff",
     },
   });
 }
