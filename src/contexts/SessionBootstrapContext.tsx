@@ -15,6 +15,15 @@ type SessionBootstrap = {
   ready: boolean;
   needsOnboarding: boolean;
   setNeedsOnboarding: (v: boolean) => void;
+  /** Call when onboarding finishes — keeps local + in-memory state in sync. */
+  completeOnboarding: () => void;
+  /** Replay onboarding (profile settings). */
+  beginOnboarding: () => void;
+  /**
+   * Whether this device has recorded onboarding as done for the signed-in user.
+   * `null` while unknown (first read in flight).
+   */
+  onboardingCompleteLocally: boolean | null;
   banned: boolean;
   banReason: string | null;
   bannedAt: string | null;
@@ -24,6 +33,9 @@ const SessionBootstrapContext = React.createContext<SessionBootstrap>({
   ready: false,
   needsOnboarding: false,
   setNeedsOnboarding: () => {},
+  completeOnboarding: () => {},
+  beginOnboarding: () => {},
+  onboardingCompleteLocally: null,
   banned: false,
   banReason: null,
   bannedAt: null,
@@ -42,6 +54,7 @@ export function SessionBootstrapProvider({ children }: { children: React.ReactNo
   const userId = user?.id ?? null;
   const [ready, setReady] = React.useState(false);
   const [needsOnboarding, setNeedsOnboarding] = React.useState(false);
+  const [onboardingCompleteLocally, setOnboardingCompleteLocally] = React.useState<boolean | null>(null);
   const [ban, setBan] = React.useState<{ banned: boolean; reason: string | null; at: string | null }>({
     banned: false,
     reason: null,
@@ -52,6 +65,7 @@ export function SessionBootstrapProvider({ children }: { children: React.ReactNo
     if (!isLoaded) return;
     if (!isSignedIn || !userId) {
       setNeedsOnboarding(false);
+      setOnboardingCompleteLocally(null);
       setBan({ banned: false, reason: null, at: null });
       setReady(true);
       return;
@@ -62,9 +76,17 @@ export function SessionBootstrapProvider({ children }: { children: React.ReactNo
     // until this user's checks resolve, otherwise the gate would render the main
     // app for a beat before flipping to onboarding for a brand-new user.
     setReady(false);
+    setOnboardingCompleteLocally(null);
 
     let cancelled = false;
     const onboardingKey = onboardingStorageKey(userId);
+
+    // Fast local read so the splash can distinguish new vs returning users
+    // before the slower Supabase round-trip finishes.
+    void AsyncStorage.getItem(onboardingKey).then((flag) => {
+      if (cancelled) return;
+      setOnboardingCompleteLocally(flag === "1");
+    });
 
     // Everything below is independent — one storage read and one network
     // round-trip instead of the previous flag -> terms -> profile -> ban chain.
@@ -96,14 +118,19 @@ export function SessionBootstrapProvider({ children }: { children: React.ReactNo
 
       if (localFlag === "1") {
         setNeedsOnboarding(false);
+        setOnboardingCompleteLocally(true);
       } else {
         // Fallback for reinstalls/new devices where local AsyncStorage is
         // empty: server-side traces mean onboarding is already done.
         const completedOnServer = !!termsRes.data || !!profile;
         if (completedOnServer) {
           void AsyncStorage.setItem(onboardingKey, "1");
+          setOnboardingCompleteLocally(true);
+          setNeedsOnboarding(false);
+        } else {
+          setOnboardingCompleteLocally(false);
+          setNeedsOnboarding(true);
         }
-        setNeedsOnboarding(!completedOnServer);
       }
       setReady(true);
     };
@@ -136,16 +163,29 @@ export function SessionBootstrapProvider({ children }: { children: React.ReactNo
     };
   }, [isLoaded, isSignedIn, userId]);
 
+  const completeOnboarding = React.useCallback(() => {
+    setNeedsOnboarding(false);
+    setOnboardingCompleteLocally(true);
+  }, []);
+
+  const beginOnboarding = React.useCallback(() => {
+    setNeedsOnboarding(true);
+    setOnboardingCompleteLocally(false);
+  }, []);
+
   const value = React.useMemo<SessionBootstrap>(
     () => ({
       ready,
       needsOnboarding,
       setNeedsOnboarding,
+      completeOnboarding,
+      beginOnboarding,
+      onboardingCompleteLocally,
       banned: ban.banned,
       banReason: ban.reason,
       bannedAt: ban.at,
     }),
-    [ready, needsOnboarding, ban]
+    [ready, needsOnboarding, completeOnboarding, beginOnboarding, onboardingCompleteLocally, ban]
   );
 
   return <SessionBootstrapContext.Provider value={value}>{children}</SessionBootstrapContext.Provider>;

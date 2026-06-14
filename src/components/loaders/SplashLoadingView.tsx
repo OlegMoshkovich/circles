@@ -1,6 +1,11 @@
 import React from "react";
-import { StyleSheet, View, useWindowDimensions } from "react-native";
+import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import Svg, { Path } from "react-native-svg";
+
+type Props = {
+  /** Shown below the logo during first-time account setup. */
+  statusMessage?: string;
+};
 
 /**
  * Full-screen branded loading view shown while the app is "still setting up".
@@ -20,7 +25,7 @@ const LOGO_COLOR = "#FFFFFF";
 const LOGO_WIDTH_RATIO = 0.1248; // logo width as a fraction of the screen width
 const LOGO_ASPECT = 175 / 132; // monogram viewBox is 132 x 175
 
-export function SplashLoadingView() {
+export function SplashLoadingView({ statusMessage }: Props) {
   const { width } = useWindowDimensions();
   const logoWidth = Math.round(width * LOGO_WIDTH_RATIO);
   const logoHeight = Math.round(logoWidth * LOGO_ASPECT);
@@ -41,6 +46,7 @@ export function SplashLoadingView() {
           strokeLinecap="round"
         />
       </Svg>
+      {statusMessage ? <Text style={styles.statusMessage}>{statusMessage}</Text> : null}
     </View>
   );
 }
@@ -51,5 +57,12 @@ const styles = StyleSheet.create({
     backgroundColor: SPLASH_GREEN,
     alignItems: "center",
     justifyContent: "center",
+  },
+  statusMessage: {
+    marginTop: 28,
+    fontSize: 14,
+    fontFamily: "Lora_400Regular",
+    color: "rgba(255,255,255,0.82)",
+    letterSpacing: 0.2,
   },
 });

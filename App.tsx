@@ -57,9 +57,12 @@ const SPLASH_FADE_DURATION = 400;
 
 function AppGate({ children }: { children: React.ReactNode }) {
   const { user, isSignedIn, isLoaded } = useUser();
-  const { ready, needsOnboarding, setNeedsOnboarding, banned } = useSessionBootstrap();
+  const { ready, needsOnboarding, completeOnboarding, beginOnboarding, onboardingCompleteLocally, banned } =
+    useSessionBootstrap();
   const { homeReady, markHomeReady } = useHomeReady();
   const [forceReveal, setForceReveal] = React.useState(false);
+  // Keep showing the setup line through onboarding and the first home fetch.
+  const firstSetupActive = React.useRef(false);
   // Splash overlay is kept mounted across one extra render so we can fade it
   // out (instead of cutting to the destination) when loading finishes, and
   // fade it back in if a later transition (e.g. sign-out -> sign-in) makes it
@@ -87,6 +90,28 @@ function AppGate({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timer);
   }, [isSignedIn]);
 
+  React.useEffect(() => {
+    if (!isSignedIn) {
+      firstSetupActive.current = false;
+    }
+  }, [isSignedIn]);
+
+  React.useEffect(() => {
+    if (needsOnboarding) firstSetupActive.current = true;
+  }, [needsOnboarding]);
+
+  React.useEffect(() => {
+    if (homeReady) firstSetupActive.current = false;
+  }, [homeReady]);
+
+  const isNewUserSetup =
+    isSignedIn &&
+    (needsOnboarding ||
+      (!ready && onboardingCompleteLocally === false) ||
+      (firstSetupActive.current && ready && !needsOnboarding && !banned && !homeReady));
+
+  const setupStatusMessage = isNewUserSetup ? "Setting up your app…" : undefined;
+
   const restart = React.useCallback(
     async (options?: OnboardingRestartOptions) => {
       if (!user) return;
@@ -94,9 +119,10 @@ function AppGate({ children }: { children: React.ReactNode }) {
         await supabase.from("terms_acceptances").delete().eq("user_id", user.id);
       }
       await AsyncStorage.removeItem(onboardingStorageKey(user.id));
-      setNeedsOnboarding(true);
+      firstSetupActive.current = true;
+      beginOnboarding();
     },
-    [user, setNeedsOnboarding]
+    [user, beginOnboarding]
   );
   const restartValue = React.useMemo(() => ({ restart }), [restart]);
 
@@ -110,8 +136,8 @@ function AppGate({ children }: { children: React.ReactNode }) {
     content = null; // covered by the splash overlay
   } else if (needsOnboarding) {
     content = (
-      <React.Suspense fallback={<SplashLoadingView />}>
-        <OnboardingScreen onComplete={() => setNeedsOnboarding(false)} />
+      <React.Suspense fallback={<SplashLoadingView statusMessage={setupStatusMessage} />}>
+        <OnboardingScreen onComplete={completeOnboarding} />
       </React.Suspense>
     );
   } else {
@@ -176,7 +202,7 @@ function AppGate({ children }: { children: React.ReactNode }) {
             style={[StyleSheet.absoluteFill, { opacity: splashOpacity }]}
             pointerEvents={splashVisible ? "auto" : "none"}
           >
-            <SplashLoadingView />
+            <SplashLoadingView statusMessage={setupStatusMessage} />
           </Animated.View>
         )}
       </View>
