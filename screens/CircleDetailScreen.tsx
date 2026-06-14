@@ -71,7 +71,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     (async () => {
       const hidden = await fetchHiddenAuthorIds([owner_id]);
       if (cancelled || !hidden.has(owner_id)) return;
-      Alert.alert("Unavailable", "This circle is no longer available.");
+      Alert.alert(t.screens.detail.circleUnavailableTitle, t.screens.detail.circleUnavailableMsg);
       navigation.goBack();
     })();
     return () => {
@@ -341,7 +341,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       return true;
     }
     console.error("Failed to create circle event", error);
-    Alert.alert("Could not create event", error.message);
+    Alert.alert(t.screens.eventForm.couldNotCreateTitle, error.message);
     return false;
   }
 
@@ -384,7 +384,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         url: shareUrl,
       });
     } catch {
-      Alert.alert("Error", "Could not open share menu.");
+      Alert.alert(t.screens.detail.shareErrorTitle, t.screens.detail.shareErrorMsg);
     }
   }
 

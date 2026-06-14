@@ -14,6 +14,7 @@ import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/dat
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../../theme/colors";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
+import { useLanguage } from "../../i18n/LanguageContext";
 import { LazyMapPickerView } from "./LazyMapPickerView";
 import { supabase } from "../../../lib/supabase";
 
@@ -59,6 +60,7 @@ function parseDateTimeStrings(dateStr: string, timeStr: string): Date {
 
 export function EditEventModal({ visible, onClose, onSaved, eventId, initialValues }: Props) {
   const { bgOption } = useBackground();
+  const { t } = useLanguage();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
 
@@ -173,20 +175,20 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
               <View style={styles.handle} />
 
               <View style={styles.header}>
-                <Text style={styles.headerTitle}>Edit Event</Text>
+                <Text style={styles.headerTitle}>{t.screens.eventForm.editEvent}</Text>
                 <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                   <Ionicons name="close" size={20} color={colors.textMuted} />
                 </TouchableOpacity>
               </View>
 
               <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                <Field label="Title" value={title} onChangeText={setTitle} placeholder="Morning Lake Swim" />
-                <Field label="Organiser" value={organizer} onChangeText={setOrganizer} placeholder="Your name" />
+                <Field label={t.screens.eventForm.title} value={title} onChangeText={setTitle} placeholder={t.screens.eventForm.titlePlaceholder} />
+                <Field label={t.screens.eventForm.organiser} value={organizer} onChangeText={setOrganizer} placeholder={t.screens.eventForm.organiserPlaceholder} />
 
                 <View style={styles.row}>
                   <View style={styles.halfField}>
                     <View style={styles.fieldContainer}>
-                      <Text style={styles.fieldLabel}>Date</Text>
+                      <Text style={styles.fieldLabel}>{t.screens.eventForm.date}</Text>
                       <TouchableOpacity
                         style={styles.pickerButton}
                         onPress={() => setPickerMode("date")}
@@ -199,7 +201,7 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
                   </View>
                   <View style={styles.halfField}>
                     <View style={styles.fieldContainer}>
-                      <Text style={styles.fieldLabel}>Time</Text>
+                      <Text style={styles.fieldLabel}>{t.screens.eventForm.time}</Text>
                       <TouchableOpacity
                         style={styles.pickerButton}
                         onPress={() => setPickerMode("time")}
@@ -221,7 +223,7 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
                 )}
 
                 <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>Location</Text>
+                  <Text style={styles.fieldLabel}>{t.screens.eventForm.location}</Text>
                   <View style={styles.locationInputRow}>
                     <Ionicons
                       name={location ? "location" : "location-outline"}
@@ -232,7 +234,7 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
                     <TextInput
                       value={location}
                       onChangeText={setLocation}
-                      placeholder="Enter an address"
+                      placeholder={t.screens.eventForm.locationPlaceholder}
                       placeholderTextColor={colors.textMuted}
                       style={styles.locationInput}
                       numberOfLines={1}
@@ -245,22 +247,22 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
                   >
                     <Ionicons name="map-outline" size={14} color={colors.textMuted} style={styles.pickerIcon} />
                     <Text style={styles.locationMapButtonText}>
-                      Choose on map instead
+                      {t.screens.eventForm.chooseOnMap}
                     </Text>
                   </TouchableOpacity>
                 </View>
 
-                <Field label="Description" value={description} onChangeText={setDescription} placeholder="A few words about the event…" multiline />
-                <Field label="Image URL" value={imageUrl} onChangeText={setImageUrl} placeholder="https://example.com/event.jpg" keyboardType="url" />
+                <Field label={t.screens.eventForm.description} value={description} onChangeText={setDescription} placeholder={t.screens.eventForm.descriptionPlaceholder} multiline />
+                <Field label={t.screens.eventForm.imageUrl} value={imageUrl} onChangeText={setImageUrl} placeholder={t.screens.eventForm.imageUrlPlaceholder} keyboardType="url" />
                 <Field
-                  label="Maximum Participants"
+                  label={t.screens.eventForm.maxParticipants}
                   value={maxParticipants}
                   onChangeText={(v) => setMaxParticipants(v.replace(/[^0-9]/g, ""))}
-                  placeholder="Limit number of participants"
+                  placeholder={t.screens.eventForm.maxParticipantsPlaceholder}
                   keyboardType="number-pad"
                 />
-                <Field label="Contact Info" value={contactInfo} onChangeText={setContactInfo} placeholder="Phone / Email" keyboardType="email-address" />
-                <Field label="Price" value={priceInfo} onChangeText={setPriceInfo} placeholder="Free / Paid" />
+                <Field label={t.screens.eventForm.contactInfo} value={contactInfo} onChangeText={setContactInfo} placeholder={t.screens.eventForm.contactPlaceholder} keyboardType="email-address" />
+                <Field label={t.screens.eventForm.price} value={priceInfo} onChangeText={setPriceInfo} placeholder={t.screens.eventForm.pricePlaceholder} />
               </ScrollView>
 
               {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -270,7 +272,7 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
                 onPress={handleSave}
                 disabled={!canSave}
               >
-                <Text style={styles.saveButtonText}>{saving ? "Saving…" : "Save Changes"}</Text>
+                <Text style={styles.saveButtonText}>{saving ? t.screens.eventForm.saving : t.screens.eventForm.saveChanges}</Text>
               </TouchableOpacity>
 
               {pickerMode !== null && Platform.OS === "ios" && (
@@ -278,10 +280,10 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
                   <View style={styles.pickerCard}>
                     <View style={styles.pickerOverlayHeader}>
                       <Text style={styles.pickerOverlayTitle}>
-                        {pickerMode === "date" ? "Choose Date" : "Choose Time"}
+                        {pickerMode === "date" ? t.screens.eventForm.chooseDate : t.screens.eventForm.chooseTime}
                       </Text>
                       <TouchableOpacity onPress={() => setPickerMode(null)}>
-                        <Text style={styles.pickerOverlayDone}>Done</Text>
+                        <Text style={styles.pickerOverlayDone}>{t.screens.common.done}</Text>
                       </TouchableOpacity>
                     </View>
                     <DateTimePicker

@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@clerk/clerk-expo";
 import { Colors } from "../../theme/colors";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
+import { useLanguage } from "../../i18n/LanguageContext";
 import { supabase, Circle } from "../../../lib/supabase";
 import { LazyMapPickerView } from "./LazyMapPickerView";
 
@@ -69,18 +70,19 @@ const DURATION_OPTIONS: (number | null)[] = [
   ...Array.from({ length: 32 }, (_, i) => (i + 1) * 15),
 ];
 
-function fmtDuration(minutes: number | null): string {
-  if (minutes === null) return "None";
-  if (minutes < 60) return `${minutes} min`;
+function fmtDuration(minutes: number | null, tf: any): string {
+  if (minutes === null) return tf.durationNone;
+  if (minutes < 60) return `${minutes} ${tf.min}`;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  if (m === 0) return `${h} hr`;
-  return `${h} hr ${m} min`;
+  if (m === 0) return `${h} ${tf.hr}`;
+  return `${h} ${tf.hr} ${m} ${tf.min}`;
 }
 
 export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: Props) {
   const { user } = useUser();
   const { bgOption } = useBackground();
+  const { t } = useLanguage();
 
   function defaultOrganizer() {
     return user?.fullName
@@ -114,6 +116,13 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
   const scrollRef = useRef<ScrollView>(null);
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
+
+  const VIS_LABELS = {
+    public: t.screens.eventForm.visPublic,
+    circle: t.screens.eventForm.visCircle,
+    friends: t.screens.eventForm.visFriends,
+    private: t.screens.eventForm.visPrivate,
+  };
 
   useEffect(() => {
     if (!visible || !user) return;
@@ -183,7 +192,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
       }
     } catch (error) {
       console.error("Failed to create event", error);
-      Alert.alert("Could not create event", "Please try again.");
+      Alert.alert(t.screens.eventForm.couldNotCreateTitle, t.screens.eventForm.couldNotCreateMsg);
     }
   }
 
@@ -243,7 +252,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
               <View style={styles.handle} />
 
               <View style={styles.header}>
-                <Text style={styles.headerTitle}>New Event</Text>
+                <Text style={styles.headerTitle}>{t.screens.eventForm.newEvent}</Text>
                 <TouchableOpacity onPress={handleClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                   <Ionicons name="close" size={20} color={colors.textMuted} />
                 </TouchableOpacity>
@@ -258,7 +267,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                     activeOpacity={0.7}
                   >
                     <Ionicons name="calendar-outline" size={14} color={!isActivity ? colors.background : colors.textMuted} style={{ marginRight: 6 }} />
-                    <Text style={[styles.typeToggleText, !isActivity && styles.typeToggleTextActive]}>Event</Text>
+                    <Text style={[styles.typeToggleText, !isActivity && styles.typeToggleTextActive]}>{t.screens.eventForm.typeEvent}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.typeToggleBtn, isActivity && styles.typeToggleBtnActive]}
@@ -266,13 +275,13 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                     activeOpacity={0.7}
                   >
                     <Ionicons name="body-outline" size={14} color={isActivity ? colors.background : colors.textMuted} style={{ marginRight: 6 }} />
-                    <Text style={[styles.typeToggleText, isActivity && styles.typeToggleTextActive]}>Activity</Text>
+                    <Text style={[styles.typeToggleText, isActivity && styles.typeToggleTextActive]}>{t.screens.eventForm.typeActivity}</Text>
                   </TouchableOpacity>
                 </View>
 
-                <Field label="Title" value={title} onChangeText={setTitle} placeholder="Morning Lake Swim" />
+                <Field label={t.screens.eventForm.title} value={title} onChangeText={setTitle} placeholder={t.screens.eventForm.titlePlaceholder} />
                 <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>Organiser</Text>
+                  <Text style={styles.fieldLabel}>{t.screens.eventForm.organiser}</Text>
                   <View style={styles.inputRow}>
                     <Text style={styles.readOnlyValue}>{organizer}</Text>
                   </View>
@@ -282,7 +291,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                 <View style={styles.row}>
                   <View style={styles.halfField}>
                     <View style={styles.fieldContainer}>
-                      <Text style={styles.fieldLabel}>Date</Text>
+                      <Text style={styles.fieldLabel}>{t.screens.eventForm.date}</Text>
                       <TouchableOpacity
                         style={styles.pickerButton}
                         onPress={() => setPickerMode("date")}
@@ -295,7 +304,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                   </View>
                   <View style={styles.halfField}>
                     <View style={styles.fieldContainer}>
-                      <Text style={styles.fieldLabel}>Time</Text>
+                      <Text style={styles.fieldLabel}>{t.screens.eventForm.time}</Text>
                       <TouchableOpacity
                         style={styles.pickerButton}
                         onPress={() => setPickerMode("time")}
@@ -312,7 +321,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                 <View style={[styles.row, { marginTop: -8 }]}>
                   <View style={styles.halfField}>
                     <View style={styles.fieldContainer}>
-                      <Text style={styles.fieldLabel}>Duration <Text style={styles.optionalLabel}>(optional)</Text></Text>
+                      <Text style={styles.fieldLabel}>{t.screens.eventForm.duration} <Text style={styles.optionalLabel}>({t.screens.common.optional})</Text></Text>
                       <TouchableOpacity
                         style={styles.pickerButton}
                         onPress={() => setShowDurationPicker(true)}
@@ -320,7 +329,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                       >
                         <Ionicons name="hourglass-outline" size={14} color={colors.textMuted} style={styles.pickerIcon} />
                         <Text style={[styles.pickerButtonText, duration === null && styles.pickerButtonPlaceholder]}>
-                          {duration !== null ? fmtDuration(duration) : "—"}
+                          {duration !== null ? fmtDuration(duration, t.screens.eventForm) : "—"}
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -337,7 +346,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                 )}
 
                 <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>Location</Text>
+                  <Text style={styles.fieldLabel}>{t.screens.eventForm.location}</Text>
                   <View style={styles.locationInputRow}>
                     <Ionicons
                       name={location ? "location" : "location-outline"}
@@ -348,7 +357,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                     <TextInput
                       value={location}
                       onChangeText={setLocation}
-                      placeholder="Enter an address"
+                      placeholder={t.screens.eventForm.locationPlaceholder}
                       placeholderTextColor={colors.textMuted}
                       style={styles.locationInput}
                       numberOfLines={1}
@@ -361,25 +370,25 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                   >
                     <Ionicons name="map-outline" size={14} color={colors.textMuted} style={styles.pickerIcon} />
                     <Text style={styles.locationMapButtonText}>
-                      Choose on map instead
+                      {t.screens.eventForm.chooseOnMap}
                     </Text>
                   </TouchableOpacity>
                 </View>
 
-                <Field label="Description" value={description} onChangeText={setDescription} placeholder="A few words about the event…" multiline />
+                <Field label={t.screens.eventForm.description} value={description} onChangeText={setDescription} placeholder={t.screens.eventForm.descriptionPlaceholder} multiline />
                 <Field
-                  label="Maximum Participants"
+                  label={t.screens.eventForm.maxParticipants}
                   value={maxParticipants}
                   onChangeText={(v) => setMaxParticipants(v.replace(/[^0-9]/g, ""))}
-                  placeholder="Limit number of participants"
+                  placeholder={t.screens.eventForm.maxParticipantsPlaceholder}
                   keyboardType="number-pad"
                 />
-                <Field label="Contact Info" value={contactInfo} onChangeText={setContactInfo} placeholder="Phone / Email" keyboardType="email-address" />
-                <Field label="Price" value={priceInfo} onChangeText={setPriceInfo} placeholder="Free / Paid" />
+                <Field label={t.screens.eventForm.contactInfo} value={contactInfo} onChangeText={setContactInfo} placeholder={t.screens.eventForm.contactPlaceholder} keyboardType="email-address" />
+                <Field label={t.screens.eventForm.price} value={priceInfo} onChangeText={setPriceInfo} placeholder={t.screens.eventForm.pricePlaceholder} />
 
                 {!defaultCircleId && (
                   <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldLabel}>Visibility</Text>
+                    <Text style={styles.fieldLabel}>{t.screens.eventForm.visibility}</Text>
                     <View style={styles.toggleRow}>
                       {(["public", "circle", "friends", "private"] as const).map((opt) => (
                         <TouchableOpacity
@@ -395,7 +404,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                           }}
                         >
                           <Text style={[styles.toggleText, eventVisibility === opt && styles.toggleTextActive]}>
-                            {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                            {VIS_LABELS[opt]}
                           </Text>
                         </TouchableOpacity>
                       ))}
@@ -406,7 +415,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                 {/* Circle sub-picker */}
                 {!defaultCircleId && eventVisibility === "circle" && myCircles.length > 0 && (
                   <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldLabel}>Select Circle</Text>
+                    <Text style={styles.fieldLabel}>{t.screens.eventForm.selectCircle}</Text>
                     {myCircles.map((circle) => (
                       <TouchableOpacity
                         key={circle.id}
@@ -425,14 +434,14 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                 )}
                 {!defaultCircleId && eventVisibility === "circle" && myCircles.length === 0 && (
                   <View style={styles.fieldContainer}>
-                    <Text style={styles.noCirclesHint}>Join a circle first to post circle-only events.</Text>
+                    <Text style={styles.noCirclesHint}>{t.screens.eventForm.noCirclesHint}</Text>
                   </View>
                 )}
 
                 {/* Friends sub-picker */}
                 {!defaultCircleId && eventVisibility === "friends" && (
                   <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldLabel}>Invite Friends</Text>
+                    <Text style={styles.fieldLabel}>{t.screens.eventForm.inviteFriends}</Text>
                     {selectedFriends.length > 0 && (
                       <View style={styles.selectedFriendsRow}>
                         {selectedFriends.map((f) => (
@@ -441,7 +450,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                             style={styles.friendChip}
                             onPress={() => setSelectedFriends((prev) => prev.filter((x) => x.user_id !== f.user_id))}
                           >
-                            <Text style={styles.friendChipText}>{f.display_name ?? "User"}</Text>
+                            <Text style={styles.friendChipText}>{f.display_name ?? t.screens.common.user}</Text>
                             <Ionicons name="close" size={12} color={colors.textMuted} style={{ marginLeft: 4 }} />
                           </TouchableOpacity>
                         ))}
@@ -452,7 +461,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                       <TextInput
                         value={friendsSearch}
                         onChangeText={setFriendsSearch}
-                        placeholder="Search by name…"
+                        placeholder={t.screens.eventForm.searchByName}
                         placeholderTextColor={colors.textMuted}
                         style={styles.locationInput}
                         autoCapitalize="none"
@@ -470,14 +479,14 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                               setFriendsSearch("");
                             }}
                           >
-                            <Text style={styles.searchResultName}>{u.display_name ?? "User"}</Text>
+                            <Text style={styles.searchResultName}>{u.display_name ?? t.screens.common.user}</Text>
                             <Ionicons name="add" size={16} color={colors.textMuted} />
                           </TouchableOpacity>
                         ))}
                       </View>
                     )}
                     {friendsSearch.trim().length > 0 && friendsSearchResults.length === 0 && (
-                      <Text style={styles.noCirclesHint}>No users found.</Text>
+                      <Text style={styles.noCirclesHint}>{t.screens.eventForm.noUsersFound}</Text>
                     )}
                   </View>
                 )}
@@ -488,7 +497,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                 onPress={handleSave}
                 disabled={!canSave}
               >
-                <Text style={styles.saveButtonText}>Create Event</Text>
+                <Text style={styles.saveButtonText}>{t.screens.eventForm.createEvent}</Text>
               </TouchableOpacity>
 
               {/* iOS picker overlay — rendered inside the sheet */}
@@ -497,10 +506,10 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                   <View style={styles.pickerCard}>
                     <View style={styles.pickerOverlayHeader}>
                       <Text style={styles.pickerOverlayTitle}>
-                        {pickerMode === "date" ? "Choose Date" : "Choose Time"}
+                        {pickerMode === "date" ? t.screens.eventForm.chooseDate : t.screens.eventForm.chooseTime}
                       </Text>
                       <TouchableOpacity onPress={() => setPickerMode(null)}>
-                        <Text style={styles.pickerOverlayDone}>Done</Text>
+                        <Text style={styles.pickerOverlayDone}>{t.screens.common.done}</Text>
                       </TouchableOpacity>
                     </View>
                     <DateTimePicker
@@ -522,9 +531,9 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                 <View style={styles.pickerOverlay}>
                   <View style={styles.pickerCard}>
                     <View style={styles.pickerOverlayHeader}>
-                      <Text style={styles.pickerOverlayTitle}>Duration</Text>
+                      <Text style={styles.pickerOverlayTitle}>{t.screens.eventForm.duration}</Text>
                       <TouchableOpacity onPress={() => setShowDurationPicker(false)}>
-                        <Text style={styles.pickerOverlayDone}>Done</Text>
+                        <Text style={styles.pickerOverlayDone}>{t.screens.common.done}</Text>
                       </TouchableOpacity>
                     </View>
                     <DurationWheelPicker value={duration} onChange={setDuration} />
@@ -542,6 +551,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
 
 function DurationWheelPicker({ value, onChange }: { value: number | null; onChange: (v: number | null) => void }) {
   const { bgOption } = useBackground();
+  const { t } = useLanguage();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const scrollRef = useRef<ScrollView>(null);
@@ -575,7 +585,7 @@ function DurationWheelPicker({ value, onChange }: { value: number | null; onChan
         {DURATION_OPTIONS.map((opt, i) => (
           <View key={i} style={styles.durationItem}>
             <Text style={[styles.durationItemText, opt === value && styles.durationItemTextSelected]}>
-              {fmtDuration(opt)}
+              {fmtDuration(opt, t.screens.eventForm)}
             </Text>
           </View>
         ))}

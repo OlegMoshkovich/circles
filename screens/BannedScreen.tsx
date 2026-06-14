@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "../lib/supabase";
 import { Spinner } from "../src/components/loaders/Spinner";
+import { useLanguage } from "../src/i18n/LanguageContext";
 
 type Props = {
   reason: string | null;
@@ -24,6 +25,7 @@ export default function BannedScreen({ reason, bannedAt }: Props) {
   const { signOut } = useAuth();
   const { user } = useUser();
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
 
   const [email, setEmail] = React.useState(user?.primaryEmailAddress?.emailAddress ?? "");
   const [message, setMessage] = React.useState("");
@@ -34,11 +36,11 @@ export default function BannedScreen({ reason, bannedAt }: Props) {
   async function handleSubmitAppeal() {
     if (submitting) return;
     if (!message.trim()) {
-      setError("Please add a message.");
+      setError(t.screens.banned.addMessage);
       return;
     }
     if (!user) {
-      setError("You must be signed in to contact support.");
+      setError(t.screens.banned.mustBeSignedIn);
       return;
     }
     setError(null);
@@ -73,17 +75,17 @@ export default function BannedScreen({ reason, bannedAt }: Props) {
 
       setSubmitted(true);
     } catch (e: any) {
-      setError(e?.message ?? "Could not send your message. Please try again.");
+      setError(e?.message ?? t.screens.banned.couldNotSend);
     } finally {
       setSubmitting(false);
     }
   }
 
   const onSignOut = () => {
-    Alert.alert("Sign out", "Sign out of your account?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t.screens.banned.signOut, t.screens.banned.signOutConfirm, [
+      { text: t.screens.common.cancel, style: "cancel" },
       {
-        text: "Sign out",
+        text: t.screens.banned.signOut,
         style: "destructive",
         onPress: async () => {
           try {
@@ -97,15 +99,15 @@ export default function BannedScreen({ reason, bannedAt }: Props) {
   };
 
   const displayName =
-    user?.firstName || user?.username || user?.primaryEmailAddress?.emailAddress || "Your account";
+    user?.firstName || user?.username || user?.primaryEmailAddress?.emailAddress || t.screens.banned.defaultName;
 
   const dateLine = bannedAt
-    ? `Banned ${new Date(bannedAt).toLocaleDateString(undefined, {
+    ? `${t.screens.banned.bannedOn} ${new Date(bannedAt).toLocaleDateString(undefined, {
         month: "short",
         day: "numeric",
         year: "numeric",
       })}`
-    : "Banned";
+    : t.screens.banned.bannedOn;
 
   return (
     <KeyboardAvoidingView
@@ -118,44 +120,43 @@ export default function BannedScreen({ reason, bannedAt }: Props) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.badgeRow}>
-          <Text style={styles.badge}>Banned</Text>
+          <Text style={styles.badge}>{t.screens.banned.badge}</Text>
         </View>
 
         <Text style={styles.heading}>{displayName}</Text>
 
-        <Text style={styles.subheading}>Your account has been banned</Text>
+        <Text style={styles.subheading}>{t.screens.banned.subheading}</Text>
 
         <Text style={styles.dateLine}>{dateLine}</Text>
 
         <View style={styles.divider} />
 
-        <Text style={styles.sectionLabel}>Reason</Text>
+        <Text style={styles.sectionLabel}>{t.screens.banned.reason}</Text>
         <Text style={styles.reason}>
-          {reason ?? "Your account has been removed from ValMia following moderator review."}
+          {reason ?? t.screens.banned.defaultReason}
         </Text>
 
         <Text style={styles.body}>
-          You can no longer access events, circles, or messages. If you believe this is a mistake, contact our
-          moderation team below.
+          {t.screens.banned.body}
         </Text>
 
         <View style={styles.divider} />
 
         {submitted ? (
           <View style={styles.appealDone}>
-            <Text style={styles.appealDoneTitle}>Message sent</Text>
+            <Text style={styles.appealDoneTitle}>{t.screens.banned.messageSent}</Text>
             <Text style={styles.appealDoneText}>
-              Thanks — your message has been sent to our moderation team. We'll review it and follow up if needed.
+              {t.screens.banned.messageSentBody}
             </Text>
           </View>
         ) : (
           <View>
-            <Text style={styles.sectionLabel}>Contact support</Text>
+            <Text style={styles.sectionLabel}>{t.screens.banned.contactSupport}</Text>
             <TextInput
               style={styles.input}
               value={email}
               onChangeText={setEmail}
-              placeholder="Email for us to reach you"
+              placeholder={t.screens.banned.emailPlaceholder}
               placeholderTextColor="#8a8780"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -166,7 +167,7 @@ export default function BannedScreen({ reason, bannedAt }: Props) {
               style={[styles.input, styles.inputMultiline]}
               value={message}
               onChangeText={setMessage}
-              placeholder="Tell us why you think this is a mistake…"
+              placeholder={t.screens.banned.messagePlaceholder}
               placeholderTextColor="#8a8780"
               multiline
               textAlignVertical="top"
@@ -186,14 +187,14 @@ export default function BannedScreen({ reason, bannedAt }: Props) {
               {submitting ? (
                 <Spinner size="small" color="#ffffff" />
               ) : (
-                <Text style={styles.buttonText}>Send message</Text>
+                <Text style={styles.buttonText}>{t.screens.banned.sendMessage}</Text>
               )}
             </Pressable>
           </View>
         )}
 
         <Pressable onPress={onSignOut} style={({ pressed }) => [styles.button, styles.signOutButton, pressed && styles.buttonPressed]}>
-          <Text style={styles.buttonText}>Sign out</Text>
+          <Text style={styles.buttonText}>{t.screens.banned.signOut}</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>

@@ -565,7 +565,7 @@ export default function EventsScreen() {
                     onPress={() => setShowPastEvents((v) => !v)}
                   >
                     <Text style={[styles.filterChipText, showPastEvents && styles.filterChipTextActive]}>
-                      Past events
+                      {t.screens.events.pastEvents}
                     </Text>
                   </TouchableOpacity>
                 </View>

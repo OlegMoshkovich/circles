@@ -14,6 +14,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../../theme/colors";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
+import { useLanguage } from "../../i18n/LanguageContext";
 import { MapPickerView } from "./LocationPickerModal";
 
 export type NewCircleData = {
@@ -41,6 +42,7 @@ const PRESET_CATEGORIES = ["Culture", "Friends", "Nature", "Sport", "Food", "Tra
 export function CreateCircleModal({ visible, onClose, onSave }: Props) {
   const { user } = useUser();
   const { bgOption } = useBackground();
+  const { t } = useLanguage();
 
   function defaultOrganizer() {
     return user?.fullName
@@ -133,23 +135,23 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
               <View style={styles.handle} />
 
               <View style={styles.header}>
-                <Text style={styles.headerTitle}>New Circle</Text>
+                <Text style={styles.headerTitle}>{t.screens.circleForm.newCircle}</Text>
                 <TouchableOpacity onPress={handleClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                   <Ionicons name="close" size={20} color={colors.textMuted} />
                 </TouchableOpacity>
               </View>
 
               <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                <Field label="Name" value={name} onChangeText={setName} placeholder="Hiking Group" />
+                <Field label={t.screens.circleForm.name} value={name} onChangeText={setName} placeholder={t.screens.circleForm.namePlaceholder} />
                 <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>Organiser</Text>
+                  <Text style={styles.fieldLabel}>{t.screens.circleForm.organiser}</Text>
                   <View style={styles.inputRow}>
                     <Text style={styles.readOnlyValue}>{organizer}</Text>
                   </View>
                 </View>
-                <Field label="Description" value={description} onChangeText={setDescription} placeholder="A few words about this circle…" multiline />
+                <Field label={t.screens.circleForm.description} value={description} onChangeText={setDescription} placeholder={t.screens.circleForm.descriptionPlaceholder} multiline />
                 <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>Category</Text>
+                  <Text style={styles.fieldLabel}>{t.screens.circleForm.category}</Text>
                   <View style={styles.categoryGrid}>
                     {PRESET_CATEGORIES.map((cat) => (
                       <TouchableOpacity
@@ -167,7 +169,7 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
                       onPress={() => setCategoryPreset(categoryPreset === "custom" ? "" : "custom")}
                     >
                       <Text style={[styles.categoryPillText, categoryPreset === "custom" && styles.categoryPillTextActive]}>
-                        Custom
+                        {t.screens.circleForm.custom}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -176,7 +178,7 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
                       <TextInput
                         value={customCategoryText}
                         onChangeText={setCustomCategoryText}
-                        placeholder="e.g. Yoga, Chess, Photography…"
+                        placeholder={t.screens.circleForm.customPlaceholder}
                         placeholderTextColor={colors.textMuted}
                         style={styles.input}
                       />
@@ -185,7 +187,7 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
                 </View>
 
                 <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>Visibility</Text>
+                  <Text style={styles.fieldLabel}>{t.screens.circleForm.visibility}</Text>
                   <View style={styles.toggleRow}>
                     {VISIBILITY_OPTIONS.map((opt) => (
                       <TouchableOpacity
@@ -194,7 +196,7 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
                         onPress={() => setVisibility(opt.value)}
                       >
                         <Text style={[styles.toggleText, visibility === opt.value && styles.toggleTextActive]}>
-                          {opt.label}
+                          {opt.value === "public" ? t.screens.circleForm.visPublic : t.screens.circleForm.visPrivate}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -202,7 +204,7 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
                 </View>
 
                 <View style={styles.fieldContainer}>
-                  <Text style={styles.fieldLabel}>Location</Text>
+                  <Text style={styles.fieldLabel}>{t.screens.circleForm.location}</Text>
                   <View style={styles.locationInputRow}>
                     <Ionicons
                       name={location ? "location" : "location-outline"}
@@ -213,7 +215,7 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
                     <TextInput
                       value={location}
                       onChangeText={setLocation}
-                      placeholder="Enter an address (optional)"
+                      placeholder={t.screens.circleForm.locationPlaceholder}
                       placeholderTextColor={colors.textMuted}
                       style={styles.locationInput}
                       numberOfLines={1}
@@ -225,7 +227,7 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
                     activeOpacity={0.7}
                   >
                     <Ionicons name="map-outline" size={14} color={colors.textMuted} style={styles.locationIcon} />
-                    <Text style={styles.locationMapButtonText}>Choose on map instead</Text>
+                    <Text style={styles.locationMapButtonText}>{t.screens.circleForm.chooseOnMap}</Text>
                   </TouchableOpacity>
                 </View>
               </ScrollView>
@@ -237,7 +239,7 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
                 onPress={handleSave}
                 disabled={!canSave}
               >
-                <Text style={styles.saveButtonText}>{saving ? "Creating…" : "Create Circle"}</Text>
+                <Text style={styles.saveButtonText}>{saving ? t.screens.circleForm.creating : t.screens.circleForm.createCircle}</Text>
               </TouchableOpacity>
             </View>
             </View>

@@ -272,9 +272,9 @@ async function handleAccept(notif: AppNotification) {
     "glass",
   ];
   const themeLabel: Record<(typeof THEME_ORDER)[number], string> = {
-    onboarding: "Glass",
-    light: "Light",
-    glass: "Solid",
+    onboarding: t.screens.profile.themeGlass,
+    light: t.screens.profile.themeLight,
+    glass: t.screens.profile.themeSolid,
   };
 
   function cycleTheme() {
@@ -316,7 +316,7 @@ async function handleAccept(notif: AppNotification) {
           Theme / Language / Mission / Replay). */}
       <View style={styles.card}>
         <TouchableOpacity style={styles.row} onPress={() => startEdit("userType")} activeOpacity={0.7}>
-          <Text style={styles.rowLabel}>Type</Text>
+          <Text style={styles.rowLabel}>{t.screens.profile.type}</Text>
           <View style={styles.userTypeValue}>
             {profileUserType ? (
               <Ionicons
@@ -327,15 +327,15 @@ async function handleAccept(notif: AppNotification) {
               />
             ) : null}
             <Text style={[styles.rowValue, !profileUserType && styles.rowValuePlaceholder]}>
-              {profileUserType === "local" ? "Local" : profileUserType === "visitor" ? "Visitor" : "Add"}
+              {profileUserType === "local" ? t.screens.profile.local : profileUserType === "visitor" ? t.screens.profile.visitor : t.screens.profile.add}
             </Text>
           </View>
         </TouchableOpacity>
         {editingField === "userType" && (
           <View style={styles.userTypePicker}>
             {([
-              { key: "local" as const, label: "Local", icon: "home-outline" as const, desc: "I live here year-round" },
-              { key: "visitor" as const, label: "Visitor", icon: "airplane-outline" as const, desc: "I'm visiting for a while" },
+              { key: "local" as const, label: t.screens.profile.local, icon: "home-outline" as const, desc: t.screens.profile.localDesc },
+              { key: "visitor" as const, label: t.screens.profile.visitor, icon: "airplane-outline" as const, desc: t.screens.profile.visitorDesc },
             ]).map((opt) => {
               const sel = profileUserType === opt.key;
               return (
@@ -355,7 +355,7 @@ async function handleAccept(notif: AppNotification) {
               );
             })}
             <TouchableOpacity onPress={cancelEdit} style={{ paddingHorizontal: 16, paddingBottom: 10 }}>
-              <Text style={styles.inlineCancelText}>Cancel</Text>
+              <Text style={styles.inlineCancelText}>{t.screens.common.cancel}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -366,7 +366,7 @@ async function handleAccept(notif: AppNotification) {
         <TouchableOpacity style={styles.row} onPress={() => startEdit("location")} activeOpacity={0.7}>
           <Text style={styles.rowLabel}>{t.profile.location}</Text>
           <Text style={[styles.rowValue, !profileLocation && styles.rowValuePlaceholder]}>
-            {profileLocation ?? "Add location"}
+            {profileLocation ?? t.screens.profile.addLocation}
           </Text>
         </TouchableOpacity>
         {editingField === "location" && (
@@ -376,7 +376,7 @@ async function handleAccept(notif: AppNotification) {
               style={styles.inlineInput}
               value={editText}
               onChangeText={setEditText}
-              placeholder="Your neighbourhood or city"
+              placeholder={t.screens.profile.locationPlaceholder}
               placeholderTextColor={colors.textMuted}
               returnKeyType="done"
               onSubmitEditing={() => saveField()}
@@ -394,9 +394,9 @@ async function handleAccept(notif: AppNotification) {
 
         {/* Bio row */}
         <TouchableOpacity style={styles.row} onPress={() => startEdit("bio")} activeOpacity={0.7}>
-          <Text style={styles.rowLabel}>Bio</Text>
+          <Text style={styles.rowLabel}>{t.screens.profile.bio}</Text>
           <Text style={[styles.rowValue, !profileBio && styles.rowValuePlaceholder]} numberOfLines={2}>
-            {profileBio ?? "Add bio"}
+            {profileBio ?? t.screens.profile.addBio}
           </Text>
         </TouchableOpacity>
         {editingField === "bio" && (
@@ -406,17 +406,17 @@ async function handleAccept(notif: AppNotification) {
               style={[styles.inlineInput, styles.inlineInputMultiline]}
               value={editText}
               onChangeText={setEditText}
-              placeholder="A few words about yourself..."
+              placeholder={t.screens.profile.bioPlaceholder}
               placeholderTextColor={colors.textMuted}
               multiline
               numberOfLines={3}
             />
             <View style={styles.inlineEditActions}>
               <TouchableOpacity onPress={() => saveField()} style={styles.inlineSaveBtn}>
-                <Text style={styles.inlineSaveBtnText}>Save</Text>
+                <Text style={styles.inlineSaveBtnText}>{t.screens.common.save}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={cancelEdit}>
-                <Text style={styles.inlineCancelText}>Cancel</Text>
+                <Text style={styles.inlineCancelText}>{t.screens.common.cancel}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -426,11 +426,11 @@ async function handleAccept(notif: AppNotification) {
 
         {/* Interests row */}
         <TouchableOpacity style={styles.row} onPress={() => startEdit("interests")} activeOpacity={0.7}>
-          <Text style={styles.rowLabel}>Interests</Text>
+          <Text style={styles.rowLabel}>{t.screens.profile.interests}</Text>
           {profileInterests.length > 0 ? (
-            <Text style={styles.rowValue}>{profileInterests.length} selected</Text>
+            <Text style={styles.rowValue}>{profileInterests.length} {t.screens.profile.selected}</Text>
           ) : (
-            <Text style={styles.rowValuePlaceholder}>Add interests</Text>
+            <Text style={styles.rowValuePlaceholder}>{t.screens.profile.addInterests}</Text>
           )}
         </TouchableOpacity>
         {profileInterests.length > 0 && editingField !== "interests" && (
@@ -463,10 +463,10 @@ async function handleAccept(notif: AppNotification) {
             </View>
             <View style={styles.inlineEditActions}>
               <TouchableOpacity onPress={() => saveField()} style={styles.inlineSaveBtn}>
-                <Text style={styles.inlineSaveBtnText}>Save</Text>
+                <Text style={styles.inlineSaveBtnText}>{t.screens.common.save}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={cancelEdit}>
-                <Text style={styles.inlineCancelText}>Cancel</Text>
+                <Text style={styles.inlineCancelText}>{t.screens.common.cancel}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -480,7 +480,7 @@ async function handleAccept(notif: AppNotification) {
               onPress={() => setCirclesExpanded((v) => !v)}
               activeOpacity={0.7}
             >
-              <Text style={styles.rowLabel}>Communities</Text>
+              <Text style={styles.rowLabel}>{t.screens.profile.communities}</Text>
               <View style={styles.circlesHeaderRight}>
                 <Text style={styles.rowValue}>{profileCircles.length}</Text>
                 <Ionicons
@@ -536,7 +536,7 @@ async function handleAccept(notif: AppNotification) {
           onPress={() => setSettingsExpanded((v) => !v)}
           activeOpacity={0.7}
         >
-          <Text style={styles.rowLabel}>Settings</Text>
+          <Text style={styles.rowLabel}>{t.screens.profile.settings}</Text>
           <Ionicons
             name={settingsExpanded ? "chevron-up" : "chevron-down"}
             size={16}
@@ -550,9 +550,9 @@ async function handleAccept(notif: AppNotification) {
 
             {/* Theme */}
             <TouchableOpacity style={styles.subSettingRow} onPress={cycleTheme} activeOpacity={0.7}>
-              <Text style={styles.rowLabel}>Theme</Text>
+              <Text style={styles.rowLabel}>{t.screens.profile.theme}</Text>
               <View style={styles.themeValue}>
-                <Text style={styles.rowValue}>{themeLabel[bgOption as keyof typeof themeLabel] ?? "Glass"}</Text>
+                <Text style={styles.rowValue}>{themeLabel[bgOption as keyof typeof themeLabel] ?? t.screens.profile.themeGlass}</Text>
                 <Ionicons name="chevron-forward" size={14} color={colors.textMuted} style={{ marginLeft: 6 }} />
               </View>
             </TouchableOpacity>
@@ -586,7 +586,7 @@ async function handleAccept(notif: AppNotification) {
               onPress={() => setValuesModalVisible(true)}
               activeOpacity={0.7}
             >
-              <Text style={styles.rowLabel}>Mission & values</Text>
+              <Text style={styles.rowLabel}>{t.screens.profile.mission}</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
             </TouchableOpacity>
 
@@ -597,17 +597,17 @@ async function handleAccept(notif: AppNotification) {
               style={styles.subSettingRow}
               onPress={() =>
                 Alert.alert(
-                  "Replay onboarding",
-                  "Go through the welcome and setup steps again? Your profile and circles stay as they are.",
+                  t.screens.profile.replayTitle,
+                  t.screens.profile.replayMessage,
                   [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "Replay", onPress: () => restartOnboarding() },
+                    { text: t.screens.common.cancel, style: "cancel" },
+                    { text: t.screens.profile.replayConfirm, onPress: () => restartOnboarding() },
                   ]
                 )
               }
               activeOpacity={0.7}
             >
-              <Text style={styles.rowLabel}>Replay onboarding</Text>
+              <Text style={styles.rowLabel}>{t.screens.profile.replay}</Text>
               <Ionicons name="refresh" size={16} color={colors.textMuted} />
             </TouchableOpacity>
           </>
@@ -630,7 +630,7 @@ async function handleAccept(notif: AppNotification) {
           onPress={() => setDeleteModalVisible(true)}
           activeOpacity={0.7}
         >
-          <Text style={[styles.rowLabel, { color: "#ff6b6b" }]}>Delete account</Text>
+          <Text style={[styles.rowLabel, { color: "#ff6b6b" }]}>{t.screens.profile.deleteAccount}</Text>
           <Ionicons name="trash-outline" size={16} color="#ff6b6b" />
         </TouchableOpacity>
       </View>
@@ -650,7 +650,7 @@ async function handleAccept(notif: AppNotification) {
               </View>
               <View style={styles.notifActions}>
                 <TouchableOpacity style={styles.acceptBtn} onPress={() => handleAccept(notif)}>
-                  <Text style={styles.acceptBtnText}>Accept</Text>
+                  <Text style={styles.acceptBtnText}>{t.common.accept}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.declineBtn} onPress={() => handleDecline(notif)}>
                   <Ionicons name="close" size={16} color={colors.textMuted} />
@@ -670,10 +670,10 @@ async function handleAccept(notif: AppNotification) {
         setDeleteTyped("");
         setDeleteError(null);
       }}
-      title="Delete account"
+      title={t.screens.profile.deleteAccount}
     >
       <Text style={styles.deleteModalBody}>
-        This permanently deletes your account and data. Type <Text style={styles.deleteInlineCode}>DELETE</Text> to confirm.
+        {t.screens.profile.deleteBodyBefore}<Text style={styles.deleteInlineCode}>DELETE</Text>{t.screens.profile.deleteBodyAfter}
       </Text>
       {!deleteConfirming ? (
         <View style={styles.deleteActionsRow}>
@@ -682,7 +682,7 @@ async function handleAccept(notif: AppNotification) {
             onPress={() => setDeleteConfirming(true)}
             disabled={deleteSubmitting}
           >
-            <Text style={styles.deleteDangerButtonText}>Delete Account</Text>
+            <Text style={styles.deleteDangerButtonText}>{t.screens.profile.deleteButton}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.deleteCancelButton}
@@ -694,7 +694,7 @@ async function handleAccept(notif: AppNotification) {
             }}
             disabled={deleteSubmitting}
           >
-            <Text style={styles.deleteCancelButtonText}>Cancel</Text>
+            <Text style={styles.deleteCancelButtonText}>{t.screens.common.cancel}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -714,7 +714,7 @@ async function handleAccept(notif: AppNotification) {
               onPress={handleDeleteAccount}
               disabled={deleteSubmitting}
             >
-              {deleteSubmitting ? <Spinner size="small" color="#fff" /> : <Text style={styles.deleteConfirmButtonText}>Confirm deletion</Text>}
+              {deleteSubmitting ? <Spinner size="small" color="#fff" /> : <Text style={styles.deleteConfirmButtonText}>{t.screens.profile.confirmDeletion}</Text>}
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.deleteCancelButton}
@@ -725,7 +725,7 @@ async function handleAccept(notif: AppNotification) {
               }}
               disabled={deleteSubmitting}
             >
-              <Text style={styles.deleteCancelButtonText}>Cancel</Text>
+              <Text style={styles.deleteCancelButtonText}>{t.screens.common.cancel}</Text>
             </TouchableOpacity>
           </View>
         </>

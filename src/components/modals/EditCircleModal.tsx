@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../../theme/colors";
 import { Spinner } from "../loaders/Spinner";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
+import { useLanguage } from "../../i18n/LanguageContext";
 import { LazyMapPickerView } from "./LazyMapPickerView";
 import { supabase } from "../../../lib/supabase";
 
@@ -41,6 +42,7 @@ const PRESET_CATEGORIES = ["Culture", "Friends", "Nature", "Sport", "Food", "Tra
 export function EditCircleModal({ visible, onClose, onSaved, circleId, initialValues }: Props) {
   const { bgOption } = useBackground();
   const colors = useColors();
+  const { t } = useLanguage();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
 
   const [name, setName] = useState(initialValues.name);
@@ -143,7 +145,7 @@ export function EditCircleModal({ visible, onClose, onSaved, circleId, initialVa
               <View style={styles.handle} />
 
               <View style={styles.header}>
-                <Text style={styles.headerTitle}>Edit Circle</Text>
+                <Text style={styles.headerTitle}>{t.screens.circleForm.editCircle}</Text>
                 <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                   <Ionicons name="close" size={20} color={colors.textMuted} />
                 </TouchableOpacity>
@@ -155,11 +157,11 @@ export function EditCircleModal({ visible, onClose, onSaved, circleId, initialVa
                 </View>
               ) : (
                 <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                  <Field label="Name" value={name} onChangeText={setName} placeholder="Hiking Group" />
-                  <Field label="Description" value={description} onChangeText={setDescription} placeholder="A few words about this circle…" multiline />
+                  <Field label={t.screens.circleForm.name} value={name} onChangeText={setName} placeholder={t.screens.circleForm.namePlaceholder} />
+                  <Field label={t.screens.circleForm.description} value={description} onChangeText={setDescription} placeholder={t.screens.circleForm.descriptionPlaceholder} multiline />
 
                   <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldLabel}>Category</Text>
+                    <Text style={styles.fieldLabel}>{t.screens.circleForm.category}</Text>
                     <View style={styles.categoryGrid}>
                       {PRESET_CATEGORIES.map((cat) => (
                         <TouchableOpacity
@@ -177,7 +179,7 @@ export function EditCircleModal({ visible, onClose, onSaved, circleId, initialVa
                         onPress={() => setCategoryPreset(categoryPreset === "custom" ? "" : "custom")}
                       >
                         <Text style={[styles.categoryPillText, categoryPreset === "custom" && styles.categoryPillTextActive]}>
-                          Custom
+                          {t.screens.circleForm.custom}
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -186,7 +188,7 @@ export function EditCircleModal({ visible, onClose, onSaved, circleId, initialVa
                         <TextInput
                           value={customCategoryText}
                           onChangeText={setCustomCategoryText}
-                          placeholder="e.g. Yoga, Chess, Photography…"
+                          placeholder={t.screens.circleForm.customPlaceholder}
                           placeholderTextColor={colors.textMuted}
                           style={styles.input}
                         />
@@ -195,7 +197,7 @@ export function EditCircleModal({ visible, onClose, onSaved, circleId, initialVa
                   </View>
 
                   <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldLabel}>Visibility</Text>
+                    <Text style={styles.fieldLabel}>{t.screens.circleForm.visibility}</Text>
                     <View style={styles.toggleRow}>
                       {VISIBILITY_OPTIONS.map((opt) => (
                         <TouchableOpacity
@@ -204,7 +206,7 @@ export function EditCircleModal({ visible, onClose, onSaved, circleId, initialVa
                           onPress={() => setVisibility(opt.value)}
                         >
                           <Text style={[styles.toggleText, visibility === opt.value && styles.toggleTextActive]}>
-                            {opt.label}
+                            {opt.value === "public" ? t.screens.circleForm.visPublic : t.screens.circleForm.visPrivate}
                           </Text>
                         </TouchableOpacity>
                       ))}
@@ -212,7 +214,7 @@ export function EditCircleModal({ visible, onClose, onSaved, circleId, initialVa
                   </View>
 
                   <View style={styles.fieldContainer}>
-                    <Text style={styles.fieldLabel}>Location</Text>
+                    <Text style={styles.fieldLabel}>{t.screens.circleForm.location}</Text>
                     <TouchableOpacity
                       style={styles.locationButton}
                       onPress={() => setShowMap(true)}
@@ -225,7 +227,7 @@ export function EditCircleModal({ visible, onClose, onSaved, circleId, initialVa
                         style={styles.locationIcon}
                       />
                       <Text style={[styles.locationButtonText, !location && styles.locationButtonPlaceholder]} numberOfLines={1}>
-                        {location || "Tap to choose on map (optional)"}
+                        {location || t.screens.circleForm.tapToChooseMap}
                       </Text>
                       <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
                     </TouchableOpacity>
@@ -240,7 +242,7 @@ export function EditCircleModal({ visible, onClose, onSaved, circleId, initialVa
                 onPress={handleSave}
                 disabled={!canSave || loading}
               >
-                <Text style={styles.saveButtonText}>{saving ? "Saving…" : "Save Changes"}</Text>
+                <Text style={styles.saveButtonText}>{saving ? t.screens.circleForm.saving : t.screens.circleForm.saveChanges}</Text>
               </TouchableOpacity>
             </View>
             </View>
