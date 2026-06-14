@@ -9,6 +9,7 @@ import { RootStackScreenProps } from "../types";
 import { deleteAccount } from "../lib/deleteAccount";
 import { useColors } from "../src/contexts/BackgroundContext";
 import { spacing } from "../src/theme/spacing";
+import { useLanguage } from "../src/i18n/LanguageContext";
 
 function getErrorMessage(e: unknown) {
   if (!e) return "Something went wrong";
@@ -21,6 +22,7 @@ export default function DeleteAccountScreen({ navigation }: RootStackScreenProps
   const { user } = useUser();
   const { getToken, signOut } = useAuth();
   const colors = useColors();
+  const { t } = useLanguage();
 
   const [confirming, setConfirming] = React.useState(false);
   const [typed, setTyped] = React.useState("");
@@ -55,7 +57,7 @@ export default function DeleteAccountScreen({ navigation }: RootStackScreenProps
         <ScreenHeaderCard style={{ marginTop: 0 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <Ionicons name="trash-outline" size={18} color={colors.text} />
-            <Text style={styles.headerTitle}>Delete account</Text>
+            <Text style={styles.headerTitle}>{t.screens.profile.deleteAccount}</Text>
           </View>
         </ScreenHeaderCard>
       }
@@ -63,9 +65,9 @@ export default function DeleteAccountScreen({ navigation }: RootStackScreenProps
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={[styles.card, { borderColor: colors.cardBorder }]}>
-            <Text style={[styles.sectionLabel, { color: colors.text }]}>Permanent deletion</Text>
+            <Text style={[styles.sectionLabel, { color: colors.text }]}>{t.screens.profile.permanentDeletion}</Text>
             <Text style={[styles.bodyText, { color: colors.textMuted }]}>
-              This will permanently delete your account and your data stored by ValMia. This action cannot be undone.
+              {t.screens.profile.deleteScreenBody}
             </Text>
 
             {!confirming ? (
@@ -74,12 +76,12 @@ export default function DeleteAccountScreen({ navigation }: RootStackScreenProps
                 onPress={() => setConfirming(true)}
                 disabled={submitting}
               >
-                <Text style={[styles.dangerButtonText, { color: "#ff6b6b" }]}>Delete Account</Text>
+                <Text style={[styles.dangerButtonText, { color: "#ff6b6b" }]}>{t.screens.profile.deleteButton}</Text>
               </TouchableOpacity>
             ) : (
               <>
                 <Text style={[styles.bodyText, { marginTop: 10, color: colors.textMuted }]}>
-                  Type <Text style={styles.inlineCode}>DELETE</Text> to confirm.
+                  {t.screens.profile.typeBefore}<Text style={styles.inlineCode}>DELETE</Text>{t.screens.profile.typeAfter}
                 </Text>
 
                 <TextInput
@@ -99,7 +101,7 @@ export default function DeleteAccountScreen({ navigation }: RootStackScreenProps
                     onPress={handleDelete}
                     disabled={submitting}
                   >
-                    {submitting ? <Spinner size="small" color="#fff" /> : <Text style={styles.confirmButtonText}>Confirm deletion</Text>}
+                    {submitting ? <Spinner size="small" color="#fff" /> : <Text style={styles.confirmButtonText}>{t.screens.profile.confirmDeletion}</Text>}
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -111,7 +113,7 @@ export default function DeleteAccountScreen({ navigation }: RootStackScreenProps
                     }}
                     disabled={submitting}
                   >
-                    <Text style={[styles.cancelButtonText, { color: colors.textMuted }]}>Cancel</Text>
+                    <Text style={[styles.cancelButtonText, { color: colors.textMuted }]}>{t.screens.common.cancel}</Text>
                   </TouchableOpacity>
                 </View>
               </>

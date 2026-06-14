@@ -3,13 +3,7 @@ import { Modal, View, Text, TouchableOpacity, StyleSheet, ScrollView } from "rea
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../../theme/colors";
 import { useColors, useBackground } from "../../contexts/BackgroundContext";
-import {
-  COMMUNITY_TAGLINE,
-  COMMUNITY_MISSION,
-  CORE_VALUES,
-  COMMUNITY_PRINCIPLES,
-  COMMUNITY_MODERATION,
-} from "../../constants/community";
+import { useLanguage } from "../../i18n/LanguageContext";
 
 type Props = {
   visible: boolean;
@@ -18,6 +12,7 @@ type Props = {
 
 export function CommunityValuesModal({ visible, onClose }: Props) {
   const colors = useColors();
+  const { t } = useLanguage();
   const { bgOption } = useBackground();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
 
@@ -29,37 +24,37 @@ export function CommunityValuesModal({ visible, onClose }: Props) {
             <View style={styles.handle} />
 
             <View style={styles.header}>
-              <Text style={styles.headerTitle}>Mission & Values</Text>
+              <Text style={styles.headerTitle}>{t.screens.values.title}</Text>
               <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                 <Ionicons name="close" size={20} color={colors.textMuted} />
               </TouchableOpacity>
             </View>
 
             <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-              <Text style={styles.tagline}>{COMMUNITY_TAGLINE}</Text>
+              <Text style={styles.tagline}>{t.screens.values.tagline}</Text>
 
-              <Text style={styles.heading}>Our mission</Text>
-              <Text style={styles.body}>{COMMUNITY_MISSION}</Text>
+              <Text style={styles.heading}>{t.screens.values.ourMission}</Text>
+              <Text style={styles.body}>{t.screens.values.missionBody}</Text>
 
-              <Text style={styles.heading}>Core values</Text>
-              {CORE_VALUES.map((v) => (
+              <Text style={styles.heading}>{t.screens.values.coreValuesHeading}</Text>
+              {t.screens.values.coreValues.map((v) => (
                 <Text key={v.name} style={styles.body}>
                   <Text style={styles.bodyEmphasis}>{v.name}. </Text>
                   {v.desc}
                 </Text>
               ))}
 
-              <Text style={styles.heading}>Community principles</Text>
-              <Text style={styles.body}>ValMia works best when everyone contributes positively. Please:</Text>
-              {COMMUNITY_PRINCIPLES.map((p) => (
+              <Text style={styles.heading}>{t.screens.values.principlesHeading}</Text>
+              <Text style={styles.body}>{t.screens.values.principlesIntro}</Text>
+              {t.screens.values.principles.map((p) => (
                 <View key={p} style={styles.bulletRow}>
                   <Text style={styles.bulletDot}>•</Text>
                   <Text style={styles.bulletText}>{p}</Text>
                 </View>
               ))}
 
-              <Text style={styles.heading}>Reporting & moderation</Text>
-              <Text style={styles.body}>{COMMUNITY_MODERATION}</Text>
+              <Text style={styles.heading}>{t.screens.values.reportingHeading}</Text>
+              <Text style={styles.body}>{t.screens.values.moderationBody}</Text>
             </ScrollView>
           </View>
         </View>

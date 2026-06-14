@@ -56,7 +56,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
     (async () => {
       const hidden = await fetchHiddenAuthorIds([created_by]);
       if (cancelled || !hidden.has(created_by)) return;
-      Alert.alert("Unavailable", "This event is no longer available.");
+      Alert.alert(t.screens.detail.eventUnavailableTitle, t.screens.detail.eventUnavailableMsg);
       navigation.goBack();
     })();
     return () => {
@@ -142,7 +142,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         url: shareUrl,
       });
     } catch {
-      Alert.alert("Error", "Could not open share menu.");
+      Alert.alert(t.screens.detail.shareErrorTitle, t.screens.detail.shareErrorMsg);
     }
   }
 

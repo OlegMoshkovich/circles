@@ -90,7 +90,7 @@ export function EventCard({
             </View>
           ) : isFilled ? (
             <View style={[styles.badge, styles.badgeFilled]}>
-              <Text style={[styles.badgeText, styles.badgeTextFilled]}>Filled</Text>
+              <Text style={[styles.badgeText, styles.badgeTextFilled]}>{t.screens.events.filled}</Text>
             </View>
           ) : null}
           {actionIcon && onActionPress ? (
