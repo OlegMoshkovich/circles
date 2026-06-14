@@ -67,6 +67,9 @@ export function CircleInviteModal({ visible, onClose, circleId, circleName }: Pr
       setSelected(new Set(invitedIds));
 
       // Build a merged user map: user_profiles takes priority, circle_members as fallback
+      const profileIds = new Set(
+        ((profilesResult.data ?? []) as any[]).map((p) => p.user_id).filter(Boolean)
+      );
       const userMap = new Map<string, string>();
       for (const m of (allCircleMembersResult.data ?? []) as any[]) {
         if (m.user_id && m.display_name) userMap.set(m.user_id, m.display_name);
@@ -75,8 +78,23 @@ export function CircleInviteModal({ visible, onClose, circleId, circleName }: Pr
         if (p.user_id && p.display_name) userMap.set(p.user_id, p.display_name);
       }
 
+      // Same display name can exist on multiple Clerk user_ids (re-signup, test
+      // accounts, etc.). Show one row per name; prefer user_profiles over stale
+      // circle_members copies.
+      const seenNames = new Set<string>();
       const list = Array.from(userMap.entries())
         .filter(([userId]) => !existingMemberIds.has(userId) && userId !== user.id)
+        .sort(([idA], [idB]) => {
+          const aScore = profileIds.has(idA) ? 0 : 1;
+          const bScore = profileIds.has(idB) ? 0 : 1;
+          return aScore - bScore;
+        })
+        .filter(([, name]) => {
+          const key = name.trim().toLowerCase();
+          if (seenNames.has(key)) return false;
+          seenNames.add(key);
+          return true;
+        })
         .map(([userId, name]) => ({ user_id: userId, name }));
 
       setCandidates(list);
