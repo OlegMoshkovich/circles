@@ -70,6 +70,7 @@ const { language, setLanguage, t } = useLanguage();
   const [profileEvents, setProfileEvents] = useState<{ id: string; title: string; date_label: string; time_label: string }[]>([]);
   const [circlesExpanded, setCirclesExpanded] = useState(false);
   const [eventsExpanded, setEventsExpanded] = useState(false);
+  const [settingsExpanded, setSettingsExpanded] = useState(false);
   const [profileUserType, setProfileUserType] = useState<"local" | "visitor" | null>(null);
   const [editingField, setEditingField] = useState<"bio" | "location" | "interests" | "userType" | null>(null);
   const [editText, setEditText] = useState("");
@@ -529,68 +530,88 @@ async function handleAccept(notif: AppNotification) {
 
         <View style={styles.rowDivider} />
 
-        {/* Theme */}
-        <TouchableOpacity style={styles.row} onPress={cycleTheme} activeOpacity={0.7}>
-          <Text style={styles.rowLabel}>Theme</Text>
-          <View style={styles.themeValue}>
-            <Text style={styles.rowValue}>{themeLabel[bgOption as keyof typeof themeLabel] ?? "Glass"}</Text>
-            <Ionicons name="chevron-forward" size={14} color={colors.textMuted} style={{ marginLeft: 6 }} />
-          </View>
-        </TouchableOpacity>
-
-        <View style={styles.rowDivider} />
-
-        {/* Language */}
-        <View style={styles.languageRow}>
-          {LANGUAGES.map(({ code, label }) => {
-            const selected = language === code;
-            return (
-              <TouchableOpacity
-                key={code}
-                onPress={() => setLanguage(code)}
-                style={[styles.flagButton, selected && styles.flagButtonSelected]}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.flagLabel, selected && styles.flagLabelSelected]}>
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <View style={styles.rowDivider} />
-
-        {/* Mission & values */}
+        {/* Settings — tapping reveals theme, language, mission & replay inside the card */}
         <TouchableOpacity
           style={styles.row}
-          onPress={() => setValuesModalVisible(true)}
+          onPress={() => setSettingsExpanded((v) => !v)}
           activeOpacity={0.7}
         >
-          <Text style={styles.rowLabel}>Mission & values</Text>
-          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          <Text style={styles.rowLabel}>Settings</Text>
+          <Ionicons
+            name={settingsExpanded ? "chevron-up" : "chevron-down"}
+            size={16}
+            color={colors.textMuted}
+          />
         </TouchableOpacity>
 
-        <View style={styles.rowDivider} />
+        {settingsExpanded && (
+          <>
+            <View style={styles.rowDivider} />
 
-        {/* Replay onboarding */}
-        <TouchableOpacity
-          style={styles.row}
-          onPress={() =>
-            Alert.alert(
-              "Replay onboarding",
-              "Go through the welcome and setup steps again? Your profile and circles stay as they are.",
-              [
-                { text: "Cancel", style: "cancel" },
-                { text: "Replay", onPress: () => restartOnboarding() },
-              ]
-            )
-          }
-          activeOpacity={0.7}
-        >
-          <Text style={styles.rowLabel}>Replay onboarding</Text>
-          <Ionicons name="refresh" size={16} color={colors.textMuted} />
-        </TouchableOpacity>
+            {/* Theme */}
+            <TouchableOpacity style={styles.subSettingRow} onPress={cycleTheme} activeOpacity={0.7}>
+              <Text style={styles.rowLabel}>Theme</Text>
+              <View style={styles.themeValue}>
+                <Text style={styles.rowValue}>{themeLabel[bgOption as keyof typeof themeLabel] ?? "Glass"}</Text>
+                <Ionicons name="chevron-forward" size={14} color={colors.textMuted} style={{ marginLeft: 6 }} />
+              </View>
+            </TouchableOpacity>
+
+            <View style={styles.rowDivider} />
+
+            {/* Language */}
+            <View style={[styles.languageRow, styles.subSettingIndent]}>
+              {LANGUAGES.map(({ code, label }) => {
+                const selected = language === code;
+                return (
+                  <TouchableOpacity
+                    key={code}
+                    onPress={() => setLanguage(code)}
+                    style={[styles.flagButton, selected && styles.flagButtonSelected]}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.flagLabel, selected && styles.flagLabelSelected]}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <View style={styles.rowDivider} />
+
+            {/* Mission & values */}
+            <TouchableOpacity
+              style={styles.subSettingRow}
+              onPress={() => setValuesModalVisible(true)}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.rowLabel}>Mission & values</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+
+            <View style={styles.rowDivider} />
+
+            {/* Replay onboarding */}
+            <TouchableOpacity
+              style={styles.subSettingRow}
+              onPress={() =>
+                Alert.alert(
+                  "Replay onboarding",
+                  "Go through the welcome and setup steps again? Your profile and circles stay as they are.",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Replay", onPress: () => restartOnboarding() },
+                  ]
+                )
+              }
+              activeOpacity={0.7}
+            >
+              <Text style={styles.rowLabel}>Replay onboarding</Text>
+              <Ionicons name="refresh" size={16} color={colors.textMuted} />
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       <View style={styles.sectionGap} />
@@ -936,6 +957,17 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       alignItems: "center",
       paddingHorizontal: spacing.cardPadding + spacing.sm,
       paddingVertical: 10,
+    },
+    subSettingRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingLeft: spacing.cardPadding + spacing.sm,
+      paddingRight: spacing.cardPadding,
+      paddingVertical: 14,
+    },
+    subSettingIndent: {
+      paddingLeft: spacing.cardPadding + spacing.sm,
     },
     rowLabel: {
       ...typography.body,
