@@ -7,7 +7,9 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "eject": "expo eject",
-    "test": "jest --watchAll"
+    "test": "jest --watchAll",
+    "cleanup:orphans": "node scripts/cleanup-orphaned-users.js",
+    "cleanup:orphans:execute": "node scripts/cleanup-orphaned-users.js --execute"
   },
   "jest": {
     "preset": "jest-expo"
