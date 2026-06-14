@@ -85,13 +85,6 @@ const { language, setLanguage, t } = useLanguage();
   const { bgOption, setBgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
-  const headerCardStyle = React.useMemo(
-    () => ({
-      marginBottom: spacing.md,
-      ...(bgOption === "onboarding" ? { borderRadius: 16, paddingTop: 0 } : null),
-    }),
-    [bgOption]
-  );
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return;
@@ -284,8 +277,8 @@ async function handleAccept(notif: AppNotification) {
   }
 
   const stickyHeader = (
-    <ScreenHeaderCard style={headerCardStyle}>
-      <View style={styles.avatarSection}>
+    <ScreenHeaderCard>
+      <View style={styles.profileHeaderRow}>
         <View style={styles.avatar}>
           {photoUrl ? (
             <Image source={{ uri: photoUrl }} style={styles.avatarImage} />
@@ -294,8 +287,14 @@ async function handleAccept(notif: AppNotification) {
           )}
         </View>
         <View style={styles.avatarInfo}>
-          <Text style={styles.name}>{name}</Text>
-          {email.length > 0 && <Text style={styles.email}>{email}</Text>}
+          <Text style={styles.name} numberOfLines={1}>
+            {name}
+          </Text>
+          {email.length > 0 && (
+            <Text style={styles.email} numberOfLines={1}>
+              {email}
+            </Text>
+          )}
         </View>
         <TouchableOpacity
           onPress={() => handleSignOut(signOut)}
@@ -621,7 +620,7 @@ async function handleAccept(notif: AppNotification) {
           styles.card,
           {
             borderWidth: 1,
-            borderColor: "rgba(255,107,107,0.35)",
+            borderColor: colors.cardBorder,
           },
         ]}
       >
@@ -630,8 +629,8 @@ async function handleAccept(notif: AppNotification) {
           onPress={() => setDeleteModalVisible(true)}
           activeOpacity={0.7}
         >
-          <Text style={[styles.rowLabel, { color: "#ff6b6b" }]}>Delete account</Text>
-          <Ionicons name="trash-outline" size={16} color="#ff6b6b" />
+          <Text style={styles.rowLabel}>Delete account</Text>
+          <Ionicons name="trash-outline" size={16} color={colors.text} />
         </TouchableOpacity>
       </View>
 
@@ -746,20 +745,22 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       backgroundColor: colors.divider,
       marginTop: spacing.md,
     },
-    avatarSection: {
+    profileHeaderRow: {
       flexDirection: "row",
       alignItems: "center",
-      paddingVertical: spacing.lg,
-      gap: spacing.md,
+      gap: 12,
+      paddingTop: spacing.md,
+      paddingBottom: spacing.md,
     },
     avatarInfo: {
       flex: 1,
       justifyContent: "center",
+      minWidth: 0,
     },
     avatar: {
-      width: 60,
-      height: 60,
-      borderRadius: 36,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       backgroundColor: colors.badgeBg,
       alignItems: "center",
       justifyContent: "center",
@@ -767,24 +768,25 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       borderColor: colors.cardBorder,
     },
     avatarImage: {
-      width: 60,
-      height: 60,
-      borderRadius: 36,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
     },
     avatarInitials: {
-      fontSize: 24,
+      fontSize: 16,
       fontFamily: "Lora_400Regular",
       color: colors.text,
     },
     name: {
-      fontSize: 20,
-      fontWeight: "400" as const,
-      fontFamily: "Lora_400Regular",
+      fontSize: 26,
+      fontFamily: "CormorantGaramond_300Light",
       color: colors.text,
     },
     email: {
-      ...typography.bodySmall,
+      fontSize: 12,
+      fontFamily: "Lora_400Regular",
       color: colors.textMuted,
+      marginTop: 1,
     },
     rowValuePlaceholder: {
       ...typography.body,
@@ -831,7 +833,10 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     inlineEditActions: {
       flexDirection: "row" as const,
       alignItems: "center" as const,
+      justifyContent: "flex-end" as const,
       gap: 16,
+      paddingHorizontal: spacing.cardPadding,
+      paddingBottom: spacing.cardPadding,
     },
     inlineSaveBtn: {
       paddingHorizontal: 16,
