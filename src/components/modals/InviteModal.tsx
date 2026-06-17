@@ -17,6 +17,7 @@ import { Colors } from "../../theme/colors";
 import { Spinner } from "../loaders/Spinner";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { supabase, UserProfile } from "../../../lib/supabase";
+import { fetchHiddenAuthorIds } from "../../../lib/contentReports";
 
 type Props = {
   visible: boolean;
@@ -72,8 +73,11 @@ export function InviteModal({ visible, onClose, eventId, eventTitle, circleId, c
 
         const rsvpSet = new Set((rsvps ?? []).map((r: any) => r.user_id));
 
+        // Exclude banned / reported / blocked users from invite candidates.
+        const hiddenAuthorIds = await fetchHiddenAuthorIds(userIds, user.id);
+
         const eligible = memberData
-          .filter((m: any) => !rsvpSet.has(m.user_id))
+          .filter((m: any) => !rsvpSet.has(m.user_id) && !hiddenAuthorIds.has(m.user_id))
           .map((m: any) => ({
             user_id: m.user_id,
             name: profileMap[m.user_id] ?? m.display_name ?? m.user_id,

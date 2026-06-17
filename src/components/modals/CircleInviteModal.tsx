@@ -17,6 +17,7 @@ import { Colors } from "../../theme/colors";
 import { Spinner } from "../loaders/Spinner";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { supabase, UserProfile } from "../../../lib/supabase";
+import { fetchHiddenAuthorIds } from "../../../lib/contentReports";
 
 type Props = {
   visible: boolean;
@@ -53,7 +54,7 @@ export function CircleInviteModal({ visible, onClose, circleId, circleName }: Pr
         .eq("type", "circle_invitation")
         .filter("data->>circle_id", "eq", circleId)
         .eq("read", false),
-    ]).then(([profilesResult, membersResult, allCircleMembersResult, notifsResult]) => {
+    ]).then(async ([profilesResult, membersResult, allCircleMembersResult, notifsResult]) => {
       const existingMemberIds = new Set(
         (membersResult.data ?? []).map((m: any) => m.user_id)
       );
@@ -78,12 +79,23 @@ export function CircleInviteModal({ visible, onClose, circleId, circleName }: Pr
         if (p.user_id && p.display_name) userMap.set(p.user_id, p.display_name);
       }
 
+      // Exclude banned / reported / blocked users so they can never be invited.
+      const hiddenAuthorIds = await fetchHiddenAuthorIds(
+        Array.from(userMap.keys()),
+        user.id
+      );
+
       // Same display name can exist on multiple Clerk user_ids (re-signup, test
       // accounts, etc.). Show one row per name; prefer user_profiles over stale
       // circle_members copies.
       const seenNames = new Set<string>();
       const list = Array.from(userMap.entries())
-        .filter(([userId]) => !existingMemberIds.has(userId) && userId !== user.id)
+        .filter(
+          ([userId]) =>
+            !existingMemberIds.has(userId) &&
+            userId !== user.id &&
+            !hiddenAuthorIds.has(userId)
+        )
         .sort(([idA], [idB]) => {
           const aScore = profileIds.has(idA) ? 0 : 1;
           const bScore = profileIds.has(idB) ? 0 : 1;

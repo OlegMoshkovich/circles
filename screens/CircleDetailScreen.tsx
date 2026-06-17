@@ -182,13 +182,20 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       .eq("status", "requested")
       .then(async ({ data, error }) => {
         if (!error && data) {
-          setRequests(data);
           const userIds = data.map((m: CircleMember) => m.user_id);
-          if (userIds.length > 0) {
+          // Drop join requests from banned / reported / blocked users.
+          const hiddenAuthorIds = await fetchHiddenAuthorIds(userIds, user?.id);
+          const visibleRequests = (data as CircleMember[]).filter(
+            (m) => !hiddenAuthorIds.has(m.user_id)
+          );
+          setRequests(visibleRequests);
+          setRequestCount(visibleRequests.length);
+          const visibleIds = visibleRequests.map((m) => m.user_id);
+          if (visibleIds.length > 0) {
             const { data: profiles } = await supabase
               .from("user_profiles")
               .select("user_id, display_name")
-              .in("user_id", userIds);
+              .in("user_id", visibleIds);
             if (profiles) {
               const map: Record<string, string> = { ...profileMap };
               for (const p of profiles as UserProfile[]) {
@@ -445,6 +452,10 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         }
       }
 
+      // Hide banned / reported / blocked users from both the member list and
+      // the pending-invite list so they never surface anywhere in the circle.
+      const hiddenAuthorIds = await fetchHiddenAuthorIds(allIds, user?.id);
+
       if (cancelled) return;
 
       if (!membersResult.error && membersResult.data) {
@@ -454,13 +465,17 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         // up as the same person listed several times.
         const seen = new Set<string>();
         const uniqueMembers = (membersResult.data as CircleMember[]).filter(
-          (m) => !seen.has(m.user_id) && seen.add(m.user_id)
+          (m) => !seen.has(m.user_id) && seen.add(m.user_id) && !hiddenAuthorIds.has(m.user_id)
         );
         setMembers(uniqueMembers);
         setProfileMap(nameMap);
       }
       if (!notifsResult.error && notifsResult.data) {
-        setInvitedUsers(invited.map((u) => ({ ...u, name: nameMap[u.user_id] ?? u.user_id })));
+        setInvitedUsers(
+          invited
+            .filter((u) => !hiddenAuthorIds.has(u.user_id))
+            .map((u) => ({ ...u, name: nameMap[u.user_id] ?? u.user_id }))
+        );
       }
 
       setLoadingMembers(false);

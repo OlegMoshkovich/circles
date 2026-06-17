@@ -12,9 +12,15 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
+import { Linking } from "react-native";
 import { useSignIn } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { log } from "../logger";
+
+/** Public terms page (override with EXPO_PUBLIC_TERMS_URL in env if needed). */
+const TERMS_PUBLIC_URL =
+  (typeof process !== "undefined" && process.env.EXPO_PUBLIC_TERMS_URL?.trim()) ||
+  "https://valmia.ch/terms-and-conditions";
 import { RootStackScreenProps } from "../types";
 import { OAuthButtons } from "../components/OAuth";
 import { Spinner } from "../src/components/loaders/Spinner";
@@ -272,6 +278,17 @@ export default function SignInScreen({
           )}
         </TouchableOpacity>
 
+        <Text style={styles.termsNotice}>
+          By continuing you agree to our{" "}
+          <Text
+            style={styles.termsNoticeLink}
+            onPress={() => Linking.openURL(TERMS_PUBLIC_URL)}
+          >
+            Terms & EULA
+          </Text>
+          , including zero tolerance for objectionable content and abusive users.
+        </Text>
+
         {needsSecondFactor && (
           <>
             <View style={styles.inputRow}>
@@ -432,6 +449,19 @@ const styles = StyleSheet.create({
     color: "#efede1",
     fontSize: 16,
     fontWeight: "600",
+  },
+  termsNotice: {
+    color: "rgba(239,237,225,0.7)",
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: "center",
+    marginTop: 16,
+    paddingHorizontal: 8,
+    fontFamily: "Lora_400Regular",
+  },
+  termsNoticeLink: {
+    color: "#efede1",
+    textDecorationLine: "underline",
   },
   footer: {
     flexDirection: "row",

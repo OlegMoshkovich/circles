@@ -19,6 +19,7 @@ import { useUser } from "@clerk/clerk-expo";
 import { Colors } from "../../theme/colors";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { supabase, Circle } from "../../../lib/supabase";
+import { fetchHiddenAuthorIds } from "../../../lib/contentReports";
 import { LazyMapPickerView } from "./LazyMapPickerView";
 
 export type NewEventData = {
@@ -144,7 +145,16 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
         .ilike("display_name", `%${friendsSearch.trim()}%`)
         .limit(8);
       const selectedIds = new Set(selectedFriends.map((f) => f.user_id));
-      setFriendsSearchResults((data ?? []).filter((u: any) => !selectedIds.has(u.user_id)));
+      // Exclude banned / reported / blocked users from friend search results.
+      const hiddenAuthorIds = await fetchHiddenAuthorIds(
+        (data ?? []).map((u: any) => u.user_id),
+        user?.id
+      );
+      setFriendsSearchResults(
+        (data ?? []).filter(
+          (u: any) => !selectedIds.has(u.user_id) && !hiddenAuthorIds.has(u.user_id)
+        )
+      );
     }, 300);
     return () => clearTimeout(timeout);
   }, [friendsSearch, eventVisibility, selectedFriends]);

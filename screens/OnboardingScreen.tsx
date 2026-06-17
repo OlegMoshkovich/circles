@@ -24,7 +24,7 @@ import MapView, { Region } from "react-native-maps";
 import * as Location from "expo-location";
 import { colors, glassColors, lightColors, onboardingColors, Colors } from "../src/theme/colors";
 import { BgOption, useBackground } from "../src/contexts/BackgroundContext";
-import { fetchReportedHiddenContentIds } from "../lib/contentReports";
+import { fetchReportedHiddenContentIds, fetchHiddenAuthorIds } from "../lib/contentReports";
 import { supabase, getAuthClient, Circle } from "../lib/supabase";
 import { Spinner } from "../src/components/loaders/Spinner";
 import {
@@ -382,7 +382,7 @@ function TermsStep({
 
   return (
     <View style={styles.formStep}>
-      <View style={[styles.panel, styles.termsPanel]}>
+      <View style={styles.panel}>
         <StepHeader
           title="Terms & community rules"
           subtitle="You must accept before using Valmia."
@@ -816,12 +816,16 @@ function CircleSuggestionsStep({
         setLoading(false);
         return;
       }
-      const hidden = await fetchReportedHiddenContentIds(
-        "circle",
-        (rows as Circle[]).map((c) => c.id)
-      );
+      const [hidden, hiddenAuthorIds] = await Promise.all([
+        fetchReportedHiddenContentIds("circle", (rows as Circle[]).map((c) => c.id)),
+        fetchHiddenAuthorIds((rows as Circle[]).map((c) => c.owner_id)),
+      ]);
       if (!cancelled) {
-        setCircles((rows as Circle[]).filter((c) => !hidden.has(c.id)));
+        setCircles(
+          (rows as Circle[]).filter(
+            (c) => !hidden.has(c.id) && !hiddenAuthorIds.has(c.owner_id)
+          )
+        );
         setLoading(false);
       }
     })();

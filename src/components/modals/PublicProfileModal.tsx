@@ -76,7 +76,9 @@ export function PublicProfileModal({ visible, onClose, userId, displayName, onBl
   }, [visible, user?.id, userId]);
 
   const name = profile?.display_name ?? displayName;
-  const canModerate = !!user?.id && user.id !== userId;
+  // A banned user's profile must not surface to anyone but themselves.
+  const isBanned = !!(profile as any)?.banned_at && user?.id !== userId;
+  const canModerate = !!user?.id && user.id !== userId && !isBanned;
 
   async function confirmBlock() {
     if (!user?.id || blockWorking) return;
@@ -128,7 +130,7 @@ export function PublicProfileModal({ visible, onClose, userId, displayName, onBl
             <View style={styles.header}>
               <View />
               <View style={styles.headerActions}>
-                {user?.id && user.id !== userId ? (
+                {canModerate ? (
                   <TouchableOpacity
                     onPress={() => {
                       const reporterId = user.id;
@@ -161,6 +163,10 @@ export function PublicProfileModal({ visible, onClose, userId, displayName, onBl
             {loading ? (
               <View style={styles.loader}>
                 <Spinner size="small" />
+              </View>
+            ) : isBanned ? (
+              <View style={styles.loader}>
+                <Text style={styles.emptyText}>This account is no longer available.</Text>
               </View>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>

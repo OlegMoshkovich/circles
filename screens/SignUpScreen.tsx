@@ -10,12 +10,19 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Linking,
 } from "react-native";
 import { useSignUp } from "@clerk/clerk-expo";
+import { Ionicons } from "@expo/vector-icons";
 import { log } from "../logger";
 import { RootStackScreenProps } from "../types";
 import { BlurView } from "expo-blur";
 import Svg, { Path } from "react-native-svg";
+
+/** Public terms page (override with EXPO_PUBLIC_TERMS_URL in env if needed). */
+const TERMS_PUBLIC_URL =
+  (typeof process !== "undefined" && process.env.EXPO_PUBLIC_TERMS_URL?.trim()) ||
+  "https://valmia.ch/terms-and-conditions";
 
 export default function SignUpScreen({
   navigation,
@@ -25,10 +32,15 @@ export default function SignUpScreen({
   const [lastName, setLastName] = React.useState("");
   const [emailAddress, setEmailAddress] = React.useState("");
   const [password, setPassword] = React.useState("");
+  const [agreedTerms, setAgreedTerms] = React.useState(false);
   const [error, setError] = React.useState("");
 
   const onSignUpPress = async () => {
     if (!isLoaded) return;
+    if (!agreedTerms) {
+      setError("Please agree to the Terms & EULA before creating an account.");
+      return;
+    }
     setError("");
     try {
       await signUp.create({ firstName, lastName, emailAddress, password });
@@ -126,9 +138,36 @@ export default function SignUpScreen({
           />
         </View>
 
+        <TouchableOpacity
+          style={styles.termsRow}
+          onPress={() => setAgreedTerms((v) => !v)}
+          activeOpacity={0.75}
+        >
+          <Ionicons
+            name={agreedTerms ? "checkbox" : "square-outline"}
+            size={22}
+            color={agreedTerms ? "#efede1" : "rgba(239,237,225,0.55)"}
+            style={{ marginRight: 12 }}
+          />
+          <Text style={styles.termsText}>
+            I agree to the{" "}
+            <Text
+              style={styles.termsLink}
+              onPress={() => Linking.openURL(TERMS_PUBLIC_URL)}
+            >
+              Terms & EULA
+            </Text>
+            , including zero tolerance for objectionable content and abusive users.
+          </Text>
+        </TouchableOpacity>
+
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <TouchableOpacity style={styles.primaryButton} onPress={onSignUpPress}>
+        <TouchableOpacity
+          style={[styles.primaryButton, !agreedTerms && styles.primaryButtonDisabled]}
+          onPress={onSignUpPress}
+          disabled={!agreedTerms}
+        >
           <BlurView intensity={28} tint="light" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(255,255,255,0.15)" }]} />
           <View style={[StyleSheet.absoluteFill, { borderRadius: 50, borderWidth: 1, borderColor: "rgba(255,255,255,0.35)" }]} />
@@ -203,12 +242,31 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     lineHeight: 18,
   },
+  termsRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 24,
+  },
+  termsText: {
+    flex: 1,
+    color: "rgba(239,237,225,0.85)",
+    fontSize: 13,
+    lineHeight: 19,
+    fontFamily: "Lora_400Regular",
+  },
+  termsLink: {
+    color: "#efede1",
+    textDecorationLine: "underline",
+  },
   primaryButton: {
     borderRadius: 50,
     height: 54,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
+  },
+  primaryButtonDisabled: {
+    opacity: 0.5,
   },
   primaryButtonText: {
     color: "#efede1",
