@@ -15,6 +15,9 @@ import { NotificationProvider } from "./src/contexts/NotificationContext";
 import { BackgroundProvider } from "./src/contexts/BackgroundContext";
 import { ReportProvider } from "./src/contexts/ReportProvider";
 import { supabase, setSupabaseTokenGetter } from "./lib/supabase";
+import * as Notifications from "expo-notifications";
+import { syncPushToken } from "./lib/pushNotifications";
+import { navigationRef } from "./navigation/navigationRef";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   SessionBootstrapProvider,
@@ -241,6 +244,39 @@ function ProfileSync() {
   return null;
 }
 
+// Registers this device for push once the user is signed in, and routes a
+// notification tap to the in-app inbox (MyProfile), which already renders invite
+// / join-request rows with their accept-decline actions.
+function PushRegistrar() {
+  const { user } = useUser();
+
+  React.useEffect(() => {
+    if (!user?.id) return;
+    // Defer slightly so the permission prompt doesn't fight the cold-start work.
+    const timer = setTimeout(() => {
+      syncPushToken(user.id).catch(() => {});
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [user?.id]);
+
+  React.useEffect(() => {
+    function goToInbox() {
+      if (navigationRef.isReady()) {
+        navigationRef.navigate("MyProfile" as never);
+      }
+    }
+    // Tapped while the app was running.
+    const sub = Notifications.addNotificationResponseReceivedListener(goToInbox);
+    // Tapped from a cold start (app was killed).
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) setTimeout(goToInbox, 800);
+    });
+    return () => sub.remove();
+  }, []);
+
+  return null;
+}
+
 export default function App() {
   const isLoadingComplete = useCachedResources();
 
@@ -262,6 +298,7 @@ export default function App() {
                 <NotificationProvider>
                   <HomeReadyProvider>
                     <ProfileSync />
+                    <PushRegistrar />
                     <AppGate>
                       <Navigation />
                     </AppGate>

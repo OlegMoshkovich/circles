@@ -29,6 +29,9 @@
       ],
       "bundleIdentifier": "ch.valmia.app",
       "appleTeamId": "Q8RCPVAZM5",
+      "entitlements": {
+        "aps-environment": "production"
+      },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Used to help you set a meeting location for events and circles.",
         "ITSAppUsesNonExemptEncryption": false
@@ -84,7 +87,14 @@
       "expo-secure-store",
       "expo-web-browser",
       "expo-location",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#37412C"
+        }
+      ]
     ]
   }
 }

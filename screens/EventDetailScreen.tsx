@@ -3,6 +3,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   Share,
@@ -84,6 +85,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const [maxParticipants, setMaxParticipants] = useState(route.params.max_participants ?? null);
   const [contactInfo, setContactInfo] = useState(route.params.contact_info ?? "");
   const [priceInfo, setPriceInfo] = useState(route.params.price_info ?? "");
+  const [eventUrl, setEventUrl] = useState(route.params.event_url ?? "");
 
   async function handleDelete() {
     Alert.alert(
@@ -444,7 +446,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
             </>
           ) : null}
 
-          {(maxParticipants !== null || contactInfo.trim() || priceInfo.trim()) && <View style={styles.divider} />}
+          {(maxParticipants !== null || contactInfo.trim() || priceInfo.trim() || eventUrl.trim()) && <View style={styles.divider} />}
           {maxParticipants !== null ? (
             <View style={styles.metaRow}>
               <Ionicons name="people-circle-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
@@ -462,6 +464,22 @@ export default function EventDetailScreen({ route, navigation }: Props) {
               <Ionicons name="cash-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
               <Text style={styles.metaText}>{priceInfo}</Text>
             </View>
+          ) : null}
+          {eventUrl.trim() ? (
+            <TouchableOpacity
+              style={styles.metaRow}
+              onPress={() => {
+                const raw = eventUrl.trim();
+                const href = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+                Linking.openURL(href).catch(() =>
+                  Alert.alert("Could not open link", "This event link doesn't appear to be valid.")
+                );
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="link-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
+              <Text style={[styles.metaText, styles.metaLink]} numberOfLines={1}>{eventUrl.trim()}</Text>
+            </TouchableOpacity>
           ) : null}
 
           <View style={styles.divider} />
@@ -805,6 +823,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   metaText: {
     ...typography.body,
     color: colors.text,
+  },
+  metaLink: {
+    flex: 1,
+    color: colors.text,
+    textDecorationLine: "underline",
   },
   description: {
     ...typography.body,

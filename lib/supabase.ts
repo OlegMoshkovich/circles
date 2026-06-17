@@ -38,6 +38,7 @@ export type Event = {
   max_participants?: number | null;
   contact_info?: string | null;
   price_info?: string | null;
+  event_url?: string | null;
   going: number;
   maybe: number;
   created_at: string;
