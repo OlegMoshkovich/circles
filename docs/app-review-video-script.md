@@ -1,113 +1,130 @@
 # App Review — Screen Recording Script
 
-Record on a **physical device** (App Review requires it), in one continuous take if you
-can. Total length ~3–4 minutes. Put the final video link in **App Store Connect →
-App Review Information → Notes**, and reference it in your reply to the reviewer.
+Record this on a **physical device** (App Review requires it), ideally in one continuous
+take. Target length **3–4 minutes**. Upload it somewhere with a stable link and put that
+link in **App Store Connect → App Review Information → Notes**, then reference it in your
+reply to the reviewer.
 
-Cover four things the reviewer raised across the last two rejections:
+Apple's reply asked specifically to see three things: the **EULA/Terms before registering**,
+the **flag** mechanism, and the **block** mechanism. This script shows those plus the
+**content filter** and the **moderation/eject** step, so the reviewer sees the full picture.
 
-1. Sign in with Apple no longer asks for name/email (Guideline 4)
-2. EULA / Terms shown before accessing user-generated content (Guideline 1.2)
-3. Flag / report objectionable content (Guideline 1.2)
-4. Block an abusive user — content disappears instantly (Guideline 1.2)
-5. Account deletion (Guideline 5.1.1(v)) — include again so the reviewer sees it in this build
+**Before you start recording:**
 
-Tip: turn on **Settings → Accessibility → Touch → Show Taps** (or the simulator's touch
-indicator) so the reviewer can see where you press.
-
----
-
-## Scene 1 — Sign in with Apple (Guideline 4)
-
-**Goal: prove the app does NOT ask for name or email after Apple sign-in.**
-
-1. Launch the app on the sign-in screen.
-2. Tap **"Continue with Apple"**.
-3. Complete the native Apple sheet (Face ID / confirm).
-4. Onboarding begins. Walk through the steps **without typing a name or email anywhere**:
-   - Welcome → Community → Community Guidelines → Terms (see Scene 2) → User type →
-     Interests → Location → **Your profile**.
-5. On the **"Your profile"** step, point out: the **Name is already filled from Apple and
-   shown read-only** — there is no required name field, and email is never requested. Tap
-   **Continue** straight through.
-6. Land on the home screen.
-
-> Caption / note to reviewer: "Name comes from Sign in with Apple and is shown read-only.
-> The app never asks the user to type a name or email."
+- Use a fresh / signed-out account so onboarding (and the EULA step) appears.
+- Have a **second test account** that has created a circle, an event, and posted a note —
+  this is the "abusive user" you will report and block. Note its display name.
+- Turn on **Settings → Accessibility → Touch → Show Taps** so the reviewer sees each press.
+- Keep one hand free to narrate, or add the captions below as on-screen text in editing.
 
 ---
 
-## Scene 2 — EULA / Terms before user-generated content (Guideline 1.2)
+## Scene 1 — EULA / Terms before any content (Guideline 1.2)  · ~40s
 
-**Goal: show the EULA is presented and must be accepted during onboarding.**
+**Goal: prove the user must accept Terms/EULA with a zero-tolerance clause before reaching content.**
 
-1. During onboarding (first run), stop on the **Terms** step.
-2. Show the on-screen text: zero tolerance for objectionable content and abusive users.
-3. Tap the link to open the full Terms & Conditions (valmia.ch/terms-and-conditions).
-4. Return, tick **"I have read and agree to the Terms…"**, and tap Continue.
+1. Launch the app on the **sign-in** screen.
+2. Tap **"Continue with Apple"** and complete the native Apple sheet.
+   - (Note for narration: the app does **not** ask for a name or email afterwards — the name
+     comes from Apple and is shown read-only.)
+3. Onboarding begins. Move through the steps until the **"Terms & community rules"** step.
+4. Show the on-screen text: **"no tolerance for objectionable content or abusive behaviour."**
+5. Tap **"Read full terms →"** to open https://valmia.ch/terms-and-conditions, then come back.
+6. Point out that **Continue is disabled** until you tick the box.
+7. Tick **"I have read and agree to the Terms… including zero tolerance…"**, then tap **Continue**.
 
-> Caption: "Users must accept the EULA/Terms (with a zero-tolerance clause) during
-> onboarding, before they can post or view community content."
-
----
-
-## Scene 3 — Flag / report objectionable content (Guideline 1.2)
-
-**Goal: show how a user reports content.**
-
-1. Open a **Circle** (or an Event) that has another member.
-2. Open the member's profile (tap their name/avatar) **or** open the content item.
-3. Tap the **••• (three dots)** in the top-right.
-4. The **Report content** sheet appears with reasons: Spam or scam / Harassment or abuse /
-   Offensive or inappropriate.
-5. Select **Harassment or abuse**, type a short reason, tap **Submit report**.
-6. Show the confirmation: "This content is now hidden while our team reviews it."
-
-> Caption: "Any user can flag content. Harassment reports hide the content immediately and
-> notify our team, who act within 24 hours."
+> Caption: "Every user must accept the EULA/Terms — with a zero-tolerance clause — during
+> onboarding, before they can view or post any community content."
 
 ---
 
-## Scene 4 — Block an abusive user (Guideline 1.2)
+## Scene 2 — Content filter blocks objectionable text (Guideline 1.2)  · ~30s
 
-**Goal: show blocking, and that the blocked user's content disappears instantly.**
+**Goal: show objectionable content is filtered before it can be saved — in titles AND notes.**
 
-1. Open the abusive user's **profile** (e.g. as the creator of a circle/event).
-2. Tap the white **"Block [name]"** button at the bottom of the profile.
-3. Confirm in the dialog ("Block").
+1. Tap **+** to create a new **Event** (or Circle).
+2. In the **Title** field, type an obvious slur / objectionable word, fill the rest, and tap
+   **Create Event**.
+3. Show the rejection: a "Can't post this" alert appears and the event is **not** created.
+4. (Optional, to show it's everywhere) Open a circle/event, compose a **note** with an
+   objectionable word, tap send, and show the same block.
+
+> Caption: "Objectionable content is filtered on every user-entered field — event/circle
+> titles, descriptions, notes, and profile bios — in the app and again on the server, so it
+> cannot be saved even from a modified client."
+
+---
+
+## Scene 3 — Flag / report objectionable content (Guideline 1.2)  · ~45s
+
+**Goal: show how any user reports content.**
+
+1. Open the **circle**, **event**, or **note** created by your second (abusive) account.
+2. Tap the **"•••" (three dots)** on that item — or open the user's profile and tap "•••".
+3. The **"Report content"** sheet opens with reasons:
+   **Spam or scam / Harassment or abuse / Offensive or inappropriate.**
+4. Select **"Harassment or abuse"**, type a short description (required for harassment),
+   and tap **"Submit report."**
+5. Show the confirmation: **"This content is now hidden while our team reviews it."**
+6. Show that the reported item is now **gone from the feed**.
+
+> Caption: "Any user can flag content. A harassment report hides the content immediately
+> and notifies our moderation team."
+
+---
+
+## Scene 4 — Block an abusive user, content disappears instantly (Guideline 1.2)  · ~40s
+
+**Goal: show blocking, and that the blocked user's content vanishes immediately.**
+
+1. Open the **profile** of the abusive user (tap their name/avatar on a circle, event, or note).
+2. Tap **"Block [name]"** at the bottom of the profile.
+3. Confirm in the dialog — note the text: *"You won't see their circles, events, or notes
+   anymore, and our team will be notified to review them."* Tap **Block**.
 4. The profile closes and you return to the feed.
-5. Show that the blocked user's **circles, events, and notes are no longer visible** — scroll
-   the feed to demonstrate their content is gone.
+5. **Scroll the feed** and show that the blocked user's circles, events, and notes are all
+   **gone**.
 
-> Caption: "Blocking removes the user's content from the feed instantly and notifies our team
-> to review them."
-
----
-
-## Scene 5 — Account deletion (Guideline 5.1.1(v))
-
-**Goal: full delete flow from initiation to confirmation.**
-
-1. Go to **Profile** (your own).
-2. Scroll to **Delete account** and tap it.
-3. Read the warning: permanent, cannot be undone.
-4. Tap **Delete Account**, then **type `DELETE`** in the confirmation field.
-5. Tap the final confirm button.
-6. Show the app returning to the signed-out / sign-in screen — the account and its data are
-   gone.
-
-> Caption: "Account creation requires account deletion. Deletion is permanent and removes the
-> user's account and all their data."
+> Caption: "Blocking removes the user's content from the feed instantly and notifies our
+> team to review them."
 
 ---
 
-## Reviewer reply checklist
+## Scene 5 — Moderation & ejecting the user within 24h (Guideline 1.2)  · ~30s
+
+**Goal: show the developer-side action that removes content and ejects the user.**
+
+1. On a laptop/second screen, open the **moderation dashboard** (valmia.ch/admin/moderation),
+   signed in as an admin.
+2. Show the new report from Scene 3/4 in the list.
+3. Tap **Ban user** (eject). Show the report move to "action taken."
+4. (Optional) Back in the app, show that the banned user's account is no longer available.
+
+> Caption: "Reports reach our moderation dashboard. We remove offending content and eject
+> the user within 24 hours; a banned user's content is removed for everyone."
+
+---
+
+## Scene 6 — Account deletion (Guideline 5.1.1(v))  · ~25s  · optional but recommended
+
+**Goal: include the in-app delete flow so the reviewer sees it in this build.**
+
+1. Go to your own **Profile → Delete account**.
+2. Read the permanent-deletion warning, type **`DELETE`** to confirm, tap the final button.
+3. Show the app returning to the signed-out screen.
+
+> Caption: "Account deletion is available in-app and permanently removes the account and its data."
+
+---
+
+## Reviewer-reply checklist
 
 - [ ] Recording captured on a physical device, taps visible
-- [ ] Shows: Apple sign-in with no name/email prompt
-- [ ] Shows: EULA acceptance during onboarding
-- [ ] Shows: report flow
-- [ ] Shows: block flow + content disappearing
-- [ ] Shows: full account deletion
+- [ ] Shows: EULA/Terms acceptance during onboarding (gated by checkbox)
+- [ ] Shows: content filter rejecting objectionable text
+- [ ] Shows: report/flag flow + content hidden
+- [ ] Shows: block flow + content disappearing instantly
+- [ ] Shows: moderation dashboard ban/eject
+- [ ] (Optional) Shows: account deletion
 - [ ] Video link added to App Review Information → Notes
-- [ ] Demo account credentials provided (so the reviewer can reproduce)
+- [ ] Demo account credentials provided

@@ -16,6 +16,10 @@ import { Colors } from "../../theme/colors";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { LazyMapPickerView } from "./LazyMapPickerView";
 import { supabase } from "../../../lib/supabase";
+import {
+  containsObjectionableContentInAny,
+  OBJECTIONABLE_CONTENT_MESSAGE,
+} from "../../../lib/contentModeration";
 
 export type EditEventData = {
   title: string;
@@ -99,6 +103,10 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
 
   async function handleSave() {
     if (!canSave) return;
+    if (containsObjectionableContentInAny(title, description, location)) {
+      setError(OBJECTIONABLE_CONTENT_MESSAGE);
+      return;
+    }
     setSaving(true);
     setError(null);
     const { data: updatedEvent, error: err } = await supabase
