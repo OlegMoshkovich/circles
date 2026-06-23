@@ -112,18 +112,8 @@ export function CircleInviteModal({ visible, onClose, circleId, circleName }: Pr
         })
         .map(([userId, name]) => ({ user_id: userId, name }));
 
-      // Collapse entries that share the same display name (case-insensitive).
-      // The list is already unique by user_id, but separate/duplicate accounts
-      // with the same name otherwise show the same person several times.
-      const seenNames = new Set<string>();
-      const deduped = list
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .filter((c) => {
-          const key = c.name.trim().toLowerCase();
-          if (seenNames.has(key)) return false;
-          seenNames.add(key);
-          return true;
-        });
+      // Already unique by display name above; present alphabetically.
+      const deduped = list.sort((a, b) => a.name.localeCompare(b.name));
 
       setCandidates(deduped);
       setLoading(false);
