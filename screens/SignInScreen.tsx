@@ -175,7 +175,7 @@ export default function SignInScreen({
       >
       <StatusBar barStyle="dark-content" />
 
-      <View style={[styles.logoContainer, { paddingTop: insets.top + 8 }]}>
+      <View style={[styles.logoContainer, { paddingTop: insets.top - 8 }]}>
         <Svg width={26} height={40} viewBox="0 0 132 175" fill="none">
           <Path
             d="M128.5 3.0005L66.1263 112.457C65.7404 113.135 64.7625 113.13 64.3836 112.448L3.5 3.00048"
@@ -347,7 +347,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: "flex-end",
-    paddingBottom: 48,
+    paddingBottom: 20,
   },
   backgroundImage: {
     top: -280,
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: "center",
     paddingHorizontal: 32,
-    paddingBottom: 52,
+    paddingBottom: 68,
   },
   titleContainer: {
     paddingHorizontal: 32,
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: "row",
     justifyContent: "center",
-    marginTop: 36,
+    marginTop: 18,
   },
   footerText: {
     color: "rgba(239,237,225,0.65)",
