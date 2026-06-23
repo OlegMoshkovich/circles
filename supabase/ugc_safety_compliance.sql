@@ -124,19 +124,22 @@ create policy "content_reports_select"
 comment on table public.content_reports is
   'User-generated content flags. App Store: act within 24h — review pending rows, remove offending content, eject user if needed. Use Supabase Dashboard, Retool, or Edge Function + email alert on INSERT.';
 
--- ─── 4) Optional: simple server-side word filter (expand list; or replace with Edge Function) ───
--- Reject inserts containing obvious slurs / spam markers. Adjust list for your locale.
+-- ─── 4) Server-side word filter on ALL user-generated text (defence in depth) ───
+-- Rejects inserts/updates containing obvious slurs so they cannot be saved even
+-- by a modified client that skips the in-app check. This covers note BODIES as
+-- well as event/circle TITLES & descriptions and profile bios — every free-text
+-- field a user controls. Expand the blocklist for your locale, or replace with an
+-- Edge Function backed by a real moderation API for production-grade coverage.
 
-create or replace function public.reject_objectionable_note_content()
-returns trigger
+-- Shared predicate: true when `input` contains a blocked term after normalization
+-- (lowercased, spacing/punctuation stripped, common leetspeak folded). Keep the
+-- blocklist in sync with BLOCKED_TERMS in lib/contentModeration.ts.
+create or replace function public.contains_objectionable(input text)
+returns boolean
 language plpgsql
+immutable
 as $$
 declare
-  -- Lowercase substrings to block. Matched against a normalized form of the
-  -- content (lowercased, spacing/punctuation stripped, common leetspeak folded)
-  -- so simple obfuscation is caught. Keep in sync with BLOCKED_TERMS in
-  -- lib/contentModeration.ts. Prefer an Edge Function + external moderation API
-  -- for production-grade coverage.
   bad text[] := array[
     'nigger', 'nigga', 'faggot', 'retard', 'kike',
     'spic', 'chink', 'wetback', 'tranny', 'cunt'
@@ -144,17 +147,65 @@ declare
   needle text;
   normalized text;
 begin
-  normalized := lower(coalesce(new.content, ''));
-  -- Strip spacing/punctuation and fold leetspeak to mirror the client filter.
+  if input is null or input = '' then
+    return false;
+  end if;
+  normalized := lower(input);
   normalized := regexp_replace(normalized, '[[:space:]._\-*]+', '', 'g');
   normalized := translate(normalized, '01345@$', 'oieasas');
 
   foreach needle in array bad
   loop
     if needle is not null and needle <> '' and position(needle in normalized) > 0 then
-      raise exception 'Content violates community guidelines' using errcode = '23514';
+      return true;
     end if;
   end loop;
+  return false;
+end;
+$$;
+
+-- Trigger: reject when any of the supplied text columns is objectionable. Each
+-- per-table function below names the columns relevant to that table.
+create or replace function public.reject_objectionable_note_content()
+returns trigger language plpgsql as $$
+begin
+  if public.contains_objectionable(new.content) then
+    raise exception 'Content violates community guidelines' using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.reject_objectionable_event()
+returns trigger language plpgsql as $$
+begin
+  if public.contains_objectionable(new.title)
+     or public.contains_objectionable(new.description) then
+    raise exception 'Content violates community guidelines' using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.reject_objectionable_circle()
+returns trigger language plpgsql as $$
+begin
+  if public.contains_objectionable(new.name)
+     or public.contains_objectionable(new.description)
+     or public.contains_objectionable(new.category) then
+    raise exception 'Content violates community guidelines' using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.reject_objectionable_profile()
+returns trigger language plpgsql as $$
+begin
+  if public.contains_objectionable(new.display_name)
+     or public.contains_objectionable(new.bio) then
+    raise exception 'Content violates community guidelines' using errcode = '23514';
+  end if;
   return new;
 end;
 $$;
@@ -171,8 +222,26 @@ create trigger trg_event_notes_filter
   before insert or update of content on public.event_notes
   for each row execute function public.reject_objectionable_note_content();
 
-comment on function public.reject_objectionable_note_content() is
-  'Example DB-level filter; maintain a real blocklist or call a moderation API from an Edge Function instead.';
+-- Enforce on event titles/descriptions:
+drop trigger if exists trg_events_filter on public.events;
+create trigger trg_events_filter
+  before insert or update of title, description on public.events
+  for each row execute function public.reject_objectionable_event();
+
+-- Enforce on circle names/descriptions:
+drop trigger if exists trg_circles_filter on public.circles;
+create trigger trg_circles_filter
+  before insert or update of name, description, category on public.circles
+  for each row execute function public.reject_objectionable_circle();
+
+-- Enforce on profile display names / bios:
+drop trigger if exists trg_user_profiles_filter on public.user_profiles;
+create trigger trg_user_profiles_filter
+  before insert or update of display_name, bio on public.user_profiles
+  for each row execute function public.reject_objectionable_profile();
+
+comment on function public.contains_objectionable(text) is
+  'DB-level blocklist filter shared by all UGC triggers. Keep in sync with lib/contentModeration.ts; replace with a moderation API via Edge Function for production-grade coverage.';
 
 -- Optional: receive email when a report is filed — deploy Edge Function + Database Webhook:
 --   supabase/functions/content-report-email/index.ts

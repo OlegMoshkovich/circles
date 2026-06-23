@@ -14,6 +14,10 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../../theme/colors";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
+import {
+  containsObjectionableContentInAny,
+  OBJECTIONABLE_CONTENT_MESSAGE,
+} from "../../../lib/contentModeration";
 import { MapPickerView } from "./LocationPickerModal";
 
 export type NewCircleData = {
@@ -81,10 +85,14 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
 
   async function handleSave() {
     if (!canSave) return;
+    const category = categoryPreset === "custom" ? customCategoryText.trim() : categoryPreset;
+    if (containsObjectionableContentInAny(name, description, category, location)) {
+      setError(OBJECTIONABLE_CONTENT_MESSAGE);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
-      const category = categoryPreset === "custom" ? customCategoryText.trim() : categoryPreset;
       await onSave({
         name: name.trim(),
         description: description.trim(),

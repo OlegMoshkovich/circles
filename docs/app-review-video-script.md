@@ -38,17 +38,20 @@ the **flag** mechanism, and the **block** mechanism. This script shows those plu
 
 ---
 
-## Scene 2 — Content filter blocks objectionable text (Guideline 1.2)  · ~25s
+## Scene 2 — Content filter blocks objectionable text (Guideline 1.2)  · ~30s
 
-**Goal: show objectionable content is filtered before it can be posted.**
+**Goal: show objectionable content is filtered before it can be saved — in titles AND notes.**
 
-1. Open a circle or event and start composing a **note**.
-2. Type a message containing an obvious slur / objectionable word.
-3. Tap post/send and show the rejection: the message is blocked with a community-guidelines
-   warning and is **not** posted.
+1. Tap **+** to create a new **Event** (or Circle).
+2. In the **Title** field, type an obvious slur / objectionable word, fill the rest, and tap
+   **Create Event**.
+3. Show the rejection: a "Can't post this" alert appears and the event is **not** created.
+4. (Optional, to show it's everywhere) Open a circle/event, compose a **note** with an
+   objectionable word, tap send, and show the same block.
 
-> Caption: "Objectionable content is filtered in the app and again on the server, so it
-> cannot be posted — even from a modified client."
+> Caption: "Objectionable content is filtered on every user-entered field — event/circle
+> titles, descriptions, notes, and profile bios — in the app and again on the server, so it
+> cannot be saved even from a modified client."
 
 ---
 

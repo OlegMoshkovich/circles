@@ -48,5 +48,17 @@ export function containsObjectionableContent(text: string): boolean {
   return BLOCKED_TERMS.some((term) => normalized.includes(term));
 }
 
+/**
+ * True when ANY of the provided texts contains objectionable content. Use this
+ * to validate every free-text field of a submission (e.g. an event title AND
+ * its description) in one call. Fields are checked independently so a term is
+ * never falsely matched across a field boundary.
+ */
+export function containsObjectionableContentInAny(
+  ...texts: (string | null | undefined)[]
+): boolean {
+  return texts.some((t) => containsObjectionableContent(t ?? ""));
+}
+
 export const OBJECTIONABLE_CONTENT_MESSAGE =
   "Your message appears to contain language that violates our community guidelines. Please revise it before posting.";

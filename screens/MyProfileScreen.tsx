@@ -20,6 +20,10 @@ import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { useLanguage, Language } from "../src/i18n/LanguageContext";
 import { supabase, AppNotification } from "../lib/supabase";
+import {
+  containsObjectionableContentInAny,
+  OBJECTIONABLE_CONTENT_MESSAGE,
+} from "../lib/contentModeration";
 import { deleteAccount } from "../lib/deleteAccount";
 import { useNotificationContext } from "../src/contexts/NotificationContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
@@ -192,6 +196,13 @@ async function handleAccept(notif: AppNotification) {
 
   async function saveField(userTypeValue?: "local" | "visitor") {
     if (!user || !editingField) return;
+    if (
+      (editingField === "bio" || editingField === "location") &&
+      containsObjectionableContentInAny(editText)
+    ) {
+      Alert.alert("Can't save this", OBJECTIONABLE_CONTENT_MESSAGE);
+      return;
+    }
     const update: Record<string, unknown> = { user_id: user.id, updated_at: new Date().toISOString() };
     if (editingField === "bio") {
       update.bio = editText.trim() || null;

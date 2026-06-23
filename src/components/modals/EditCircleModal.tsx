@@ -16,6 +16,10 @@ import { Spinner } from "../loaders/Spinner";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { LazyMapPickerView } from "./LazyMapPickerView";
 import { supabase } from "../../../lib/supabase";
+import {
+  containsObjectionableContentInAny,
+  OBJECTIONABLE_CONTENT_MESSAGE,
+} from "../../../lib/contentModeration";
 
 export type EditCircleData = {
   name: string;
@@ -94,9 +98,13 @@ export function EditCircleModal({ visible, onClose, onSaved, circleId, initialVa
 
   async function handleSave() {
     if (!canSave) return;
+    const category = categoryPreset === "custom" ? customCategoryText.trim() : categoryPreset;
+    if (containsObjectionableContentInAny(name, description, category, location)) {
+      setError(OBJECTIONABLE_CONTENT_MESSAGE);
+      return;
+    }
     setSaving(true);
     setError(null);
-    const category = categoryPreset === "custom" ? customCategoryText.trim() : categoryPreset;
     const { error: err } = await supabase
       .from("circles")
       .update({

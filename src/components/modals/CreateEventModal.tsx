@@ -20,6 +20,10 @@ import { Colors } from "../../theme/colors";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { supabase, Circle } from "../../../lib/supabase";
 import { fetchHiddenAuthorIds } from "../../../lib/contentReports";
+import {
+  containsObjectionableContentInAny,
+  OBJECTIONABLE_CONTENT_MESSAGE,
+} from "../../../lib/contentModeration";
 import { LazyMapPickerView } from "./LazyMapPickerView";
 
 export type NewEventData = {
@@ -170,6 +174,10 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
 
   async function handleSave() {
     if (!canSave) return;
+    if (containsObjectionableContentInAny(title, description, location)) {
+      Alert.alert("Can't post this", OBJECTIONABLE_CONTENT_MESSAGE);
+      return;
+    }
     try {
       const didSave = await onSave({
       title: title.trim(),
