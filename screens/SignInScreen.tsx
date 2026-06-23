@@ -26,11 +26,13 @@ import { OAuthButtons } from "../components/OAuth";
 import { Spinner } from "../src/components/loaders/Spinner";
 import { BlurView } from "expo-blur";
 import Svg, { Path } from "react-native-svg";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function SignInScreen({
   navigation,
 }: RootStackScreenProps<"SignIn">) {
   const { signIn, setActive, isLoaded } = useSignIn();
+  const insets = useSafeAreaInsets();
 
   const [emailAddress, setEmailAddress] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -173,7 +175,7 @@ export default function SignInScreen({
       >
       <StatusBar barStyle="dark-content" />
 
-      <View style={styles.logoContainer}>
+      <View style={[styles.logoContainer, { paddingTop: insets.top + 8 }]}>
         <Svg width={26} height={40} viewBox="0 0 132 175" fill="none">
           <Path
             d="M128.5 3.0005L66.1263 112.457C65.7404 113.135 64.7625 113.13 64.3836 112.448L3.5 3.00048"
@@ -354,7 +356,7 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: "center",
     paddingHorizontal: 32,
-    paddingBottom: 120,
+    paddingBottom: 52,
   },
   titleContainer: {
     paddingHorizontal: 32,
