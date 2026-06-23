@@ -22,6 +22,7 @@ import { useLanguage, Language } from "../src/i18n/LanguageContext";
 import { supabase, AppNotification } from "../lib/supabase";
 import {
   containsObjectionableContentInAny,
+  isObjectionableContentError,
   OBJECTIONABLE_CONTENT_MESSAGE,
 } from "../lib/contentModeration";
 import { deleteAccount } from "../lib/deleteAccount";
@@ -217,7 +218,17 @@ async function handleAccept(notif: AppNotification) {
       update.user_type = userTypeValue;
       setProfileUserType(userTypeValue);
     }
-    await supabase.from("user_profiles").upsert(update, { onConflict: "user_id" });
+    const { error: saveErr } = await supabase
+      .from("user_profiles")
+      .upsert(update, { onConflict: "user_id" });
+    if (saveErr) {
+      if (isObjectionableContentError(saveErr.message)) {
+        Alert.alert("Can't save this", OBJECTIONABLE_CONTENT_MESSAGE);
+      } else {
+        Alert.alert("Couldn't save", saveErr.message);
+      }
+      return;
+    }
     setEditingField(null);
   }
 

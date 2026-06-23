@@ -34,6 +34,7 @@ import {
 } from "../lib/contentReports";
 import {
   containsObjectionableContent,
+  isObjectionableContentError,
   OBJECTIONABLE_CONTENT_MESSAGE,
 } from "../lib/contentModeration";
 import { fetchEventNoteStats } from "../lib/activityStats";
@@ -352,7 +353,11 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       return true;
     }
     console.error("Failed to create circle event", error);
-    Alert.alert("Could not create event", error.message);
+    if (isObjectionableContentError(error.message)) {
+      Alert.alert("Can't create this event", OBJECTIONABLE_CONTENT_MESSAGE);
+    } else {
+      Alert.alert("Could not create event", error.message);
+    }
     return false;
   }
 
@@ -377,6 +382,12 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     if (!error && data) {
       setNotes((prev) => [data, ...prev]);
       setNoteText("");
+    } else if (error) {
+      if (isObjectionableContentError(error.message)) {
+        Alert.alert("Can't post this", OBJECTIONABLE_CONTENT_MESSAGE);
+      } else {
+        Alert.alert("Couldn't post", error.message);
+      }
     }
     setPostingNote(false);
   }

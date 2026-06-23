@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useUser } from "@clerk/clerk-expo";
 import {
+  Alert,
   Modal,
   View,
   Text,
@@ -16,6 +17,7 @@ import { Colors } from "../../theme/colors";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import {
   containsObjectionableContentInAny,
+  isObjectionableContentError,
   OBJECTIONABLE_CONTENT_MESSAGE,
 } from "../../../lib/contentModeration";
 import { MapPickerView } from "./LocationPickerModal";
@@ -87,7 +89,7 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
     if (!canSave) return;
     const category = categoryPreset === "custom" ? customCategoryText.trim() : categoryPreset;
     if (containsObjectionableContentInAny(name, description, category, location)) {
-      setError(OBJECTIONABLE_CONTENT_MESSAGE);
+      Alert.alert("Can't create this circle", OBJECTIONABLE_CONTENT_MESSAGE);
       return;
     }
     setSaving(true);
@@ -102,7 +104,11 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
         organizer: organizer.trim(),
       });
     } catch (e: any) {
-      setError(e?.message ?? "Failed to create circle. Please try again.");
+      if (isObjectionableContentError(e?.message)) {
+        Alert.alert("Can't create this circle", OBJECTIONABLE_CONTENT_MESSAGE);
+      } else {
+        setError(e?.message ?? "Failed to create circle. Please try again.");
+      }
     } finally {
       setSaving(false);
     }

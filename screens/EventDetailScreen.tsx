@@ -30,6 +30,7 @@ import {
 } from "../lib/contentReports";
 import {
   containsObjectionableContent,
+  isObjectionableContentError,
   OBJECTIONABLE_CONTENT_MESSAGE,
 } from "../lib/contentModeration";
 import { useReport } from "../src/contexts/ReportProvider";
@@ -240,7 +241,11 @@ export default function EventDetailScreen({ route, navigation }: Props) {
       .select()
       .single();
     if (error) {
-      Alert.alert("Could not post note", error.message);
+      if (isObjectionableContentError(error.message)) {
+        Alert.alert("Can't post this", OBJECTIONABLE_CONTENT_MESSAGE);
+      } else {
+        Alert.alert("Could not post note", error.message);
+      }
     } else if (data) {
       setNotes((prev) => [data, ...prev]);
       setNoteText("");

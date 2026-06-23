@@ -18,6 +18,7 @@ import { useUser } from "@clerk/clerk-expo";
 import { useLanguage } from "../src/i18n/LanguageContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { fetchHiddenAuthorIds, fetchReportedHiddenContentIds } from "../lib/contentReports";
+import { isObjectionableContentError, OBJECTIONABLE_CONTENT_MESSAGE } from "../lib/contentModeration";
 import { fetchEventNoteStats } from "../lib/activityStats";
 import { supabase, Event } from "../lib/supabase";
 import { parseEventDateTime, isPastEvent } from "../lib/events";
@@ -280,7 +281,11 @@ export default function EventsScreen() {
       return true;
     }
     console.error("Failed to create event", error);
-    Alert.alert("Could not create event", error?.message ?? "Unknown error");
+    if (isObjectionableContentError(error?.message)) {
+      Alert.alert("Can't create this event", OBJECTIONABLE_CONTENT_MESSAGE);
+    } else {
+      Alert.alert("Could not create event", error?.message ?? "Unknown error");
+    }
     return false;
   }
 

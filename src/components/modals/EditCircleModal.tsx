@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  Alert,
   Modal,
   View,
   Text,
@@ -18,6 +19,7 @@ import { LazyMapPickerView } from "./LazyMapPickerView";
 import { supabase } from "../../../lib/supabase";
 import {
   containsObjectionableContentInAny,
+  isObjectionableContentError,
   OBJECTIONABLE_CONTENT_MESSAGE,
 } from "../../../lib/contentModeration";
 
@@ -100,7 +102,7 @@ export function EditCircleModal({ visible, onClose, onSaved, circleId, initialVa
     if (!canSave) return;
     const category = categoryPreset === "custom" ? customCategoryText.trim() : categoryPreset;
     if (containsObjectionableContentInAny(name, description, category, location)) {
-      setError(OBJECTIONABLE_CONTENT_MESSAGE);
+      Alert.alert("Can't save these changes", OBJECTIONABLE_CONTENT_MESSAGE);
       return;
     }
     setSaving(true);
@@ -117,7 +119,11 @@ export function EditCircleModal({ visible, onClose, onSaved, circleId, initialVa
       .eq("id", circleId);
 
     if (err) {
-      setError(err.message);
+      if (isObjectionableContentError(err.message)) {
+        Alert.alert("Can't save these changes", OBJECTIONABLE_CONTENT_MESSAGE);
+      } else {
+        setError(err.message);
+      }
       setSaving(false);
     } else {
       setSaving(false);
