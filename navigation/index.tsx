@@ -23,12 +23,13 @@ import CircleDetailScreen from "../screens/CircleDetailScreen";
 import TabNavigator from "./TabNavigator";
 import { RootStackParamList } from "../types";
 import LinkingConfiguration from "./LinkingConfiguration";
+import { navigationRef } from "./navigationRef";
 import { ClerkLoaded, useUser } from "@clerk/clerk-expo";
 import * as SplashScreen from "expo-splash-screen";
 
 export default function Navigation() {
   return (
-    <NavigationContainer linking={LinkingConfiguration}>
+    <NavigationContainer ref={navigationRef} linking={LinkingConfiguration}>
       <RootNavigator />
     </NavigationContainer>
   );

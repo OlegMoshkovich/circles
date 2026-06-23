@@ -21,6 +21,7 @@ export type EventDetailParams = {
   max_participants?: number | null;
   contact_info?: string | null;
   price_info?: string | null;
+  event_url?: string | null;
   created_by?: string | null;
   circleName?: string | null;
   circle_id?: string | null;

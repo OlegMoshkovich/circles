@@ -7,6 +7,11 @@
 [functions.content-report-email]
 verify_jwt = false
 
+# Database Webhook on `notifications` INSERT -> sends an Expo push to the
+# recipient's devices. Gated by PUSH_WEBHOOK_SECRET (see function source).
+[functions.send-push]
+verify_jwt = false
+
 # The caller sends a Clerk-issued JWT (not a Supabase-issued one), so the
 # gateway's built-in verification is disabled and the function verifies the
 # token itself with SUPABASE_JWT_SECRET.

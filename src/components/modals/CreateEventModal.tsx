@@ -38,6 +38,7 @@ export type NewEventData = {
   max_participants: number | null;
   contact_info: string;
   price_info: string;
+  event_url: string;
   visibility: "public" | "circle" | "friends" | "private";
   circle_id: string | null;
   invited_user_ids: string[];
@@ -69,18 +70,30 @@ function fmtTime(d: Date) {
 
 const DURATION_ITEM_HEIGHT = 44;
 const DURATION_VISIBLE_ITEMS = 5;
+const MINUTES_PER_DAY = 24 * 60;
 const DURATION_OPTIONS: (number | null)[] = [
   null,
+  // 15-min increments up to 8 hours
   ...Array.from({ length: 32 }, (_, i) => (i + 1) * 15),
+  // hourly from 9 to 23 hours
+  ...Array.from({ length: 15 }, (_, i) => (i + 9) * 60),
+  // daily from 1 to 14 days (for multi-day events)
+  ...Array.from({ length: 14 }, (_, i) => (i + 1) * MINUTES_PER_DAY),
 ];
 
 function fmtDuration(minutes: number | null): string {
   if (minutes === null) return "None";
   if (minutes < 60) return `${minutes} min`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (m === 0) return `${h} hr`;
-  return `${h} hr ${m} min`;
+  if (minutes < MINUTES_PER_DAY) {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (m === 0) return `${h} hr`;
+    return `${h} hr ${m} min`;
+  }
+  const days = Math.floor(minutes / MINUTES_PER_DAY);
+  const h = Math.floor((minutes % MINUTES_PER_DAY) / 60);
+  const dayLabel = `${days} ${days === 1 ? "day" : "days"}`;
+  return h === 0 ? dayLabel : `${dayLabel} ${h} hr`;
 }
 
 export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: Props) {
@@ -107,6 +120,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
   const [maxParticipants, setMaxParticipants] = useState("");
   const [contactInfo, setContactInfo] = useState("");
   const [priceInfo, setPriceInfo] = useState("");
+  const [eventUrl, setEventUrl] = useState("");
   const [eventVisibility, setEventVisibility] = useState<"public" | "circle" | "friends" | "private">(
     defaultCircleId ? "circle" : "public"
   );
@@ -191,6 +205,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
       max_participants: maxParticipants.trim() ? Number(maxParticipants.trim()) : null,
       contact_info: contactInfo.trim(),
       price_info: priceInfo.trim(),
+      event_url: eventUrl.trim(),
       visibility: eventVisibility,
       circle_id: eventVisibility === "circle" ? selectedCircleId : null,
       invited_user_ids: eventVisibility === "friends" ? selectedFriends.map((f) => f.user_id) : [],
@@ -223,6 +238,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
     setMaxParticipants("");
     setContactInfo("");
     setPriceInfo("");
+    setEventUrl("");
     setEventVisibility(defaultCircleId ? "circle" : "public");
     setSelectedCircleId(defaultCircleId ?? null);
     setFriendsSearch("");
@@ -394,6 +410,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                 />
                 <Field label="Contact Info" value={contactInfo} onChangeText={setContactInfo} placeholder="Phone / Email" keyboardType="email-address" />
                 <Field label="Price" value={priceInfo} onChangeText={setPriceInfo} placeholder="Free / Paid" />
+                <Field label="Event URL" value={eventUrl} onChangeText={setEventUrl} placeholder="https://…" keyboardType="url" />
 
                 {!defaultCircleId && (
                   <View style={styles.fieldContainer}>
