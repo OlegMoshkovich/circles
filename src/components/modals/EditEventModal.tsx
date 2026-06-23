@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  Alert,
   Modal,
   View,
   Text,
@@ -18,6 +19,7 @@ import { LazyMapPickerView } from "./LazyMapPickerView";
 import { supabase } from "../../../lib/supabase";
 import {
   containsObjectionableContentInAny,
+  isObjectionableContentError,
   OBJECTIONABLE_CONTENT_MESSAGE,
 } from "../../../lib/contentModeration";
 
@@ -104,7 +106,7 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
   async function handleSave() {
     if (!canSave) return;
     if (containsObjectionableContentInAny(title, description, location)) {
-      setError(OBJECTIONABLE_CONTENT_MESSAGE);
+      Alert.alert("Can't save these changes", OBJECTIONABLE_CONTENT_MESSAGE);
       return;
     }
     setSaving(true);
@@ -128,7 +130,11 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
       .maybeSingle();
 
     if (err) {
-      setError(err.message);
+      if (isObjectionableContentError(err.message)) {
+        Alert.alert("Can't save these changes", OBJECTIONABLE_CONTENT_MESSAGE);
+      } else {
+        setError(err.message);
+      }
       setSaving(false);
     } else if (!updatedEvent) {
       setError("Could not update this event. Please try again.");

@@ -141,8 +141,8 @@ immutable
 as $$
 declare
   bad text[] := array[
-    'nigger', 'nigga', 'faggot', 'retard', 'kike',
-    'spic', 'chink', 'wetback', 'tranny', 'cunt'
+    'nigger', 'nigga', 'faggot', 'faggit', 'retard', 'retart', 'kike',
+    'spic', 'chink', 'wetback', 'tranny', 'trannie', 'cunt', 'kunt'
   ];
   needle text;
   normalized text;

@@ -18,13 +18,17 @@ const BLOCKED_TERMS: string[] = [
   "nigger",
   "nigga",
   "faggot",
+  "faggit",
   "retard",
+  "retart",
   "kike",
   "spic",
   "chink",
   "wetback",
   "tranny",
+  "trannie",
   "cunt",
+  "kunt",
 ];
 
 /** Collapse leetspeak/spacing so "n i g g e r" / "n1gger" still match. */
@@ -62,3 +66,14 @@ export function containsObjectionableContentInAny(
 
 export const OBJECTIONABLE_CONTENT_MESSAGE =
   "Your message appears to contain language that violates our community guidelines. Please revise it before posting.";
+
+/**
+ * True when an error thrown by a save/insert is the server-side moderation
+ * trigger rejecting the content (see `reject_objectionable_*` in
+ * ugc_safety_compliance.sql). Lets callers surface the friendly
+ * OBJECTIONABLE_CONTENT_MESSAGE popup instead of the raw SQL error.
+ */
+export function isObjectionableContentError(message?: string | null): boolean {
+  if (!message) return false;
+  return /community guidelines/i.test(message);
+}
