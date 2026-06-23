@@ -18,13 +18,17 @@ const BLOCKED_TERMS: string[] = [
   "nigger",
   "nigga",
   "faggot",
+  "faggit",
   "retard",
+  "retart",
   "kike",
   "spic",
   "chink",
   "wetback",
   "tranny",
+  "trannie",
   "cunt",
+  "kunt",
 ];
 
 /** Collapse leetspeak/spacing so "n i g g e r" / "n1gger" still match. */
