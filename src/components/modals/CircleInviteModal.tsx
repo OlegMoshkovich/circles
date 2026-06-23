@@ -7,6 +7,7 @@ import {
   Share,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -35,6 +36,7 @@ export function CircleInviteModal({ visible, onClose, circleId, circleName }: Pr
   const [alreadyInvited, setAlreadyInvited] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [search, setSearch] = useState("");
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
 
   useEffect(() => {
@@ -42,6 +44,7 @@ export function CircleInviteModal({ visible, onClose, circleId, circleName }: Pr
     setLoading(true);
     setSelected(new Set());
     setAlreadyInvited(new Set());
+    setSearch("");
 
     // Fetch all known users from multiple sources, existing members, and pending invitations
     Promise.all([
@@ -109,7 +112,20 @@ export function CircleInviteModal({ visible, onClose, circleId, circleName }: Pr
         })
         .map(([userId, name]) => ({ user_id: userId, name }));
 
-      setCandidates(list);
+      // Collapse entries that share the same display name (case-insensitive).
+      // The list is already unique by user_id, but separate/duplicate accounts
+      // with the same name otherwise show the same person several times.
+      const seenNames = new Set<string>();
+      const deduped = list
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .filter((c) => {
+          const key = c.name.trim().toLowerCase();
+          if (seenNames.has(key)) return false;
+          seenNames.add(key);
+          return true;
+        });
+
+      setCandidates(deduped);
       setLoading(false);
     });
   }, [visible, user, circleId]);
@@ -168,6 +184,11 @@ export function CircleInviteModal({ visible, onClose, circleId, circleName }: Pr
       : name.slice(0, 2).toUpperCase();
   };
 
+  const query = search.trim().toLowerCase();
+  const visibleCandidates = query
+    ? candidates.filter((c) => c.name.toLowerCase().includes(query))
+    : candidates;
+
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -203,8 +224,29 @@ export function CircleInviteModal({ visible, onClose, circleId, circleName }: Pr
               ) : candidates.length === 0 ? (
                 <Text style={styles.emptyText}>No users available to invite.</Text>
               ) : (
+                <>
+                <View style={styles.searchRow}>
+                  <Ionicons name="search-outline" size={16} color={colors.textMuted} style={styles.searchIcon} />
+                  <TextInput
+                    value={search}
+                    onChangeText={setSearch}
+                    placeholder="Search members…"
+                    placeholderTextColor={colors.textMuted}
+                    style={styles.searchInput}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    returnKeyType="search"
+                  />
+                  {search.length > 0 ? (
+                    <TouchableOpacity onPress={() => setSearch("")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Ionicons name="close-circle" size={16} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
                 <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-                  {candidates.map((c) => {
+                  {visibleCandidates.length === 0 ? (
+                    <Text style={styles.emptyText}>No members match “{search.trim()}”.</Text>
+                  ) : visibleCandidates.map((c) => {
                     const isSelected = selected.has(c.user_id);
                     const isAlreadyInvited = alreadyInvited.has(c.user_id);
                     return (
@@ -231,6 +273,7 @@ export function CircleInviteModal({ visible, onClose, circleId, circleName }: Pr
                     );
                   })}
                 </ScrollView>
+                </>
               )}
 
               {(() => {
@@ -349,6 +392,28 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       height: 1,
       backgroundColor: colors.divider,
       marginBottom: 12,
+    },
+    searchRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      marginBottom: 12,
+      backgroundColor: isOnboarding ? "#F0EBE0" : colors.card,
+    },
+    searchIcon: {
+      marginRight: 10,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 15,
+      color: colors.text,
+      fontFamily: "Lora_400Regular",
+      paddingVertical: 0,
+      margin: 0,
     },
     memberRow: {
       flexDirection: "row",
