@@ -1,11 +1,9 @@
 // Share links for events and circles.
 //
-// We use the valmia:// custom scheme so "Open in ValMia" launches the app when
-// it is installed. HTTPS links (https://valmia.ch/event/:id) only open the app
-// after the website hosts apple-app-site-association — that file is not on
-// valmia.ch yet, so universal links currently fall through to the website.
-//
-// Recipients without the app should use APP_DOWNLOAD_URL (App Store).
+// Use HTTPS URLs in shared text so messengers (WhatsApp, Telegram, etc.) make the
+// link tappable. Custom schemes (valmia://) work in Notes/Mail but stay plain text
+// in WhatsApp. With apple-app-site-association on valmia.ch, https links open the
+// app when installed; otherwise the web page offers the App Store.
 
 export const APP_SCHEME = "valmia";
 export const SHARE_BASE_URL = "https://valmia.ch";
@@ -13,10 +11,18 @@ export const SHARE_BASE_URL = "https://valmia.ch";
 export const APP_DOWNLOAD_URL = "https://apps.apple.com/app/valmia/id6762593097";
 
 export function eventShareUrl(id: string): string {
-  return `${APP_SCHEME}://event/${id}`;
+  return `${SHARE_BASE_URL}/event/${id}`;
 }
 
 export function circleShareUrl(id: string): string {
+  return `${SHARE_BASE_URL}/circle/${id}`;
+}
+
+export function eventDeepLink(id: string): string {
+  return `${APP_SCHEME}://event/${id}`;
+}
+
+export function circleDeepLink(id: string): string {
   return `${APP_SCHEME}://circle/${id}`;
 }
 
@@ -42,8 +48,7 @@ export function buildEventShareMessage(e: EventShareInput): { url: string; messa
     e.circleName ? `${e.circlesLabel}: ${e.circleName}` : null,
     e.description?.trim() ? e.description.trim() : null,
     "",
-    `Open in ValMia: ${url}`,
-    `Don't have the app yet? Get ValMia: ${APP_DOWNLOAD_URL}`,
+    url,
   ];
   return { url, message: lines.filter((l) => l !== null).join("\n") };
 }
@@ -60,8 +65,7 @@ export function buildCircleShareMessage(c: CircleShareInput): { url: string; mes
     c.name,
     c.description?.trim() ? c.description.trim() : null,
     "",
-    `Open in ValMia: ${url}`,
-    `Don't have the app yet? Get ValMia: ${APP_DOWNLOAD_URL}`,
+    url,
   ];
   return { url, message: lines.filter((l) => l !== null).join("\n") };
 }
