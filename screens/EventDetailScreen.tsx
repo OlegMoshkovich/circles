@@ -6,7 +6,6 @@ import {
   Linking,
   Platform,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -25,7 +24,7 @@ import { useLanguage } from "../src/i18n/LanguageContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, getAuthClient, EventNote } from "../lib/supabase";
-import { buildEventShareMessage } from "../lib/shareLinks";
+import { buildEventShareMessage, shareMessage } from "../lib/shareLinks";
 import {
   fetchHiddenAuthorIds,
   fetchReportedHiddenNoteIds,
@@ -76,12 +75,12 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const [hasNewActivity, setHasNewActivity] = useState(!!initialHasNewActivity);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
 
-  // Mutable local copies of editable fields
-  const [title, setTitle] = useState(route.params.title);
-  const [organizer, setOrganizer] = useState(route.params.organizer);
-  const [date, setDate] = useState(route.params.date);
-  const [time, setTime] = useState(route.params.time);
-  const [location, setLocation] = useState(route.params.location);
+  // Mutable local copies of editable fields (defaults for deep-link opens with id only)
+  const [title, setTitle] = useState(route.params.title ?? "");
+  const [organizer, setOrganizer] = useState(route.params.organizer ?? "");
+  const [date, setDate] = useState(route.params.date ?? "");
+  const [time, setTime] = useState(route.params.time ?? "");
+  const [location, setLocation] = useState(route.params.location ?? "");
   const [description, setDescription] = useState(route.params.description ?? "");
   const [imageUrl, setImageUrl] = useState(route.params.image_url ?? "");
   const [maxParticipants, setMaxParticipants] = useState(route.params.max_participants ?? null);
@@ -123,8 +122,8 @@ export default function EventDetailScreen({ route, navigation }: Props) {
     );
   }
 
-  const [going, setGoing] = useState(route.params.going);
-  const [maybe, setMaybe] = useState(route.params.maybe);
+  const [going, setGoing] = useState(route.params.going ?? 0);
+  const [maybe, setMaybe] = useState(route.params.maybe ?? 0);
   const [rsvp, setRsvp] = useState<"going" | "maybe" | undefined>(route.params.rsvp);
   const [submitting, setSubmitting] = useState(false);
 
@@ -133,7 +132,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const [postingNote, setPostingNote] = useState(false);
 
   async function handleShare() {
-    const { url, message } = buildEventShareMessage({
+    const { message } = buildEventShareMessage({
       id,
       title,
       dateLabel: date,
@@ -144,7 +143,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
       circlesLabel: t.nav.circles,
     });
     try {
-      await Share.share({ title, message, url });
+      await shareMessage(message, title);
     } catch {
       Alert.alert("Error", "Could not open share menu.");
     }
@@ -162,17 +161,27 @@ export default function EventDetailScreen({ route, navigation }: Props) {
       .maybeSingle()
       .then(({ data }) => {
         if (cancelled || !data) return;
-        setTitle(data.title);
-        setOrganizer(data.organizer);
-        setDate(data.date_label);
-        setTime(data.time_label);
-        setLocation(data.location);
+        setTitle(data.title ?? "");
+        setOrganizer(data.organizer ?? "");
+        setDate(data.date_label ?? "");
+        setTime(data.time_label ?? "");
+        setLocation(data.location ?? "");
         setDescription(data.description ?? "");
         setImageUrl(data.image_url ?? "");
         setMaxParticipants(data.max_participants ?? null);
         setContactInfo(data.contact_info ?? "");
         setPriceInfo(data.price_info ?? "");
         setEventUrl(data.event_url ?? "");
+        if (data.created_by) {
+          navigation.setParams({ created_by: data.created_by });
+        }
+        const circle = data.circles as { name?: string } | null;
+        if (circle?.name || data.circle_id) {
+          navigation.setParams({
+            circleName: circle?.name ?? null,
+            circle_id: data.circle_id ?? null,
+          });
+        }
       });
     return () => {
       cancelled = true;
@@ -470,37 +479,37 @@ export default function EventDetailScreen({ route, navigation }: Props) {
             <Text style={styles.metaText}>{location}</Text>
           </View>
 
-          {description.trim().length > 0 ? (
+          {(description ?? "").trim().length > 0 ? (
             <>
               <View style={styles.divider} />
               <Text style={styles.description}>{description}</Text>
             </>
           ) : null}
 
-          {(maxParticipants !== null || contactInfo.trim() || priceInfo.trim() || eventUrl.trim()) && <View style={styles.divider} />}
+          {(maxParticipants !== null || (contactInfo ?? "").trim() || (priceInfo ?? "").trim() || (eventUrl ?? "").trim()) && <View style={styles.divider} />}
           {maxParticipants !== null ? (
             <View style={styles.metaRow}>
               <Ionicons name="people-circle-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
               <Text style={styles.metaText}>{t.events.maxParticipants}: {maxParticipants}</Text>
             </View>
           ) : null}
-          {contactInfo.trim() ? (
+          {(contactInfo ?? "").trim() ? (
             <View style={styles.metaRow}>
               <Ionicons name="call-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
               <Text style={styles.metaText}>{contactInfo}</Text>
             </View>
           ) : null}
-          {priceInfo.trim() ? (
+          {(priceInfo ?? "").trim() ? (
             <View style={styles.metaRow}>
               <Ionicons name="cash-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
               <Text style={styles.metaText}>{priceInfo}</Text>
             </View>
           ) : null}
-          {eventUrl.trim() ? (
+          {(eventUrl ?? "").trim() ? (
             <TouchableOpacity
               style={styles.metaRow}
               onPress={() => {
-                const raw = eventUrl.trim();
+                const raw = (eventUrl ?? "").trim();
                 const href = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
                 Linking.openURL(href).catch(() =>
                   Alert.alert("Could not open link", "This event link doesn't appear to be valid.")
@@ -509,7 +518,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
               activeOpacity={0.7}
             >
               <Ionicons name="link-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
-              <Text style={[styles.metaText, styles.metaLink]} numberOfLines={1}>{eventUrl.trim()}</Text>
+              <Text style={[styles.metaText, styles.metaLink]} numberOfLines={1}>{(eventUrl ?? "").trim()}</Text>
             </TouchableOpacity>
           ) : null}
 

@@ -6,7 +6,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -26,7 +25,7 @@ import { useLanguage } from "../src/i18n/LanguageContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, CircleMember, CircleNote, Event, UserProfile } from "../lib/supabase";
-import { buildEventShareMessage } from "../lib/shareLinks";
+import { buildEventShareMessage, shareMessage } from "../lib/shareLinks";
 import { isPastEvent } from "../lib/events";
 import {
   fetchHiddenAuthorIds,
@@ -419,7 +418,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   }
 
   async function handleShareEvent(event: Event) {
-    const { url, message } = buildEventShareMessage({
+    const { message } = buildEventShareMessage({
       id: event.id,
       title: event.title,
       dateLabel: event.date_label,
@@ -430,7 +429,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       circlesLabel: t.nav.circles,
     });
     try {
-      await Share.share({ title: event.title, message, url });
+      await shareMessage(message, event.title);
     } catch {
       Alert.alert("Error", "Could not open share menu.");
     }

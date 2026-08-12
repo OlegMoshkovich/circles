@@ -4,7 +4,6 @@ import {
   Modal,
   Platform,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -18,7 +17,7 @@ import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { supabase, UserProfile } from "../../../lib/supabase";
 import { fetchHiddenAuthorIds } from "../../../lib/contentReports";
-import { buildEventShareMessage } from "../../../lib/shareLinks";
+import { buildEventShareMessage, shareMessage } from "../../../lib/shareLinks";
 
 type Props = {
   visible: boolean;
@@ -125,17 +124,16 @@ export function InviteModal({ visible, onClose, eventId, eventTitle, circleId, c
   }
 
   async function handleShareLink() {
-    const { url, message } = buildEventShareMessage({
+    const { message } = buildEventShareMessage({
       id: eventId,
       title: eventTitle,
       circleName,
       circlesLabel: t.nav.circles,
     });
     try {
-      await Share.share({
-        message: `You're invited to "${eventTitle}" · ${circleName} on ValMia!\n\n${message}`,
-        url,
-      });
+      await shareMessage(
+        `You're invited to "${eventTitle}" · ${circleName} on ValMia!\n\n${message}`
+      );
     } catch (_) {}
   }
 

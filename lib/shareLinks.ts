@@ -4,6 +4,11 @@
 // link tappable. Custom schemes (valmia://) work in Notes/Mail but stay plain text
 // in WhatsApp. With apple-app-site-association on valmia.ch, https links open the
 // app when installed; otherwise the web page offers the App Store.
+//
+// On iOS, Share.share({ message, url }) makes WhatsApp append binary plist garbage
+// after the text. Put the https link in message only — see shareMessage().
+
+import { Share } from "react-native";
 
 export const APP_SCHEME = "valmia";
 export const SHARE_BASE_URL = "https://valmia.ch";
@@ -68,4 +73,9 @@ export function buildCircleShareMessage(c: CircleShareInput): { url: string; mes
     url,
   ];
   return { url, message: lines.filter((l) => l !== null).join("\n") };
+}
+
+/** Share text only — never pass `url` separately (breaks WhatsApp on iOS). */
+export async function shareMessage(message: string, title?: string): Promise<void> {
+  await Share.share(title ? { message, title } : { message });
 }

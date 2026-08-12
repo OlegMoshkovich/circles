@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Alert, Share, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -21,7 +21,7 @@ import { fetchHiddenAuthorIds, fetchReportedHiddenContentIds } from "../lib/cont
 import { isObjectionableContentError, OBJECTIONABLE_CONTENT_MESSAGE } from "../lib/contentModeration";
 import { fetchEventNoteStats } from "../lib/activityStats";
 import { supabase, Event } from "../lib/supabase";
-import { buildEventShareMessage } from "../lib/shareLinks";
+import { buildEventShareMessage, shareMessage } from "../lib/shareLinks";
 import { parseEventDateTime, isPastEvent } from "../lib/events";
 import { getCachedScreenData, setCachedScreenData } from "../lib/screenCache";
 
@@ -294,7 +294,7 @@ export default function EventsScreen() {
   }
 
   const handleShareEvent = useCallback(async (event: EventWithCircle) => {
-    const { url, message } = buildEventShareMessage({
+    const { message } = buildEventShareMessage({
       id: event.id,
       title: event.title,
       dateLabel: event.date_label,
@@ -305,7 +305,7 @@ export default function EventsScreen() {
       circlesLabel: t.nav.circles,
     });
     try {
-      await Share.share({ title: event.title, message, url });
+      await shareMessage(message, event.title);
     } catch {
       Alert.alert("Error", "Could not open share menu.");
     }

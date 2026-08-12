@@ -68,40 +68,40 @@ export function EditEventModal({ visible, onClose, onSaved, eventId, initialValu
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
 
-  const [title, setTitle] = useState(initialValues.title);
-  const [organizer, setOrganizer] = useState(initialValues.organizer);
+  const [title, setTitle] = useState(initialValues.title ?? "");
+  const [organizer, setOrganizer] = useState(initialValues.organizer ?? "");
   const [selectedDate, setSelectedDate] = useState<Date>(() =>
-    parseDateTimeStrings(initialValues.date, initialValues.time)
+    parseDateTimeStrings(initialValues.date ?? "", initialValues.time ?? "")
   );
   const [pickerMode, setPickerMode] = useState<"date" | "time" | null>(null);
-  const [location, setLocation] = useState(initialValues.location);
-  const [description, setDescription] = useState(initialValues.description);
-  const [imageUrl, setImageUrl] = useState(initialValues.image_url);
+  const [location, setLocation] = useState(initialValues.location ?? "");
+  const [description, setDescription] = useState(initialValues.description ?? "");
+  const [imageUrl, setImageUrl] = useState(initialValues.image_url ?? "");
   const [maxParticipants, setMaxParticipants] = useState(initialValues.max_participants ? String(initialValues.max_participants) : "");
-  const [contactInfo, setContactInfo] = useState(initialValues.contact_info);
-  const [priceInfo, setPriceInfo] = useState(initialValues.price_info);
+  const [contactInfo, setContactInfo] = useState(initialValues.contact_info ?? "");
+  const [priceInfo, setPriceInfo] = useState(initialValues.price_info ?? "");
   const [showMap, setShowMap] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (visible) {
-      setTitle(initialValues.title);
-      setOrganizer(initialValues.organizer);
-      setSelectedDate(parseDateTimeStrings(initialValues.date, initialValues.time));
+      setTitle(initialValues.title ?? "");
+      setOrganizer(initialValues.organizer ?? "");
+      setSelectedDate(parseDateTimeStrings(initialValues.date ?? "", initialValues.time ?? ""));
       setPickerMode(null);
-      setLocation(initialValues.location);
-      setDescription(initialValues.description);
-      setImageUrl(initialValues.image_url);
+      setLocation(initialValues.location ?? "");
+      setDescription(initialValues.description ?? "");
+      setImageUrl(initialValues.image_url ?? "");
       setMaxParticipants(initialValues.max_participants ? String(initialValues.max_participants) : "");
-      setContactInfo(initialValues.contact_info);
-      setPriceInfo(initialValues.price_info);
+      setContactInfo(initialValues.contact_info ?? "");
+      setPriceInfo(initialValues.price_info ?? "");
       setShowMap(false);
       setError(null);
     }
   }, [visible]);
 
-  const canSave = !saving && !!title.trim() && !!organizer.trim();
+  const canSave = !saving && !!(title ?? "").trim() && !!(organizer ?? "").trim();
 
   async function handleSave() {
     if (!canSave) return;
