@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Acquisition Due-Diligence Report — Circles / ValMia</title>
+<style>
+  @page { size: A4; margin: 20mm 18mm; }
+  :root {
+    --ink: #1a1a1a;
+    --muted: #5b5b5b;
+    --rule: #d9d9d9;
+    --crit: #b3261e;
+    --high: #c05621;
+    --accent: #1a1a1a;
+    --band: #f4f2ee;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: "Georgia", "Times New Roman", serif;
+    color: var(--ink);
+    font-size: 10.5pt;
+    line-height: 1.5;
+    margin: 0;
+  }
+  h1, h2, h3, .kicker, th, .tag, .verdict-label { font-family: "Helvetica Neue", Arial, sans-serif; }
+
+  /* Cover */
+  .cover { padding: 40mm 0 0; page-break-after: always; }
+  .kicker { text-transform: uppercase; letter-spacing: .22em; font-size: 8.5pt; color: var(--muted); font-weight: 700; }
+  .cover h1 { font-size: 30pt; line-height: 1.1; margin: 14px 0 6px; letter-spacing: -0.5px; }
+  .cover .sub { font-size: 13pt; color: var(--muted); font-style: italic; margin-bottom: 40px; }
+  .cover-rule { border: none; border-top: 2px solid var(--ink); margin: 24px 0; }
+  .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; font-family: "Helvetica Neue", Arial, sans-serif; font-size: 9.5pt; }
+  .meta-grid dt { color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-size: 8pt; }
+  .meta-grid dd { margin: 0 0 10px; font-weight: 600; }
+  .verdict-box { margin-top: 46px; border: 1.5px solid var(--ink); padding: 18px 22px; background: var(--band); }
+  .verdict-label { text-transform: uppercase; letter-spacing: .14em; font-size: 8.5pt; color: var(--muted); font-weight: 700; }
+  .verdict-box .call { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 19pt; font-weight: 700; margin: 4px 0 8px; }
+  .verdict-box p { margin: 0; font-size: 10pt; }
+
+  h2 {
+    font-size: 14pt; margin: 26px 0 8px; padding-bottom: 5px;
+    border-bottom: 1.5px solid var(--ink); letter-spacing: -0.2px;
+  }
+  h2 .num { color: var(--muted); font-weight: 400; margin-right: 8px; }
+  h3 { font-size: 11pt; margin: 16px 0 4px; }
+  p { margin: 0 0 9px; }
+  .lead { font-size: 11pt; }
+  a { color: var(--ink); }
+  code { font-family: "SF Mono", "Menlo", monospace; font-size: 8.7pt; background: #f0efec; padding: 1px 4px; border-radius: 3px; }
+
+  .tag { display: inline-block; font-size: 7.5pt; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; color: #fff; vertical-align: middle; }
+  .tag.crit { background: var(--crit); }
+  .tag.high { background: var(--high); }
+  .tag.med  { background: #6b6b6b; }
+
+  .finding { margin: 0 0 13px; padding-left: 12px; border-left: 3px solid var(--rule); }
+  .finding.c { border-left-color: var(--crit); }
+  .finding.h { border-left-color: var(--high); }
+  .finding h3 { margin-top: 0; }
+  .finding .impact { font-size: 9.7pt; }
+  .finding .cite { font-family: "SF Mono", Menlo, monospace; font-size: 8.2pt; color: var(--muted); display: block; margin-top: 3px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 9.3pt; }
+  th { text-align: left; background: var(--ink); color: #fff; padding: 6px 8px; font-size: 8pt; text-transform: uppercase; letter-spacing: .06em; }
+  td { padding: 6px 8px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  tr:nth-child(even) td { background: #faf9f7; }
+  .sev-c { color: var(--crit); font-weight: 700; }
+  .sev-h { color: var(--high); font-weight: 700; }
+
+  .callout { background: var(--band); border: 1px solid var(--rule); padding: 12px 16px; margin: 14px 0; font-size: 10pt; }
+  .callout strong { font-family: "Helvetica Neue", Arial, sans-serif; }
+
+  ul.tight { margin: 4px 0 10px; padding-left: 18px; }
+  ul.tight li { margin-bottom: 5px; }
+
+  .pagebreak { page-break-before: always; }
+  footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid var(--rule); font-family: "Helvetica Neue", Arial, sans-serif; font-size: 8pt; color: var(--muted); }
+  .disclaimer { font-size: 8.2pt; color: var(--muted); font-style: italic; }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<section class="cover">
+  <div class="kicker">Acquisition Due Diligence · Confidential</div>
+  <h1>The Case Against Buying<br>the Circles / ValMia Codebase</h1>
+  <div class="sub">A technical valuation review of a proposed ~$50,000 source-code purchase</div>
+  <hr class="cover-rule">
+  <dl class="meta-grid">
+    <div><dt>Subject</dt><dd>Circles / ValMia — Expo (React Native) social app</dd></div>
+    <div><dt>Asking price</dt><dd>~$50,000 (source code)</dd></div>
+    <div><dt>Prepared</dt><dd>29 July 2026</dd></div>
+    <div><dt>Basis</dt><dd>Full source audit, 84 source files</dd></div>
+    <div><dt>Stack</dt><dd>Expo SDK 54 · RN 0.81 · Clerk · Supabase</dd></div>
+    <div><dt>Findings</dt><dd>4 Critical · ~10 High · ~30 Medium/Low</dd></div>
+  </dl>
+
+  <div class="verdict-box">
+    <div class="verdict-label">Recommendation</div>
+    <div class="call">Do not buy at $50,000 as-is.</div>
+    <p>The codebase is a lightly-customized free starter template whose one differentiator — its trust &amp; safety layer — is also its most broken component, carrying an exploitable "ban any user" flaw. It has zero tests, no production monitoring, and configuration proving it has never run as a real production app. Remediation to a shippable state is weeks of senior engineering work that should be priced <em>into</em>, not on top of, any offer.</p>
+  </div>
+</section>
+
+<!-- EXEC SUMMARY -->
+<h2><span class="num">1</span>Why this report exists</h2>
+<p class="lead">You asked for the case <em>against</em> the purchase. This document makes that case as strongly as the evidence in the code supports — so you can negotiate, re-scope, or walk away with your eyes open. Every claim below is tied to a specific file and line in the delivered source.</p>
+
+<p>The central issue is not any single bug. It is a mismatch between <strong>what you would be paying for</strong> and <strong>what actually exists</strong>. A $50,000 price implies a differentiated, production-ready product. What the source shows is a modified open-source template whose distinguishing features are the least reliable code in the repository.</p>
+
+<h2><span class="num">2</span>The seven reasons not to buy</h2>
+
+<div class="finding c">
+  <h3><span class="tag crit">Reason 1</span> &nbsp;You are buying a starter template, not a product</h3>
+  <p class="impact">The <code>package.json</code> name is still <code>clerk-expo-starter</code>. The Android bundle identifier is still <code>com.sokratisv.clerkexpostarter</code> — the <em>template author's</em> namespace, never rebranded. The differentiated value is a few thousand lines of feature screens on top of a freely available starter. A competent React Native developer can rebuild the non-trivial parts on the same free base in roughly 4–8 weeks.</p>
+  <span class="cite">package.json:2 · app.json (android.package)</span>
+</div>
+
+<div class="finding c">
+  <h3><span class="tag crit">Reason 2</span> &nbsp;A one-request "ban any user" exploit ships in the code</h3>
+  <p class="impact">The moderation table's insert policy is <code>with check (true)</code>, and a database trigger auto-bans the <em>reported</em> user whenever a report's reason is "Harassment or abuse." Nothing verifies the reporter is who they claim to be, and the public API key is committed to the repository. Result, verified in the SQL: anyone can permanently ban any user with a single API call. This is not an isolated bug — it is the security <em>pattern</em>: row-level security is switched on but the policies are open (<code>using (true)</code>), so blocking, banning, and content-hiding are enforced only inside the app and collapse against a direct API call.</p>
+  <span class="cite">supabase/ugc_safety_compliance.sql:113-122 · supabase/auto_ban_on_harassment.sql · verified</span>
+</div>
+
+<div class="finding c">
+  <h3><span class="tag crit">Reason 3</span> &nbsp;The premium features are the weakest code</h3>
+  <p class="impact">This app's only real advantage over a generic template is its safety machinery: reporting, blocking, banning, content filters, push. Every one of those has a hole — spoofable blocks, banned users who can un-ban themselves by editing their own profile row, a ban check that "fails open" and admits banned users on any network error, and forgeable push notifications that let anyone spam any user's lock screen. You would be paying a premium for exactly the features that do not work.</p>
+  <span class="cite">lib/userBlocks.ts · SessionBootstrapContext.tsx:109-117 · functions/send-push</span>
+</div>
+
+<div class="finding h">
+  <h3><span class="tag high">Reason 4</span> &nbsp;Zero tests, no CI, no error monitoring</h3>
+  <p class="impact">There is not a single test file. The Jest harness is configured but tests nothing, and its script (<code>jest --watchAll</code>) cannot even run in CI. There is no linting, no continuous integration, and no crash/error reporting — the app's error boundary logs failures into the void. You would inherit four screens of 1,100–1,700 lines each, riddled with race conditions, and <em>no safety net</em> to change them. On a codebase this size, the absence of tests roughly doubles the true cost of every future change.</p>
+  <span class="cite">no *.test.* files · package.json:10 · src/components/ErrorBoundary.tsx:22</span>
+</div>
+
+<div class="finding h">
+  <h3><span class="tag high">Reason 5</span> &nbsp;A live demo cannot reveal the real defects</h3>
+  <p class="impact">Several handlers delete or save data, ignore the database's error response, and update the screen anyway. In a demo this looks flawless — the note vanishes, the RSVP toggles. In production the write silently failed and the data reappears on the next refresh. These failures only surface under real authorization rules and load, so any "watch it work" demonstration is <em>not</em> evidence the code is sound.</p>
+  <span class="cite">EventDetailScreen.tsx:592 · CircleDetailScreen.tsx:843 · MyProfileScreen.tsx:159</span>
+</div>
+
+<div class="finding h">
+  <h3><span class="tag high">Reason 6</span> &nbsp;It has never run as a real production app</h3>
+  <p class="impact">The production build profile ships a Clerk <strong>test</strong> key (<code>pk_test_…</code>) and points authentication at a Clerk <em>staging</em> domain. The Google Maps key is still the literal placeholder <code>YOUR_GOOGLE_MAPS_API_KEY</code>. This is proof the app has never been properly configured for production — so any claim that it is "live and working" deserves hard scrutiny.</p>
+  <span class="cite">eas.json (build.production) · app.json (associatedDomains, googleMaps.apiKey)</span>
+</div>
+
+<div class="finding h">
+  <h3><span class="tag high">Reason 7</span> &nbsp;Secrets and identity debt are baked in</h3>
+  <p class="impact">Backend configuration and API keys are committed directly into <code>eas.json</code> — the very values that <code>.gitignore</code> is supposed to keep out — with no rotation path. Session IDs and user emails are written to device logs on every sign-in, unconditionally, in release builds. The project carries three different names across its files. None of this is fatal alone, but together it signals a codebase that was never hardened for handover.</p>
+  <span class="cite">eas.json · logger.ts:1-3 · SignInScreen.tsx:68,101</span>
+</div>
+
+<!-- COST TABLE -->
+<h2 class="pagebreak"><span class="num">3</span>What "fixing it" actually costs</h2>
+<p>The asking price is not the real price. Below is the minimum remediation required before the app can be responsibly put in front of users. This work is mandatory, not optional.</p>
+
+<table>
+  <thead>
+    <tr><th style="width:44%">Remediation item</th><th>Severity</th><th>Rough effort</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Re-architect authorization server-side (RLS) — fix ban exploit, blocks, self-unban, notifications</td><td class="sev-c">Critical</td><td>2–3 weeks</td></tr>
+    <tr><td>Replace test Clerk key / staging config with real production infrastructure</td><td class="sev-c">Critical</td><td>2–4 days</td></tr>
+    <tr><td>Stop logging session IDs &amp; emails; move secrets out of the repo</td><td class="sev-c">Critical</td><td>1 day</td></tr>
+    <tr><td>Fix race conditions &amp; silent-failure handlers in the four large screens</td><td class="sev-h">High</td><td>1–2 weeks</td></tr>
+    <tr><td>Introduce a test suite, CI pipeline, linting, and crash monitoring</td><td class="sev-h">High</td><td>1–2 weeks</td></tr>
+    <tr><td>Version-control the database policies that currently live only in the live DB</td><td class="sev-h">High</td><td>2–3 days</td></tr>
+    <tr><td>Dependency cleanup, rebrand, config de-duplication</td><td>Medium</td><td>2–3 days</td></tr>
+  </tbody>
+</table>
+<p class="disclaimer">Effort assumes one senior React Native / Postgres engineer. Total: on the order of 6–9 weeks of senior work before first responsible launch — a cost that should be credited against, not added to, the purchase price.</p>
+
+<div class="callout">
+  <strong>The blunt version.</strong> You would pay ~$50,000 for a lightly-customized free template whose one differentiator — trust &amp; safety — is the most broken part, with no tests to protect you while you repair it, and configuration proving it never ran in real production. Add the remediation cost to the sticker and compare it to a clean rebuild on the same starter: the rebuild may be cheaper <em>and</em> leave you with code you understand.
+</div>
+
+<!-- WHAT WOULD CHANGE THE ANSWER -->
+<h2><span class="num">4</span>What would change this recommendation</h2>
+<p>This is a "not at this price, not without answers" — not an automatic no. The verdict flips toward buying only if:</p>
+<ul class="tight">
+  <li><strong>There is a real, verified userbase</strong> you are actually acquiring. Then this becomes a users/acquihire deal where code quality matters less — but confirm the users are genuine and engaged.</li>
+  <li><strong>The price drops to reflect remediation.</strong> Treat the 6–9 weeks of security and testing work as a direct credit against the number.</li>
+  <li><strong>You receive a warranty and staged payment</strong> — code escrow or milestone payments contingent on the app passing an independent security review after sale.</li>
+</ul>
+
+<h2><span class="num">5</span>Questions to put to the seller</h2>
+<p>Each of these will expose whether there is anything here worth $50,000:</p>
+<ul class="tight">
+  <li>"Show me the database row-level security policies for circles, profiles, and notifications." <em>(They are not in the delivered code.)</em></li>
+  <li>"Has this ever run on a production <code>pk_live</code> Clerk key and real infrastructure? Show me." </li>
+  <li>"Where are the automated tests?" </li>
+  <li>"How many real, active users are on this today — and can you prove it?" </li>
+  <li>"Who owns the Android <code>com.sokratisv.*</code> namespace, and can it be transferred?" </li>
+</ul>
+
+<footer>
+  Prepared as an independent technical due-diligence review from a full read of the delivered source. Findings are tied to specific files and lines and were current as of the audit date. Two findings (self-unban, forgeable notifications) depend on database policies that exist only in the live backend and could not be confirmed from source — a gap that is itself a reason for caution. This document argues the case against purchase as requested and is not a substitute for a negotiated warranty or a post-sale security review.
+</footer>
+
+</body>
+</html>
