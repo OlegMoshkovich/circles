@@ -12,12 +12,13 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "@clerk/clerk-expo";
-import * as Linking from "expo-linking";
 import { Colors } from "../../theme/colors";
 import { Spinner } from "../loaders/Spinner";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
+import { useLanguage } from "../../i18n/LanguageContext";
 import { supabase, UserProfile } from "../../../lib/supabase";
 import { fetchHiddenAuthorIds } from "../../../lib/contentReports";
+import { buildEventShareMessage } from "../../../lib/shareLinks";
 
 type Props = {
   visible: boolean;
@@ -30,6 +31,7 @@ type Props = {
 
 export function InviteModal({ visible, onClose, eventId, eventTitle, circleId, circleName }: Props) {
   const { user } = useUser();
+  const { t } = useLanguage();
   const { bgOption } = useBackground();
   const colors = useColors();
   const [members, setMembers] = useState<{ user_id: string; name: string }[]>([]);
@@ -123,10 +125,15 @@ export function InviteModal({ visible, onClose, eventId, eventTitle, circleId, c
   }
 
   async function handleShareLink() {
-    const url = Linking.createURL(`event/join`, { queryParams: { id: eventId, title: eventTitle } });
+    const { url, message } = buildEventShareMessage({
+      id: eventId,
+      title: eventTitle,
+      circleName,
+      circlesLabel: t.nav.circles,
+    });
     try {
       await Share.share({
-        message: `You're invited to "${eventTitle}" · ${circleName} on ValMia! ${url}`,
+        message: `You're invited to "${eventTitle}" · ${circleName} on ValMia!\n\n${message}`,
         url,
       });
     } catch (_) {}

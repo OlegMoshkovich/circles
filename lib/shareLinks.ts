@@ -1,28 +1,23 @@
-// Canonical share links + messages for events and circles.
+// Share links for events and circles.
 //
-// These are HTTPS "universal links". When the ValMia app is installed AND the
-// valmia.ch domain is verified for deep linking (see the infra checklist below),
-// tapping one opens the app directly on the matching screen. When the app is not
-// installed, the same URL opens the website, which should offer the app download.
+// We use the valmia:// custom scheme so "Open in ValMia" launches the app when
+// it is installed. HTTPS links (https://valmia.ch/event/:id) only open the app
+// after the website hosts apple-app-site-association — that file is not on
+// valmia.ch yet, so universal links currently fall through to the website.
 //
-// INFRA REQUIRED for the "opens in the app" behaviour (cannot be done in app code):
-//   • iOS  — host https://valmia.ch/.well-known/apple-app-site-association listing
-//            the app's <TeamID>.<bundleId> with paths ["/event/*", "/circle/*"].
-//   • Android — host https://valmia.ch/.well-known/assetlinks.json with the app's
-//            package name + signing SHA-256.
-//   • A web page at /event/:id, /circle/:id and /app that shows the content and
-//            links to the App Store / Play Store when the app isn't installed.
+// Recipients without the app should use APP_DOWNLOAD_URL (App Store).
 
+export const APP_SCHEME = "valmia";
 export const SHARE_BASE_URL = "https://valmia.ch";
-/** "Get the app" landing page. Point this at your store links / smart banner. */
-export const APP_DOWNLOAD_URL = "https://valmia.ch/app";
+/** App Store listing (opens in the user's local storefront). */
+export const APP_DOWNLOAD_URL = "https://apps.apple.com/app/valmia/id6762593097";
 
 export function eventShareUrl(id: string): string {
-  return `${SHARE_BASE_URL}/event/${id}`;
+  return `${APP_SCHEME}://event/${id}`;
 }
 
 export function circleShareUrl(id: string): string {
-  return `${SHARE_BASE_URL}/circle/${id}`;
+  return `${APP_SCHEME}://circle/${id}`;
 }
 
 type EventShareInput = {
