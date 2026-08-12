@@ -5,7 +5,7 @@
     "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "myapp",
+    "scheme": "valmia",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/splash-bg.png",
@@ -24,7 +24,8 @@
     "ios": {
       "supportsTablet": false,
       "associatedDomains": [
-        "applinks:clerk.helping.lemming-64.lclstage.dev",
+        "applinks:valmia.ch",
+        "applinks:www.valmia.ch",
         "applinks:clerk.helping.lemming-64.lclstage.dev"
       ],
       "bundleIdentifier": "ch.valmia.app",
@@ -54,6 +55,20 @@
         }
       },
       "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            { "scheme": "https", "host": "valmia.ch", "pathPrefix": "/event" },
+            { "scheme": "https", "host": "valmia.ch", "pathPrefix": "/circle" },
+            { "scheme": "https", "host": "www.valmia.ch", "pathPrefix": "/event" },
+            { "scheme": "https", "host": "www.valmia.ch", "pathPrefix": "/circle" }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
         {
           "action": "VIEW",
           "autoVerify": true,

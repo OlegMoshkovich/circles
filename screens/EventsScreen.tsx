@@ -21,6 +21,7 @@ import { fetchHiddenAuthorIds, fetchReportedHiddenContentIds } from "../lib/cont
 import { isObjectionableContentError, OBJECTIONABLE_CONTENT_MESSAGE } from "../lib/contentModeration";
 import { fetchEventNoteStats } from "../lib/activityStats";
 import { supabase, Event } from "../lib/supabase";
+import { buildEventShareMessage } from "../lib/shareLinks";
 import { parseEventDateTime, isPastEvent } from "../lib/events";
 import { getCachedScreenData, setCachedScreenData } from "../lib/screenCache";
 
@@ -84,6 +85,7 @@ const EventRow = React.memo(function EventRow({
       maybe={event.maybe}
       maxParticipants={event.max_participants ?? null}
       isActivity={event.is_activity ?? false}
+      category={event.category ?? null}
       rsvp={rsvp}
       isOwner={isOwner}
       circleName={event.circles?.name ?? null}
@@ -109,6 +111,7 @@ export default function EventsScreen() {
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("newest");
   const [rsvpFilter, setRsvpFilter] = useState<RsvpFilter>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [events, setEvents] = useState<EventWithCircle[]>([]);
   const [rsvpStatusMap, setRsvpStatusMap] = useState<Record<string, "going" | "maybe">>({});
   const [noteCountMap, setNoteCountMap] = useState<Record<string, number>>({});
@@ -291,22 +294,18 @@ export default function EventsScreen() {
   }
 
   const handleShareEvent = useCallback(async (event: EventWithCircle) => {
-    const shareUrl = "https://valmia.ch";
-    const lines = [
-      event.title,
-      `${event.date_label} · ${event.time_label}`,
-      event.location,
-      event.circles?.name ? `${t.nav.circles}: ${event.circles.name}` : null,
-      event.description?.trim() ? event.description.trim() : null,
-      shareUrl,
-    ].filter(Boolean);
-
+    const { url, message } = buildEventShareMessage({
+      id: event.id,
+      title: event.title,
+      dateLabel: event.date_label,
+      timeLabel: event.time_label,
+      location: event.location,
+      circleName: event.circles?.name ?? null,
+      description: event.description,
+      circlesLabel: t.nav.circles,
+    });
     try {
-      await Share.share({
-        title: event.title,
-        message: lines.join("\n"),
-        url: shareUrl,
-      });
+      await Share.share({ title: event.title, message, url });
     } catch {
       Alert.alert("Error", "Could not open share menu.");
     }
@@ -326,10 +325,17 @@ export default function EventsScreen() {
     [events, showPastEvents]
   );
 
+  // Topics actually present in the loaded events, so we never show an empty filter.
+  const categories = React.useMemo(
+    () => Array.from(new Set(events.map((e) => e.category).filter((c): c is string => !!c))).sort(),
+    [events]
+  );
+
   const displayedEvents = React.useMemo(
     () =>
       visibleEvents
         .filter((e) => rsvpFilter === "all" || rsvpStatusMap[e.id] === rsvpFilter)
+        .filter((e) => categoryFilter === "all" || e.category === categoryFilter)
         .filter((e) => {
           if (contentType === "events") return !e.is_activity;
           if (contentType === "activity") return !!e.is_activity;
@@ -346,7 +352,7 @@ export default function EventsScreen() {
           if (sortBy === "activity") return (noteCountMap[b.id] ?? 0) - (noteCountMap[a.id] ?? 0);
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         }),
-    [visibleEvents, rsvpFilter, contentType, sortBy, rsvpStatusMap, activityMap, lastViewedMap, noteCountMap, eventTimeMap]
+    [visibleEvents, rsvpFilter, categoryFilter, contentType, sortBy, rsvpStatusMap, activityMap, lastViewedMap, noteCountMap, eventTimeMap]
   );
 
   const handleOpenEvent = useCallback((event: EventWithCircle, fromDismissed: boolean) => {
@@ -427,7 +433,7 @@ export default function EventsScreen() {
     [showDismissed, rsvpStatusMap, noteCountMap, lastViewedMap, activityMap, user?.id, handleOpenEvent, handleShareEvent, handleDismissEvent, handleRestoreEvent]
   );
 
-  const filterActive = sortBy !== "newest" || rsvpFilter !== "all" || showDismissed || showPastEvents || contentType !== "all";
+  const filterActive = sortBy !== "newest" || rsvpFilter !== "all" || categoryFilter !== "all" || showDismissed || showPastEvents || contentType !== "all";
 
   const { bgOption } = useBackground();
   const colors = useColors();
@@ -556,6 +562,24 @@ export default function EventsScreen() {
                   ))}
                 </View>
               </View>
+              {categories.length > 0 && (
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterSectionLabel}>Topic</Text>
+                  <View style={styles.filterChipRow}>
+                    {["all", ...categories].map((opt) => (
+                      <TouchableOpacity
+                        key={opt}
+                        style={[styles.filterChip, categoryFilter === opt && styles.filterChipActive]}
+                        onPress={() => setCategoryFilter(opt)}
+                      >
+                        <Text style={[styles.filterChipText, categoryFilter === opt && styles.filterChipTextActive]}>
+                          {opt === "all" ? t.common.all : opt}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
               <View style={styles.filterSection}>
                 <Text style={styles.filterSectionLabel}>{t.common.view}</Text>
                 <View style={styles.filterChipRow}>

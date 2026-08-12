@@ -18,6 +18,7 @@ import { Colors } from "../../theme/colors";
 import { Spinner } from "../loaders/Spinner";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
 import { supabase, UserProfile } from "../../../lib/supabase";
+import { buildCircleShareMessage } from "../../../lib/shareLinks";
 import { fetchHiddenAuthorIds } from "../../../lib/contentReports";
 
 type Props = {
@@ -158,10 +159,10 @@ export function CircleInviteModal({ visible, onClose, circleId, circleName }: Pr
   }
 
   async function handleShareLink() {
-    const url = Linking.createURL(`circle/join`, { queryParams: { id: circleId, name: circleName } });
+    const { url, message } = buildCircleShareMessage({ id: circleId, name: circleName });
     try {
       await Share.share({
-        message: `Join "${circleName}" on ValMia! ${url}`,
+        message: `Join "${circleName}" on ValMia!\n\n${message}`,
         url,
       });
     } catch (_) {}

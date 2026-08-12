@@ -10,10 +10,21 @@ import * as Linking from "expo-linking";
 import { RootStackParamList } from "../types";
 
 const linking: LinkingOptions<RootStackParamList> = {
-  prefixes: [Linking.createURL("/")],
+  // Accept both the custom scheme (valmia://) and the https universal links.
+  // Universal links only reach the app once valmia.ch is verified via
+  // apple-app-site-association / assetlinks.json (see lib/shareLinks.ts).
+  prefixes: [
+    Linking.createURL("/"),
+    "https://valmia.ch",
+    "https://www.valmia.ch",
+  ],
   config: {
     screens: {
       Home: "home",
+      // Shared content links: /event/:id and /circle/:id. The detail screens
+      // fetch the record by id when opened this way (only id is present).
+      EventDetail: "event/:id",
+      CircleDetail: "circle/:id",
       Root: {
         screens: {
           SignUp: {

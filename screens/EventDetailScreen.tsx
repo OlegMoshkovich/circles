@@ -25,6 +25,7 @@ import { useLanguage } from "../src/i18n/LanguageContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, getAuthClient, EventNote } from "../lib/supabase";
+import { buildEventShareMessage } from "../lib/shareLinks";
 import {
   fetchHiddenAuthorIds,
   fetchReportedHiddenNoteIds,
@@ -132,26 +133,51 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const [postingNote, setPostingNote] = useState(false);
 
   async function handleShare() {
-    const shareUrl = "https://valmia.ch";
-    const lines = [
+    const { url, message } = buildEventShareMessage({
+      id,
       title,
-      `${date} · ${time}`,
+      dateLabel: date,
+      timeLabel: time,
       location,
-      circleName ? `${t.nav.circles}: ${circleName}` : null,
-      description.trim().length > 0 ? description.trim() : null,
-      shareUrl,
-    ].filter(Boolean);
-
+      circleName: circleName ?? null,
+      description,
+      circlesLabel: t.nav.circles,
+    });
     try {
-      await Share.share({
-        title,
-        message: lines.join("\n"),
-        url: shareUrl,
-      });
+      await Share.share({ title, message, url });
     } catch {
       Alert.alert("Error", "Could not open share menu.");
     }
   }
+
+  // When opened from a shared deep link (valmia.ch/event/:id) only the id is
+  // present, so fetch the full record to populate the header.
+  useEffect(() => {
+    if (route.params.title) return;
+    let cancelled = false;
+    supabase
+      .from("events")
+      .select("*, circles(name)")
+      .eq("id", id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        setTitle(data.title);
+        setOrganizer(data.organizer);
+        setDate(data.date_label);
+        setTime(data.time_label);
+        setLocation(data.location);
+        setDescription(data.description ?? "");
+        setImageUrl(data.image_url ?? "");
+        setMaxParticipants(data.max_participants ?? null);
+        setContactInfo(data.contact_info ?? "");
+        setPriceInfo(data.price_info ?? "");
+        setEventUrl(data.event_url ?? "");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, route.params.title]);
 
   // Load fresh counts + this user's RSVP on every mount
   useEffect(() => {

@@ -26,6 +26,7 @@ import { useLanguage } from "../src/i18n/LanguageContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, CircleMember, CircleNote, Event, UserProfile } from "../lib/supabase";
+import { buildEventShareMessage } from "../lib/shareLinks";
 import { isPastEvent } from "../lib/events";
 import {
   fetchHiddenAuthorIds,
@@ -111,6 +112,30 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [postingNote, setPostingNote] = useState(false);
   const [requests, setRequests] = useState<CircleMember[]>([]);
   const [requestCount, setRequestCount] = useState(0);
+
+  // When opened from a shared deep link (valmia.ch/circle/:id) only the id is
+  // present, so fetch the circle to populate the header.
+  useEffect(() => {
+    if (route.params.name) return;
+    let cancelled = false;
+    supabase
+      .from("circles")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        setName(data.name);
+        setDescription(data.description ?? "");
+        setVisibility(data.visibility);
+        if (typeof (data as { member_count?: number }).member_count === "number") {
+          setMemberCount((data as { member_count?: number }).member_count as number);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, route.params.name]);
   const [loadingFeed, setLoadingFeed] = useState(false);
   const hasLoadedFeedRef = useRef(false);
   const [loadingMembers, setLoadingMembers] = useState(false);
@@ -394,22 +419,18 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   }
 
   async function handleShareEvent(event: Event) {
-    const shareUrl = "https://valmia.ch";
-    const lines = [
-      event.title,
-      `${event.date_label} · ${event.time_label}`,
-      event.location,
-      name ? `${t.nav.circles}: ${name}` : null,
-      event.description?.trim() ? event.description.trim() : null,
-      shareUrl,
-    ].filter(Boolean);
-
+    const { url, message } = buildEventShareMessage({
+      id: event.id,
+      title: event.title,
+      dateLabel: event.date_label,
+      timeLabel: event.time_label,
+      location: event.location,
+      circleName: name ?? null,
+      description: event.description,
+      circlesLabel: t.nav.circles,
+    });
     try {
-      await Share.share({
-        title: event.title,
-        message: lines.join("\n"),
-        url: shareUrl,
-      });
+      await Share.share({ title: event.title, message, url });
     } catch {
       Alert.alert("Error", "Could not open share menu.");
     }

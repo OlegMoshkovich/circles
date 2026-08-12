@@ -47,6 +47,7 @@ export type Event = {
   invited_user_ids?: string[] | null;
   is_activity?: boolean | null;
   created_by: string | null;
+  category?: string | null;
 };
 
 export type Circle = {

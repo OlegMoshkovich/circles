@@ -17,6 +17,7 @@ type EventCardProps = {
   maybe: number;
   maxParticipants?: number | null;
   isActivity?: boolean | null;
+  category?: string | null;
   rsvp?: "going" | "maybe";
   isOwner?: boolean;
   circleName?: string | null;
@@ -50,6 +51,7 @@ export function EventCard({
   maybe,
   maxParticipants,
   isActivity,
+  category,
   rsvp,
   isOwner = false,
   circleName,
@@ -102,6 +104,12 @@ export function EventCard({
       </View>
 
       <Text style={styles.organizer}>{t.events.by} {organizer}</Text>
+
+      {category ? (
+        <View style={styles.categoryBadge}>
+          <Text style={styles.categoryBadgeText}>{category}</Text>
+        </View>
+      ) : null}
 
       <View style={styles.metaRow}>
         <Ionicons name="calendar-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
@@ -225,6 +233,25 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       color: colors.textMuted,
       marginBottom: spacing.md,
       fontFamily: "Lora_400Regular",
+    },
+    categoryBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      alignSelf: "flex-start",
+      paddingVertical: 3,
+      paddingHorizontal: 8,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+      backgroundColor: "transparent",
+      marginBottom: spacing.md,
+    },
+    categoryBadgeText: {
+      fontSize: 11,
+      fontWeight: "600" as const,
+      letterSpacing: 0.5,
+      textTransform: "uppercase" as const,
+      color: colors.textMuted,
     },
     metaRow: {
       flexDirection: "row",
