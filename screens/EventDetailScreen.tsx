@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -87,6 +87,47 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const [contactInfo, setContactInfo] = useState(route.params.contact_info ?? "");
   const [priceInfo, setPriceInfo] = useState(route.params.price_info ?? "");
   const [eventUrl, setEventUrl] = useState(route.params.event_url ?? "");
+  /** Deep links arrive with id only — back should go to the event's circle, not an empty stack. */
+  const openedFromShareLink = useRef(!route.params.title);
+  const [shareCircleParams, setShareCircleParams] = useState<{
+    id: string;
+    name: string;
+    description: string | null;
+    visibility: "public" | "private" | "request";
+    owner_id: string;
+    member_count: number;
+  } | null>(null);
+
+  function handleBack() {
+    if (openedFromShareLink.current && circle_id) {
+      const circleParams = shareCircleParams ?? {
+        id: circle_id,
+        name: circleName ?? "",
+        description: null,
+        visibility: "public" as const,
+        owner_id: "",
+        member_count: 0,
+      };
+      navigation.reset({
+        index: 1,
+        routes: [{ name: "Home" }, { name: "CircleDetail", params: circleParams }],
+      });
+      return;
+    }
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Home" }],
+    });
+  }
+
+  const backLabel =
+    openedFromShareLink.current && circle_id
+      ? circleName ?? t.nav.circles
+      : t.common.back;
 
   async function handleDelete() {
     Alert.alert(
@@ -156,7 +197,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
     let cancelled = false;
     supabase
       .from("events")
-      .select("*, circles(name)")
+      .select("*, circles(id, name, description, visibility, owner_id)")
       .eq("id", id)
       .maybeSingle()
       .then(({ data }) => {
@@ -175,11 +216,26 @@ export default function EventDetailScreen({ route, navigation }: Props) {
         if (data.created_by) {
           navigation.setParams({ created_by: data.created_by });
         }
-        const circle = data.circles as { name?: string } | null;
-        if (circle?.name || data.circle_id) {
+        const circle = data.circles as {
+          id?: string;
+          name?: string;
+          description?: string | null;
+          visibility?: "public" | "private" | "request";
+          owner_id?: string;
+        } | null;
+        const resolvedCircleId = data.circle_id ?? circle?.id ?? null;
+        if (resolvedCircleId) {
           navigation.setParams({
             circleName: circle?.name ?? null,
-            circle_id: data.circle_id ?? null,
+            circle_id: resolvedCircleId,
+          });
+          setShareCircleParams({
+            id: resolvedCircleId,
+            name: circle?.name ?? "",
+            description: circle?.description ?? null,
+            visibility: circle?.visibility ?? "public",
+            owner_id: circle?.owner_id ?? "",
+            member_count: 0,
           });
         }
       });
@@ -366,12 +422,14 @@ export default function EventDetailScreen({ route, navigation }: Props) {
       {/* Fixed back button */}
       <View style={[styles.backRow, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity
-          onPress={() => navigation.goBack()}
+          onPress={handleBack}
           style={styles.backButton}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
           <Ionicons name="chevron-back" size={18} color={colors.text} />
-          <Text style={styles.backLabel}>{t.common.back}</Text>
+          <Text style={styles.backLabel} numberOfLines={1}>
+            {backLabel}
+          </Text>
         </TouchableOpacity>
         <View style={styles.headerActions}>
           <TouchableOpacity
