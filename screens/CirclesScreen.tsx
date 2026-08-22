@@ -31,7 +31,7 @@ type SortBy = "newest" | "members" | "new_activity";
 
 const PRESET_CATEGORIES = ["Culture", "Friends", "Nature", "Sport", "Food", "Travel"];
 
-type CircleWithCount = Circle & { member_count: number };
+type CircleWithCount = Circle & { member_count: number; event_count: number };
 
 // Stale-while-revalidate cache for the Circles list. The first network load on
 // a fresh login is two sequential round-trips; persisting the last result lets
@@ -93,6 +93,7 @@ const CircleRow = React.memo(function CircleRow({
       category={circle.category}
       visibility={circle.visibility}
       memberCount={circle.member_count}
+      eventCount={circle.event_count}
       memberStatus={memberStatus}
       location={circle.location}
       organizer={circle.organizer}
@@ -200,7 +201,7 @@ export default function CirclesScreen() {
         user
           ? client.from("dismissed_items").select("item_id").eq("user_id", user.id).eq("item_type", "circle")
           : Promise.resolve({ data: [], error: null }),
-        client.from("circles").select("*, circle_members(count)").order("created_at", { ascending: false }),
+        client.from("circles").select("*, circle_members(count), events(count)").order("created_at", { ascending: false }),
         user
           ? client.from("circle_members").select("circle_id, role, status").eq("user_id", user.id)
           : Promise.resolve({ data: [], error: null }),
@@ -242,6 +243,7 @@ export default function CirclesScreen() {
           .map((row) => ({
             ...row,
             member_count: row.circle_members?.[0]?.count ?? 0,
+            event_count: row.events?.[0]?.count ?? 0,
           }))
           // Hide private circles unless the user is already a member/owner
           .filter((circle) => circle.visibility !== "private" || map[circle.id] != null);
