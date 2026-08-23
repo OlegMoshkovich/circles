@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -31,6 +31,13 @@ type SortBy = "newest" | "recent" | "popular" | "activity" | "new_activity";
 type RsvpFilter = "all" | "going" | "maybe";
 type ContentType = "all" | "events" | "activity";
 type Nav = NativeStackNavigationProp<RootStackParamList>;
+
+function normalizeSearchText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase();
+}
 
 // Snapshot of everything a render needs, cached in memory so returning to
 // this tab paints instantly while a silent refetch runs in the background.
@@ -106,6 +113,8 @@ export default function EventsScreen() {
   const { t } = useLanguage();
   const { user } = useUser();
   const [modalVisible, setModalVisible] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [contentType, setContentType] = useState<ContentType>("all");
   const [showFilterPanel, setShowFilterPanel] = useState(false);
@@ -331,9 +340,31 @@ export default function EventsScreen() {
     [events]
   );
 
+  const searchKeywords = React.useMemo(
+    () => normalizeSearchText(searchQuery.trim()).split(/\s+/).filter(Boolean),
+    [searchQuery]
+  );
+
   const displayedEvents = React.useMemo(
     () =>
       visibleEvents
+        .filter((event) => {
+          if (searchKeywords.length === 0) return true;
+          const searchableText = normalizeSearchText(
+            [
+              event.title,
+              event.description,
+              event.location,
+              event.organizer,
+              event.circles?.name,
+              event.category,
+              event.date_label,
+            ]
+              .filter(Boolean)
+              .join(" ")
+          );
+          return searchKeywords.every((keyword) => searchableText.includes(keyword));
+        })
         .filter((e) => rsvpFilter === "all" || rsvpStatusMap[e.id] === rsvpFilter)
         .filter((e) => categoryFilter === "all" || e.category === categoryFilter)
         .filter((e) => {
@@ -352,7 +383,7 @@ export default function EventsScreen() {
           if (sortBy === "activity") return (noteCountMap[b.id] ?? 0) - (noteCountMap[a.id] ?? 0);
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         }),
-    [visibleEvents, rsvpFilter, categoryFilter, contentType, sortBy, rsvpStatusMap, activityMap, lastViewedMap, noteCountMap, eventTimeMap]
+    [visibleEvents, searchKeywords, rsvpFilter, categoryFilter, contentType, sortBy, rsvpStatusMap, activityMap, lastViewedMap, noteCountMap, eventTimeMap]
   );
 
   const handleOpenEvent = useCallback((event: EventWithCircle, fromDismissed: boolean) => {
@@ -458,7 +489,9 @@ export default function EventsScreen() {
           ) : (
             <View style={styles.empty}>
               <Text style={styles.emptyText}>
-                {showDismissed
+                {searchKeywords.length > 0
+                  ? t.events.noSearchResults
+                  : showDismissed
                   ? t.events.noDismissed
                   : filter === "circles"
                     ? t.events.noEventsCircles
@@ -472,6 +505,25 @@ export default function EventsScreen() {
             title={t.nav.events}
             rightElement={
               <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                <TouchableOpacity
+                  style={[
+                    styles.filterIconButton,
+                    (showSearch || searchKeywords.length > 0) && styles.filterIconButtonActive,
+                  ]}
+                  onPress={() => setShowSearch((visible) => !visible)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="search-outline"
+                    size={17}
+                    color={
+                      showSearch || searchKeywords.length > 0
+                        ? colors.textOnIconBg
+                        : colors.textMuted
+                    }
+                  />
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.filterIconButton, (filter !== "all" || filterActive) && styles.filterIconButtonActive]}
                   onPress={() => setShowFilterPanel((v) => !v)}
@@ -495,6 +547,31 @@ export default function EventsScreen() {
             }
           />
           {/* <TextBlock subtitle={t.events.subtitle} /> */}
+
+          {showSearch && (
+            <View style={styles.searchBar}>
+              <Ionicons name="search-outline" size={17} color={colors.textMuted} />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder={t.events.searchPlaceholder}
+                placeholderTextColor={colors.textMuted}
+                style={[styles.searchInput, { color: colors.text }]}
+                autoFocus
+                autoCorrect={false}
+                returnKeyType="search"
+                clearButtonMode="never"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setSearchQuery("")}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
           {showFilterPanel && (
             <View style={styles.filterPanel}>
@@ -653,6 +730,25 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
   filterIconButtonActive: {
     borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.iconbBg,
     backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+  },
+  searchBar: {
+    minHeight: 42,
+    marginBottom: 14,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    minHeight: 42,
+    paddingVertical: 8,
+    fontSize: 14,
+    fontFamily: "Lora_400Regular",
   },
   filterPanel: {
     backgroundColor: colors.card,
