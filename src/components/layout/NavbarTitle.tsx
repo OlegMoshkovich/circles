@@ -8,9 +8,10 @@ import { spacing } from "../../theme/spacing";
 type NavbarTitleProps = {
   title: string;
   rightElement?: React.ReactNode;
+  textColor?: string;
 };
 
-export function NavbarTitle({ title, rightElement }: NavbarTitleProps) {
+export function NavbarTitle({ title, rightElement, textColor }: NavbarTitleProps) {
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors), [colors]);
 
@@ -30,7 +31,7 @@ export function NavbarTitle({ title, rightElement }: NavbarTitleProps) {
           strokeLinecap="round"
         />
       </Svg> */}
-      <Text style={styles.title}>{title}</Text>
+      <Text style={[styles.title, textColor ? { color: textColor } : null]}>{title}</Text>
       {rightElement != null ? (
         <>
           <View style={styles.spacer} />

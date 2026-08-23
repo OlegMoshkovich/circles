@@ -1,5 +1,6 @@
 import React from "react";
 import { Platform, StyleSheet, View, ViewStyle } from "react-native";
+import { BlurView } from "expo-blur";
 import { Colors } from "../../theme/colors";
 import { spacing } from "../../theme/spacing";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
@@ -7,13 +8,28 @@ import { useBackground, useColors } from "../../contexts/BackgroundContext";
 type Props = {
   children: React.ReactNode;
   style?: ViewStyle;
+  glass?: boolean;
 };
 
-export function ScreenHeaderCard({ children, style }: Props) {
+export function ScreenHeaderCard({ children, style, glass = false }: Props) {
   const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
-  return <View style={[styles.card, style]}>{children}</View>;
+  return (
+    <View style={[styles.card, glass && styles.glassCard, style]}>
+      {glass ? (
+        <>
+          <BlurView
+            intensity={72}
+            tint="systemUltraThinMaterialLight"
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={[StyleSheet.absoluteFill, styles.glassOverlay]} />
+        </>
+      ) : null}
+      {children}
+    </View>
+  );
 }
 
 function makeStyles(colors: Colors, isOnboarding: boolean) {
@@ -36,6 +52,15 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
         android: { elevation: 2 },
         default: {},
       }),
+    },
+    glassCard: {
+      backgroundColor: "transparent",
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: "rgba(255, 255, 255, 0.55)",
+      overflow: "hidden",
+    },
+    glassOverlay: {
+      backgroundColor: "rgba(255, 255, 255, 0.18)",
     },
   });
 }

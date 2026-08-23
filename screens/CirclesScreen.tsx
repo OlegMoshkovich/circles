@@ -17,7 +17,7 @@ import type { MapCircle } from "../src/components/maps/CirclesMapView";
 import { CreateCircleModal, NewCircleData } from "../src/components/modals/CreateCircleModal";
 import { Spinner } from "../src/components/loaders/Spinner";
 import { SplashLoadingView } from "../src/components/loaders/SplashLoadingView";
-import { Colors, greenColors } from "../src/theme/colors";
+import { Colors } from "../src/theme/colors";
 
 import { useLanguage } from "../src/i18n/LanguageContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
@@ -28,6 +28,7 @@ import { fetchCircleLatestActivity } from "../lib/activityStats";
 import { supabase, getAuthClient, Circle } from "../lib/supabase";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
+const MAP_GLASS_TEXT = "#2C2A26";
 type MemberStatusMap = Record<string, "owner" | "active" | "requested" | "invited">;
 type PendingRequestsMap = Record<string, number>;
 type SortBy = "newest" | "members" | "events" | "new_activity";
@@ -519,9 +520,10 @@ export default function CirclesScreen() {
             </View>
           ) : null
         }
-        stickyTop={<ScreenHeaderCard style={mapView ? styles.mapHeaderCard : undefined}>
+        stickyTop={<ScreenHeaderCard glass={mapView} style={mapView ? styles.mapHeaderCard : undefined}>
           <NavbarTitle
             title={t.nav.circles}
+            textColor={mapView ? MAP_GLASS_TEXT : undefined}
             rightElement={
               <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
                 <TouchableOpacity
@@ -537,7 +539,7 @@ export default function CirclesScreen() {
                   <Ionicons
                     name={mapView ? "list-outline" : "map-outline"}
                     size={17}
-                    color={mapView ? greenColors.textOnIconBg : colors.textMuted}
+                    color={mapView ? MAP_GLASS_TEXT : colors.textMuted}
                   />
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -557,10 +559,10 @@ export default function CirclesScreen() {
                     color={
                       sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null
                         ? mapView
-                          ? greenColors.textOnIconBg
+                          ? MAP_GLASS_TEXT
                           : colors.iconbBg
                         : mapView
-                          ? greenColors.textMuted
+                          ? MAP_GLASS_TEXT
                           : colors.textMuted
                     }
                   />
@@ -570,7 +572,7 @@ export default function CirclesScreen() {
                   style={[styles.addButton, mapView && styles.mapAddButton]}
                   onPress={() => setModalVisible(true)}
                 >
-                  <Ionicons name="add" size={16} color={mapView ? greenColors.textOnIconBg : colors.textOnIconBg} />
+                  <Ionicons name="add" size={16} color={mapView ? MAP_GLASS_TEXT : colors.textOnIconBg} />
                 </TouchableOpacity>
               </View>
             }
@@ -735,20 +737,19 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : colors.iconbBg,
   },
   mapHeaderCard: {
-    backgroundColor: greenColors.background,
-    borderWidth: 0,
+    backgroundColor: "transparent",
   },
   mapFilterPanel: {
-    backgroundColor: greenColors.background,
+    backgroundColor: "rgba(255,255,255,0.72)",
   },
   mapFilterIconButton: {
-    backgroundColor: greenColors.iconbBg,
+    backgroundColor: "rgba(255,255,255,0.28)",
   },
   mapFilterIconButtonActive: {
-    backgroundColor: greenColors.badgeBg,
+    backgroundColor: "rgba(255,255,255,0.46)",
   },
   mapAddButton: {
-    backgroundColor: greenColors.iconbBg,
+    backgroundColor: "rgba(255,255,255,0.28)",
   },
   filterPanel: {
     backgroundColor: colors.card,
