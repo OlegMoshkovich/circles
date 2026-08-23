@@ -23,7 +23,8 @@ export const en = {
     accept: "Accept",
   },
   home: {
-    subtitle: "Curated essentials and seasonal rhythms \nliving with the lake and forest as part of daily life.",
+    subtitle:
+      "Curated essentials and seasonal rhythms for living with the lake and forest as part of daily life. Seasonal prompts suggest routes, moments, and discoveries from people who live here.",
     today: "TODAY",
     todayItems: [
       { icon: "thermometer-outline", label: "4°C, clear skies" },
@@ -36,25 +37,29 @@ export const en = {
       {
         title: "Winter Morning Lake Walk",
         badge: "ROUTE",
-        description: "A quiet path along the frozen shore. Best in early light when mist rises from the water.",
+        description:
+          "A quiet path follows the frozen lakeshore through the village quarter. Routes are walks locals repeat and share—they map a way through a place, not just a point on a map. Go in early light when mist rises from the water; the east dock is a favourite stopping point.",
         quote: "Perfect for morning walks. Watch the sunrise from the dock.",
       },
       {
         title: "First Light at the Forest Edge",
         badge: "MOMENT",
-        description: "The clearing near the oak grove catches the morning sun perfectly in winter.",
+        description:
+          "The clearing near the oak grove catches the morning sun perfectly in winter. Moments are short windows of time and place worth planning around—they are about when to show up, not only where. On clear days, arrive before 7:30 for the warmest light on the snow.",
         quote: "The light here in winter is unlike anything else. Arrive before 7:30.",
       },
       {
         title: "Hidden Tea House",
         badge: "DISCOVERY",
-        description: "A cozy stop on the way back. Open from 9 AM on weekends.",
+        description:
+          "A cozy tea house sits just off the main path, an easy stop on the way back from the lake. Discoveries are places neighbours recommend but visitors rarely find on their own. It opens from 9 AM on weekends—the cardamom tea is the house specialty.",
         quote: "The best kept secret in the neighbourhood. The cardamom tea is wonderful.",
       },
     ],
   },
   events: {
-    subtitle: "Gentle opportunities for connection \nsmall, meaningful gatherings",
+    subtitle:
+      "Gentle opportunities for connection through small, meaningful gatherings. Events are hosted by circles—open invitations to meet neighbours around a shared place or activity.",
     filterAll: "All",
     filterMyCircles: "My Circles",
     filterJoining: "Events I'm Joining",
@@ -89,15 +94,18 @@ export const en = {
     items: [
       {
         title: "Morning Lake Swim",
-        description: "A refreshing early morning swim at the lake. All levels welcome—bring a towel and good energy.",
+        description:
+          "Join an early swim at the lake before the day gets busy. Events like this are open gatherings hosted by a circle—anyone welcome to dip in, watch from the shore, or just say hello. Bring a towel and good energy; all levels are welcome.",
       },
       {
         title: "Afternoon Coffee",
-        description: "An informal drop-in coffee hour in the common room. Come for a chat or bring something to work on.",
+        description:
+          "Drop in for an informal coffee hour in the common room. There is no agenda—stay for a chat, read, or bring something quiet to work on. Events like this are how neighbours meet without needing a formal plan.",
       },
       {
         title: "Weekend Garden Work",
-        description: "Let's prepare the garden beds for spring. All skill levels welcome.",
+        description:
+          "Help prepare the garden beds for spring alongside others from the neighbourhood. Shared work events build the circle over time, and no experience is needed. Tools are on site—just wear clothes you do not mind getting muddy.",
       },
     ],
   },
@@ -114,7 +122,8 @@ export const en = {
     language: "LANGUAGE",
   },
   circles: {
-    subtitle: "Communities that gather around shared interests and places",
+    subtitle:
+      "Communities that gather around shared interests and places. A circle is where members post events, invite neighbours, and keep local life in one thread.",
     filterAll: "All",
     filterMyCircles: "My Circles",
     createTitle: "New Circle",
@@ -137,10 +146,12 @@ export const en = {
     noMembers: "No members yet",
     sortNewest: "Newest",
     sortMembers: "Most Members",
+    sortEvents: "Most Events",
     sortNewActivity: "New Activity",
     typeLabel: "Type",
     typeOwner: "Owner",
     typeMember: "Member",
+    typeEvent: "Event",
     typeJoin: "Join",
     categoryLabel: "Category",
     noDismissed: "No dismissed circles",
@@ -159,6 +170,8 @@ export const en = {
     descriptionTab: "Description",
     eventsTab: "Events",
     organizer: "Organizer",
+    mapNoLocations: "No circles with a location to show on the map.",
+    mapGeocodeFailed: "Could not place circles on the map.",
     visibilityRequestToJoin: "Request to join",
   },
 };
@@ -186,7 +199,8 @@ export const de: Translations = {
     accept: "Akzeptieren",
   },
   home: {
-    subtitle: "Kuratierte Essenzialles und saisonale Rhythmen –\ndas Leben mit dem See und Wald als Teil des Alltags.",
+    subtitle:
+      "Kuratierte Essenzialles und saisonale Rhythmen für ein Leben mit See und Wald im Alltag. Saisonale Anregungen schlagen Routen, Momente und Entdeckungen von Menschen vor, die hier wohnen.",
     today: "HEUTE",
     todayItems: [
       { icon: "thermometer-outline", label: "4°C, klarer Himmel" },
@@ -199,25 +213,29 @@ export const de: Translations = {
       {
         title: "Wintermorgen-Seespaziergang",
         badge: "ROUTE",
-        description: "Ein stiller Pfad am gefrorenen Ufer. Am schönsten im frühen Licht, wenn Nebel über dem Wasser aufsteigt.",
+        description:
+          "Ein stiller Pfad folgt dem gefrorenen Ufer durch das Viertel am See. Routen sind Wege, die Einheimische wiederholt gehen und teilen—sie zeigen einen Weg durch einen Ort, nicht nur einen Punkt auf der Karte. Am schönsten im frühen Licht, wenn Nebel über dem Wasser aufsteigt; der östliche Steg ist ein beliebter Rastplatz.",
         quote: "Perfekt für Morgenausflüge. Den Sonnenaufgang vom Steg aus beobachten.",
       },
       {
         title: "Erstes Licht am Waldrand",
         badge: "MOMENT",
-        description: "Die Lichtung beim Eichenwald fängt die Morgensonne im Winter wunderbar ein.",
+        description:
+          "Die Lichtung beim Eichenwald fängt die Morgensonne im Winter wunderbar ein. Momente sind kurze Fenster aus Zeit und Ort, die sich zu planen lohnen—es geht um das Wann, nicht nur um das Wo. An klaren Tagen vor 7:30 Uhr ankommen, für das wärmste Licht auf dem Schnee.",
         quote: "Das Licht hier im Winter ist einzigartig. Vor 7:30 Uhr ankommen.",
       },
       {
         title: "Verstecktes Teehaus",
         badge: "ENTDECKUNG",
-        description: "Ein gemütlicher Zwischenstopp auf dem Rückweg. An Wochenenden ab 9 Uhr geöffnet.",
+        description:
+          "Ein gemütliches Teehaus liegt knapp abseits des Hauptwegs—ein leichter Stopp auf dem Rückweg vom See. Entdeckungen sind Orte, die Nachbarn empfehlen, die Besucher selten allein finden. An Wochenenden ab 9 Uhr geöffnet; der Kardamom-Tee ist die Spezialität des Hauses.",
         quote: "Das bestgehütete Geheimnis der Nachbarschaft. Der Kardamom-Tee ist wunderbar.",
       },
     ],
   },
   events: {
-    subtitle: "Sanfte Gelegenheiten zur Begegnung –\nkleine, bedeutungsvolle Zusammenkünfte",
+    subtitle:
+      "Sanfte Gelegenheiten zur Begegnung durch kleine, bedeutungsvolle Zusammenkünfte. Events werden von Kreisen veranstaltet—offene Einladungen, Nachbarn an einem gemeinsamen Ort oder bei einer Aktivität zu treffen.",
     filterAll: "Alle",
     filterMyCircles: "Meine Kreise",
     filterJoining: "Events, bei denen ich dabei bin",
@@ -252,15 +270,18 @@ export const de: Translations = {
     items: [
       {
         title: "Morgendliches Seeschwimmen",
-        description: "Ein erfrischendes Frühmorgen-Schwimmen am See. Alle Niveaus willkommen – Handtuch und gute Energie mitbringen.",
+        description:
+          "Starte mit einem frühen Bad im See, bevor der Tag richtig losgeht. Events wie dieses sind offene Treffen eines Kreises—jede:r kann mit ins Wasser, vom Ufer zuschauen oder einfach Hallo sagen. Handtuch und gute Laune mitbringen; alle Niveaus sind willkommen.",
       },
       {
         title: "Nachmittagskaffee",
-        description: "Eine informelle Kaffeestunde im Gemeinschaftsraum. Komm zum Plausch oder bring etwas zum Arbeiten mit.",
+        description:
+          "Komm vorbei zu einer lockeren Kaffeestunde im Gemeinschaftsraum. Es gibt keine feste Agenda—bleib zum Plaudern, zum Lesen oder bring etwas Ruhiges zum Arbeiten mit. So treffen sich Nachbarn, ohne einen formalen Plan zu brauchen.",
       },
       {
         title: "Wochenend-Gartenarbeit",
-        description: "Wir bereiten die Beete für den Frühling vor. Alle Erfahrungsstufen willkommen.",
+        description:
+          "Hilf mit, die Beete für den Frühling vorzubereiten—gemeinsam mit anderen aus der Nachbarschaft. Gemeinsame Arbeit baut den Kreis über die Zeit; Erfahrung ist nicht nötig. Werkzeug ist vor Ort—zieh Kleidung an, die schmutzig werden darf.",
       },
     ],
   },
@@ -277,7 +298,8 @@ export const de: Translations = {
     language: "SPRACHE",
   },
   circles: {
-    subtitle: "Gemeinschaften rund um gemeinsame Interessen \nund Orte",
+    subtitle:
+      "Gemeinschaften, die sich um gemeinsame Interessen und Orte scharen. Ein Kreis ist der Ort, an dem Mitglieder Events posten, Nachbarn einladen und das lokale Leben an einem Ort bündeln.",
     filterAll: "Alle",
     filterMyCircles: "Meine Kreise",
     createTitle: "Neuer Kreis",
@@ -300,10 +322,12 @@ export const de: Translations = {
     noMembers: "Noch keine Mitglieder",
     sortNewest: "Neueste",
     sortMembers: "Meiste Mitglieder",
+    sortEvents: "Meiste Veranstaltungen",
     sortNewActivity: "Neue Aktivität",
     typeLabel: "Typ",
     typeOwner: "Besitzer",
     typeMember: "Mitglied",
+    typeEvent: "Veranstaltung",
     typeJoin: "Beitreten",
     categoryLabel: "Kategorie",
     noDismissed: "Keine ausgeblendeten Kreise",
@@ -322,6 +346,8 @@ export const de: Translations = {
     descriptionTab: "Beschreibung",
     eventsTab: "Veranstaltungen",
     organizer: "Organisator",
+    mapNoLocations: "Keine Kreise mit Standort auf der Karte.",
+    mapGeocodeFailed: "Kreise konnten nicht auf der Karte platziert werden.",
     visibilityRequestToJoin: "Beitritt anfragen",
   },
 };
@@ -349,7 +375,8 @@ export const fr: Translations = {
     accept: "Accepter",
   },
   home: {
-    subtitle: "Essentiels curatés et rythmes saisonniers –\nvivre avec le lac et la forêt au quotidien.",
+    subtitle:
+      "Essentiels curatés et rythmes saisonniers pour vivre avec le lac et la forêt au quotidien. Les suggestions saisonnières proposent routes, moments et découvertes de la part de personnes qui habitent ici.",
     today: "AUJOURD'HUI",
     todayItems: [
       { icon: "thermometer-outline", label: "4°C, ciel dégagé" },
@@ -362,25 +389,29 @@ export const fr: Translations = {
       {
         title: "Promenade Hivernale au Lac",
         badge: "ROUTE",
-        description: "Un chemin tranquille le long du rivage gelé. Idéal à l'aube quand la brume s'élève sur l'eau.",
+        description:
+          "Un chemin tranquille longe la rive gelée à travers le quartier du lac. Les routes sont des parcours que les habitants refont et partagent—elles tracent un chemin dans un lieu, pas seulement un point sur une carte. Idéal à l'aube, quand la brume s'élève sur l'eau ; le quai à l'est est une halte appréciée.",
         quote: "Parfait pour les promenades matinales. Admirer le lever du soleil depuis le quai.",
       },
       {
         title: "Première Lumière en Lisière",
         badge: "MOMENT",
-        description: "La clairière près du chênaie capte parfaitement le soleil matinal en hiver.",
+        description:
+          "La clairière près du chênaie capte parfaitement le soleil matinal en hiver. Les moments sont de courtes fenêtres de temps et de lieu qui valent la peine d'être planifiées—il s'agit autant du quand que du où. Par temps clair, arriver avant 7h30 pour la lumière la plus chaude sur la neige.",
         quote: "La lumière ici en hiver est incomparable. Arriver avant 7h30.",
       },
       {
         title: "Salon de Thé Caché",
         badge: "DÉCOUVERTE",
-        description: "Une halte chaleureuse sur le chemin du retour. Ouvert dès 9h le week-end.",
+        description:
+          "Un salon de thé chaleureux se trouve juste à côté du sentier principal, une pause facile au retour du lac. Les découvertes sont des lieux recommandés par les voisins que les visiteurs trouvent rarement seuls. Ouvert dès 9h le week-end ; le thé à la cardamome est la spécialité de la maison.",
         quote: "Le secret le mieux gardé du quartier. Le thé à la cardamome est merveilleux.",
       },
     ],
   },
   events: {
-    subtitle: "De douces occasions de rencontre –\nde petits rassemblements porteurs de sens",
+    subtitle:
+      "De douces occasions de rencontre à travers de petits rassemblements porteurs de sens. Les événements sont organisés par des cercles—des invitations ouvertes à rencontrer des voisins autour d'un lieu ou d'une activité partagée.",
     filterAll: "Tous",
     filterMyCircles: "Mes Cercles",
     filterJoining: "Événements auxquels je participe",
@@ -415,15 +446,18 @@ export const fr: Translations = {
     items: [
       {
         title: "Baignade Matinale au Lac",
-        description: "Une baignade rafraîchissante en début de matinée. Tous niveaux bienvenus – apportez une serviette et de la bonne humeur.",
+        description:
+          "Rejoignez une baignade matinale au lac avant que la journée ne s'anime. Les événements comme celui-ci sont des rencontres ouvertes organisées par un cercle—chacun peut entrer dans l'eau, regarder depuis la rive ou simplement dire bonjour. Apportez une serviette et de la bonne humeur ; tous niveaux bienvenus.",
       },
       {
         title: "Café de l'Après-midi",
-        description: "Une heure de café informelle dans la salle commune. Venez discuter ou apportez de quoi travailler.",
+        description:
+          "Passez pour une heure de café informelle dans la salle commune. Il n'y a pas d'ordre du jour—restez pour discuter, lire ou apportez quelque chose de calme sur lequel travailler. C'est ainsi que les voisins se rencontrent sans plan formel.",
       },
       {
         title: "Jardinage du Week-end",
-        description: "Préparons les parterres pour le printemps. Tous niveaux bienvenus.",
+        description:
+          "Aidez à préparer les parterres pour le printemps aux côtés d'autres voisins. Le travail partagé renforce le cercle au fil du temps, sans expérience requise. Les outils sont sur place—portez des vêtements que vous n'avez pas peur de salir.",
       },
     ],
   },
@@ -440,7 +474,8 @@ export const fr: Translations = {
     language: "LANGUE",
   },
   circles: {
-    subtitle: "Communautés qui se rassemblent autour d'intérêts \net de lieux communs",
+    subtitle:
+      "Communautés qui se rassemblent autour d'intérêts et de lieux communs. Un cercle est l'endroit où les membres publient des événements, invitent des voisins et regroupent la vie locale en un seul fil.",
     filterAll: "Tous",
     filterMyCircles: "Mes Cercles",
     createTitle: "Nouveau Cercle",
@@ -463,10 +498,12 @@ export const fr: Translations = {
     noMembers: "Pas encore de membres",
     sortNewest: "Les plus récents",
     sortMembers: "Le plus de membres",
+    sortEvents: "Le plus d'événements",
     sortNewActivity: "Nouvelle activité",
     typeLabel: "Type",
     typeOwner: "Propriétaire",
     typeMember: "Membre",
+    typeEvent: "Événement",
     typeJoin: "Rejoindre",
     categoryLabel: "Catégorie",
     noDismissed: "Aucun cercle masqué",
@@ -485,6 +522,8 @@ export const fr: Translations = {
     descriptionTab: "Description",
     eventsTab: "Événements",
     organizer: "Organisateur",
+    mapNoLocations: "Aucun cercle avec un lieu à afficher sur la carte.",
+    mapGeocodeFailed: "Impossible de placer les cercles sur la carte.",
     visibilityRequestToJoin: "Sur demande",
   },
 };
@@ -512,7 +551,8 @@ export const it: Translations = {
     accept: "Accetta",
   },
   home: {
-    subtitle: "Essenziali curati e ritmi stagionali –\nvivere con il lago e la foresta come parte della vita quotidiana.",
+    subtitle:
+      "Essenziali curati e ritmi stagionali per vivere con il lago e la foresta nella vita quotidiana. I suggerimenti stagionali propongono percorsi, momenti e scoperte da parte di chi vive qui.",
     today: "OGGI",
     todayItems: [
       { icon: "thermometer-outline", label: "4°C, cielo sereno" },
@@ -525,25 +565,29 @@ export const it: Translations = {
       {
         title: "Passeggiata Invernale al Lago",
         badge: "PERCORSO",
-        description: "Un sentiero tranquillo lungo la riva ghiacciata. Meglio all'alba quando la nebbia sale dall'acqua.",
+        description:
+          "Un sentiero tranquillo segue la riva ghiacciata attraverso il quartiere del lago. I percorsi sono camminate che gli abitanti ripetono e condividono—tracciano un modo di attraversare un luogo, non solo un punto sulla mappa. Meglio all'alba, quando la nebbia sale dall'acqua; il molo a est è una sosta preferita.",
         quote: "Perfetto per le passeggiate mattutine. Ammirare l'alba dal molo.",
       },
       {
         title: "Prima Luce al Margine del Bosco",
         badge: "MOMENTO",
-        description: "La radura vicino al querceto cattura perfettamente il sole mattutino d'inverno.",
+        description:
+          "La radura vicino al querceto cattura perfettamente il sole mattutino d'inverno. I momenti sono brevi finestre di tempo e luogo che vale la pena pianificare—riguardano quando presentarsi, non solo dove. Nei giorni limpidi, arrivare prima delle 7:30 per la luce più calda sulla neve.",
         quote: "La luce qui in inverno è unica. Arrivare prima delle 7:30.",
       },
       {
         title: "Casa da Tè Nascosta",
         badge: "SCOPERTA",
-        description: "Una sosta accogliente sulla via del ritorno. Aperta dalle 9 nei fine settimana.",
+        description:
+          "Una casa da tè accogliente si trova appena fuori dal sentiero principale, una sosta facile sulla via del ritorno dal lago. Le scoperte sono luoghi consigliati dai vicini che i visitatori raramente trovano da soli. Aperta dalle 9 nei fine settimana; il tè al cardamomo è la specialità della casa.",
         quote: "Il segreto meglio custodito del quartiere. Il tè al cardamomo è meraviglioso.",
       },
     ],
   },
   events: {
-    subtitle: "Dolci occasioni di connessione –\npiccoli incontri ricchi di significato",
+    subtitle:
+      "Dolci occasioni di connessione attraverso piccoli incontri ricchi di significato. Gli eventi sono organizzati dai cerchi—inviti aperti a incontrare i vicini intorno a un luogo o un'attività condivisa.",
     filterAll: "Tutti",
     filterMyCircles: "I Miei Cerchi",
     filterJoining: "Eventi a cui partecipo",
@@ -578,15 +622,18 @@ export const it: Translations = {
     items: [
       {
         title: "Nuotata Mattutina al Lago",
-        description: "Una nuotata rinfrescante al lago nelle prime ore del mattino. Tutti i livelli benvenuti – portate un asciugamano e buona energia.",
+        description:
+          "Unisciti a una nuotata mattutina al lago prima che la giornata si riempia. Eventi come questo sono incontri aperti organizzati da un cerchio—chiunque può entrare in acqua, guardare dalla riva o semplicemente salutare. Porta un asciugamano e buona energia; tutti i livelli sono benvenuti.",
       },
       {
         title: "Caffè del Pomeriggio",
-        description: "Un'ora informale di caffè nella sala comune. Venite a chiacchierare o portate qualcosa su cui lavorare.",
+        description:
+          "Passa per un'ora informale di caffè nella sala comune. Non c'è un ordine del giorno—resta per chiacchierare, leggere o porta qualcosa di tranquillo su cui lavorare. Così i vicini si incontrano senza bisogno di un piano formale.",
       },
       {
         title: "Lavori in Giardino nel Week-end",
-        description: "Prepariamo le aiuole per la primavera. Tutti i livelli di esperienza benvenuti.",
+        description:
+          "Aiuta a preparare le aiuole per la primavera insieme ad altri del quartiere. Il lavoro condiviso costruisce il cerchio nel tempo; non serve esperienza. Gli attrezzi sono in loco—indossa abiti che non ti dispiace sporcare.",
       },
     ],
   },
@@ -603,7 +650,8 @@ export const it: Translations = {
     language: "LINGUA",
   },
   circles: {
-    subtitle: "Comunità che si riuniscono attorno a interessi \ne luoghi condivisi",
+    subtitle:
+      "Comunità che si riuniscono attorno a interessi e luoghi condivisi. Un cerchio è dove i membri pubblicano eventi, invitano i vicini e tengono la vita locale in un unico filo.",
     filterAll: "Tutti",
     filterMyCircles: "I Miei Cerchi",
     createTitle: "Nuovo Cerchio",
@@ -626,10 +674,12 @@ export const it: Translations = {
     noMembers: "Nessun membro ancora",
     sortNewest: "Più recenti",
     sortMembers: "Più membri",
+    sortEvents: "Più eventi",
     sortNewActivity: "Nuova attività",
     typeLabel: "Tipo",
     typeOwner: "Proprietario",
     typeMember: "Membro",
+    typeEvent: "Evento",
     typeJoin: "Unisciti",
     categoryLabel: "Categoria",
     noDismissed: "Nessun cerchio nascosto",
@@ -648,6 +698,8 @@ export const it: Translations = {
     descriptionTab: "Descrizione",
     eventsTab: "Eventi",
     organizer: "Organizzatore",
+    mapNoLocations: "Nessun cerchio con una posizione da mostrare sulla mappa.",
+    mapGeocodeFailed: "Impossibile posizionare i cerchi sulla mappa.",
     visibilityRequestToJoin: "Su richiesta",
   },
 };

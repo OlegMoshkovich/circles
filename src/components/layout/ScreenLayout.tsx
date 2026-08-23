@@ -26,19 +26,43 @@ type ScreenLayoutProps = {
   renderItem?: ListRenderItem<any>;
   keyExtractor?: (item: any, index: number) => string;
   listEmptyComponent?: React.ReactElement | null;
+  /** When true, children fill the remaining screen area (no ScrollView). */
+  fillContent?: boolean;
+  /** Edge-to-edge content (e.g. full-screen map) with stickyTop floating above. */
+  fullBleed?: boolean;
 };
 
-export function ScreenLayout({ header, children, stickyTop, contentStyle, backgroundImage, backgroundBlurIntensity = 55, backgroundColor, onRefresh, refreshing = false, listData, renderItem, keyExtractor, listEmptyComponent }: ScreenLayoutProps) {
+export function ScreenLayout({ header, children, stickyTop, contentStyle, backgroundImage, backgroundBlurIntensity = 55, backgroundColor, onRefresh, refreshing = false, listData, renderItem, keyExtractor, listEmptyComponent, fillContent, fullBleed }: ScreenLayoutProps) {
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const resolvedBg = backgroundColor ?? colors.background;
   const { bgOption } = useBackground();
-  const shouldUseThemedBackground = backgroundImage == null && bgOption === "onboarding";
+  const shouldUseThemedBackground = !fullBleed && backgroundImage == null && bgOption === "onboarding";
 
   const contentContainerStyle = [styles.content, { paddingBottom: insets.bottom + 80 }, contentStyle];
   const refreshControl = onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" colors={["#FFFFFF"]} /> : undefined;
 
-  const inner = (
+  const inner = fullBleed ? (
+    <View style={[styles.wrapper, styles.fullBleedWrapper]}>
+      <View style={StyleSheet.absoluteFill}>{children}</View>
+      {(header != null || stickyTop != null) && (
+        <View
+          style={[
+            styles.fullBleedOverlay,
+            {
+              paddingTop: insets.top,
+              paddingLeft: insets.left + spacing.pageHorizontal,
+              paddingRight: insets.right + spacing.pageHorizontal,
+            },
+          ]}
+          pointerEvents="box-none"
+        >
+          {header}
+          {stickyTop}
+        </View>
+      )}
+    </View>
+  ) : (
     <View
       style={[
         styles.wrapper,
@@ -63,6 +87,10 @@ export function ScreenLayout({ header, children, stickyTop, contentStyle, backgr
           showsVerticalScrollIndicator={false}
           refreshControl={refreshControl}
         />
+      ) : fillContent ? (
+        <View style={[styles.scroll, contentContainerStyle]}>
+          {children}
+        </View>
       ) : (
         <ScrollView
           style={styles.scroll}
@@ -90,6 +118,10 @@ export function ScreenLayout({ header, children, stickyTop, contentStyle, backgr
     return <ThemedBackground backgroundBlurIntensity={0}>{inner}</ThemedBackground>;
   }
 
+  if (fullBleed) {
+    return <View style={[styles.fill, styles.fullBleedWrapper]}>{inner}</View>;
+  }
+
   return inner;
 }
 
@@ -105,4 +137,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {},
+  fullBleedWrapper: {
+    backgroundColor: "transparent",
+  },
+  fullBleedOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    elevation: 10,
+    backgroundColor: "transparent",
+  },
 });

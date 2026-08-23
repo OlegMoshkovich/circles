@@ -12,14 +12,17 @@ import { ScreenHeaderCard } from "../src/components/layout/ScreenHeaderCard";
 import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { TextBlock } from "../src/components/blocks/TextBlock";
 import { CircleCard } from "../src/components/cards/CircleCard";
+import { LazyCirclesMapView } from "../src/components/maps/LazyCirclesMapView";
+import type { MapCircle } from "../src/components/maps/CirclesMapView";
 import { CreateCircleModal, NewCircleData } from "../src/components/modals/CreateCircleModal";
 import { Spinner } from "../src/components/loaders/Spinner";
 import { SplashLoadingView } from "../src/components/loaders/SplashLoadingView";
-import { Colors } from "../src/theme/colors";
+import { Colors, greenColors } from "../src/theme/colors";
 
 import { useLanguage } from "../src/i18n/LanguageContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { useHomeReady } from "../src/contexts/HomeReadyContext";
+import { useCirclesMapView } from "../src/contexts/CirclesMapViewContext";
 import { fetchHiddenAuthorIds, fetchReportedHiddenContentIds } from "../lib/contentReports";
 import { fetchCircleLatestActivity } from "../lib/activityStats";
 import { supabase, getAuthClient, Circle } from "../lib/supabase";
@@ -27,11 +30,13 @@ import { supabase, getAuthClient, Circle } from "../lib/supabase";
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type MemberStatusMap = Record<string, "owner" | "active" | "requested" | "invited">;
 type PendingRequestsMap = Record<string, number>;
-type SortBy = "newest" | "members" | "new_activity";
+type SortBy = "newest" | "members" | "events" | "new_activity";
+
+const SORT_OPTIONS: SortBy[] = ["newest", "members", "events", "new_activity"];
 
 const PRESET_CATEGORIES = ["Culture", "Friends", "Nature", "Sport", "Food", "Travel"];
 
-type CircleWithCount = Circle & { member_count: number };
+type CircleWithCount = Circle & { member_count: number; event_count: number };
 
 // Stale-while-revalidate cache for the Circles list. The first network load on
 // a fresh login is two sequential round-trips; persisting the last result lets
@@ -93,6 +98,7 @@ const CircleRow = React.memo(function CircleRow({
       category={circle.category}
       visibility={circle.visibility}
       memberCount={circle.member_count}
+      eventCount={circle.event_count ?? 0}
       memberStatus={memberStatus}
       location={circle.location}
       organizer={circle.organizer}
@@ -113,8 +119,17 @@ export default function CirclesScreen() {
   const { user } = useUser();
   const { getToken } = useAuth();
   const { markHomeReady } = useHomeReady();
+  const { setMapViewActive } = useCirclesMapView();
   const [modalVisible, setModalVisible] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [mapView, setMapView] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      setMapViewActive(mapView);
+      return () => setMapViewActive(false);
+    }, [mapView, setMapViewActive])
+  );
   const [sortBy, setSortBy] = useState<SortBy>("newest");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [locationFilter, setLocationFilter] = useState<string | null>(null);
@@ -122,7 +137,7 @@ export default function CirclesScreen() {
   const [nearMe, setNearMe] = useState(false);
   const [nearMeCity, setNearMeCity] = useState<string | null>(null);
   const [nearMeLoading, setNearMeLoading] = useState(false);
-  const [circles, setCircles] = useState<(Circle & { member_count: number })[]>([]);
+  const [circles, setCircles] = useState<CircleWithCount[]>([]);
   const [memberStatusMap, setMemberStatusMap] = useState<MemberStatusMap>({});
   const [pendingRequestsMap, setPendingRequestsMap] = useState<PendingRequestsMap>({});
   const [loading, setLoading] = useState(true);
@@ -200,7 +215,7 @@ export default function CirclesScreen() {
         user
           ? client.from("dismissed_items").select("item_id").eq("user_id", user.id).eq("item_type", "circle")
           : Promise.resolve({ data: [], error: null }),
-        client.from("circles").select("*, circle_members(count)").order("created_at", { ascending: false }),
+        client.from("circles").select("*, circle_members(count), events(count)").order("created_at", { ascending: false }),
         user
           ? client.from("circle_members").select("circle_id, role, status").eq("user_id", user.id)
           : Promise.resolve({ data: [], error: null }),
@@ -242,6 +257,7 @@ export default function CirclesScreen() {
           .map((row) => ({
             ...row,
             member_count: row.circle_members?.[0]?.count ?? 0,
+            event_count: row.events?.[0]?.count ?? 0,
           }))
           // Hide private circles unless the user is already a member/owner
           .filter((circle) => circle.visibility !== "private" || map[circle.id] != null);
@@ -396,9 +412,9 @@ export default function CirclesScreen() {
             const bNew = (activityMap[b.id] ?? 0) > (lastViewedMap[b.id] ?? 0) ? 1 : 0;
             return bNew - aNew;
           }
-          return sortBy === "members"
-            ? b.member_count - a.member_count
-            : new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          if (sortBy === "members") return b.member_count - a.member_count;
+          if (sortBy === "events") return (b.event_count ?? 0) - (a.event_count ?? 0);
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         }),
     [circles, dismissedIds, roleFilter, categoryFilter, locationFilter, nearMe, nearMeCity, sortBy, memberStatusMap, activityMap, lastViewedMap]
   );
@@ -444,6 +460,14 @@ export default function CirclesScreen() {
     [showLoader, showDismissed, dismissedCircles, displayedCircles]
   );
 
+  const handleMapCirclePress = useCallback(
+    (circle: MapCircle) => {
+      const full = listCircles.find((c) => c.id === circle.id);
+      if (full) handleOpenCircle(full, showDismissed);
+    },
+    [listCircles, showDismissed, handleOpenCircle]
+  );
+
   const renderCircleRow = useCallback(
     ({ item }: { item: CircleWithCount }) => (
       <CircleRow
@@ -475,15 +499,17 @@ export default function CirclesScreen() {
       ) : (
       <>
       <ScreenLayout
-        backgroundColor={screenBgColor}
+        backgroundColor={mapView ? "transparent" : screenBgColor}
         contentStyle={showLoader ? styles.scrollContentLoader : undefined}
+        fillContent={mapView}
+        fullBleed={mapView}
         onRefresh={async () => { setRefreshing(true); try { await fetchCircles(true); } finally { setRefreshing(false); } }}
         refreshing={refreshing}
-        listData={listCircles}
-        renderItem={renderCircleRow}
-        keyExtractor={circleKeyExtractor}
+        listData={mapView ? undefined : listCircles}
+        renderItem={mapView ? undefined : renderCircleRow}
+        keyExtractor={mapView ? undefined : circleKeyExtractor}
         listEmptyComponent={
-          showLoader ? (
+          mapView ? null : showLoader ? (
             <View style={styles.loader}>
               <Spinner size="large" />
             </View>
@@ -493,13 +519,34 @@ export default function CirclesScreen() {
             </View>
           ) : null
         }
-        stickyTop={<ScreenHeaderCard>
+        stickyTop={<ScreenHeaderCard style={mapView ? styles.mapHeaderCard : undefined}>
           <NavbarTitle
             title={t.nav.circles}
             rightElement={
               <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
                 <TouchableOpacity
-                  style={[styles.filterIconButton, (sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null) && styles.filterIconButtonActive]}
+                  style={[
+                    styles.filterIconButton,
+                    mapView && styles.mapFilterIconButton,
+                    mapView && styles.mapFilterIconButtonActive,
+                  ]}
+                  onPress={() => setMapView((v) => !v)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={mapView ? "list-outline" : "map-outline"}
+                    size={17}
+                    color={mapView ? greenColors.textOnIconBg : colors.textMuted}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.filterIconButton,
+                    mapView && styles.mapFilterIconButton,
+                    (sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null) &&
+                      (mapView ? styles.mapFilterIconButtonActive : styles.filterIconButtonActive),
+                  ]}
                   onPress={() => setShowFilterPanel((v) => !v)}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   activeOpacity={0.7}
@@ -507,15 +554,23 @@ export default function CirclesScreen() {
                   <Ionicons
                     name="options-outline"
                     size={17}
-                    color={(sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null) ? colors.iconbBg : colors.textMuted}
+                    color={
+                      sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null
+                        ? mapView
+                          ? greenColors.textOnIconBg
+                          : colors.iconbBg
+                        : mapView
+                          ? greenColors.textMuted
+                          : colors.textMuted
+                    }
                   />
                 </TouchableOpacity>
                 <TouchableOpacity
                   hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                  style={styles.addButton}
+                  style={[styles.addButton, mapView && styles.mapAddButton]}
                   onPress={() => setModalVisible(true)}
                 >
-                  <Ionicons name="add" size={16} color={colors.textOnIconBg} />
+                  <Ionicons name="add" size={16} color={mapView ? greenColors.textOnIconBg : colors.textOnIconBg} />
                 </TouchableOpacity>
               </View>
             }
@@ -523,7 +578,7 @@ export default function CirclesScreen() {
           {/* <TextBlock subtitle={t.circles.subtitle} /> */}
 
           {showFilterPanel && (
-            <View style={styles.filterPanel}>
+            <View style={[styles.filterPanel, mapView && styles.mapFilterPanel]}>
               <View style={styles.filterSection}>
                 <Text style={styles.filterSectionLabel}>{t.circles.typeLabel}</Text>
                 <View style={styles.filterChipRow}>
@@ -555,14 +610,20 @@ export default function CirclesScreen() {
               <View style={styles.filterSection}>
                 <Text style={styles.filterSectionLabel}>{t.common.sort}</Text>
                 <View style={styles.filterChipRow}>
-                  {(["newest", "members", "new_activity"] as SortBy[]).map((opt) => (
+                  {SORT_OPTIONS.map((opt) => (
                     <TouchableOpacity
                       key={opt}
                       style={[styles.filterChip, sortBy === opt && styles.filterChipActive]}
                       onPress={() => setSortBy(opt)}
                     >
                       <Text style={[styles.filterChipText, sortBy === opt && styles.filterChipTextActive]}>
-                        {opt === "newest" ? t.circles.sortNewest : opt === "members" ? t.circles.sortMembers : t.circles.sortNewActivity}
+                        {opt === "newest"
+                          ? t.circles.sortNewest
+                          : opt === "members"
+                            ? t.circles.sortMembers
+                            : opt === "events"
+                              ? t.circles.sortEvents
+                              : t.circles.sortNewActivity}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -620,7 +681,11 @@ export default function CirclesScreen() {
             </View>
           )}
         </ScreenHeaderCard>}
-      />
+      >
+        {mapView ? (
+          <LazyCirclesMapView circles={listCircles} onCirclePress={handleMapCirclePress} />
+        ) : null}
+      </ScreenLayout>
 
       <CreateCircleModal
         visible={modalVisible}
@@ -668,6 +733,22 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
   },
   filterIconButtonActive: {
     backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : colors.iconbBg,
+  },
+  mapHeaderCard: {
+    backgroundColor: greenColors.background,
+    borderWidth: 0,
+  },
+  mapFilterPanel: {
+    backgroundColor: greenColors.background,
+  },
+  mapFilterIconButton: {
+    backgroundColor: greenColors.iconbBg,
+  },
+  mapFilterIconButtonActive: {
+    backgroundColor: greenColors.badgeBg,
+  },
+  mapAddButton: {
+    backgroundColor: greenColors.iconbBg,
   },
   filterPanel: {
     backgroundColor: colors.card,

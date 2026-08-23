@@ -59,10 +59,26 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            { "scheme": "https", "host": "valmia.ch", "pathPrefix": "/event" },
-            { "scheme": "https", "host": "valmia.ch", "pathPrefix": "/circle" },
-            { "scheme": "https", "host": "www.valmia.ch", "pathPrefix": "/event" },
-            { "scheme": "https", "host": "www.valmia.ch", "pathPrefix": "/circle" }
+            {
+              "scheme": "https",
+              "host": "valmia.ch",
+              "pathPrefix": "/event"
+            },
+            {
+              "scheme": "https",
+              "host": "valmia.ch",
+              "pathPrefix": "/circle"
+            },
+            {
+              "scheme": "https",
+              "host": "www.valmia.ch",
+              "pathPrefix": "/event"
+            },
+            {
+              "scheme": "https",
+              "host": "www.valmia.ch",
+              "pathPrefix": "/circle"
+            }
           ],
           "category": [
             "BROWSABLE",

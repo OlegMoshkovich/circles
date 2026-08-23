@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import EventsScreen from "../screens/EventsScreen";
 import CirclesScreen from "../screens/CirclesScreen";
@@ -11,6 +11,7 @@ import { useLanguage, Language } from "../src/i18n/LanguageContext";
 import { Translations } from "../src/i18n/translations";
 import { useNotificationContext } from "../src/contexts/NotificationContext";
 import { useBackground } from "../src/contexts/BackgroundContext";
+import { CirclesMapViewProvider, useCirclesMapView } from "../src/contexts/CirclesMapViewContext";
 
 const Tab = createBottomTabNavigator();
 
@@ -34,9 +35,12 @@ function makeTabButton(getLabel: (t: Translations) => string, showBadge = false)
   return function TabButton({ onPress, accessibilityState }: any) {
     const { t } = useLanguage();
     const { bgOption } = useBackground();
+    const { mapViewActive } = useCirclesMapView();
     const { unreadCount } = useNotificationContext();
     const focused = accessibilityState?.selected;
-    const labelColor = bgOption === "onboarding"
+    const labelColor = mapViewActive
+      ? colors.text
+      : bgOption === "onboarding"
       ? (focused ? "rgba(255, 255, 255, 0.96)" : "rgba(255, 255, 255, 0.72)")
       : bgOption === "glass"
         ? (focused ? "rgba(255, 255, 255, 0.96)" : "rgba(255, 255, 255, 0.72)")
@@ -62,31 +66,40 @@ const EventsTabButton = makeTabButton((t) => t.nav.events);
 const ProfileTabButton = makeTabButton((t) => t.nav.profile, true);
 const renderGlassBackground = () => <GlassBackground />;
 
-export default function TabNavigator() {
+function TabNavigatorInner() {
   const insets = useSafeAreaInsets();
+  const { mapViewActive } = useCirclesMapView();
   const tabBarBottom = insets.bottom > 0 ? insets.bottom - 8 : 16;
+
+  const tabBarStyle = useMemo(
+    () => ({
+      position: "absolute" as const,
+      bottom: tabBarBottom,
+      left: 28,
+      right: 28,
+      borderRadius: 32,
+      height: 56,
+      backgroundColor: "transparent",
+      borderTopWidth: 0,
+      elevation: 0,
+      overflow: "hidden" as const,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
+      shadowRadius: 20,
+    }),
+    [tabBarBottom]
+  );
 
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          position: "absolute",
-          bottom: tabBarBottom,
-          left: 28,
-          right: 28,
-          borderRadius: 32,
-          height: 56,
-          backgroundColor: "transparent",
-          borderTopWidth: 0,
-          elevation: 0,
-          overflow: "hidden",
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.08,
-          shadowRadius: 20,
-        },
+        tabBarStyle,
         tabBarBackground: renderGlassBackground,
+        sceneContainerStyle: mapViewActive
+          ? { backgroundColor: "transparent" }
+          : undefined,
       }}
     >
       <Tab.Screen
@@ -111,6 +124,14 @@ export default function TabNavigator() {
         }}
       />
     </Tab.Navigator>
+  );
+}
+
+export default function TabNavigator() {
+  return (
+    <CirclesMapViewProvider>
+      <TabNavigatorInner />
+    </CirclesMapViewProvider>
   );
 }
 

@@ -9,11 +9,31 @@ export const COMMUNITY_MISSION =
   "connected — not just digitally, but through meaningful real-world experiences.";
 
 export const CORE_VALUES: { name: string; desc: string }[] = [
-  { name: "Community first", desc: "ValMia is built around people, not algorithms. We value real interaction, participation and connection." },
-  { name: "Real experiences", desc: "We encourage authentic activities, meaningful encounters and real-world experiences." },
-  { name: "Respect & kindness", desc: "Healthy communities are built on respect, openness and positive interaction." },
-  { name: "Local culture matters", desc: "Every destination has its own character. ValMia should strengthen local identity — not replace it." },
-  { name: "Participation creates life", desc: "A destination becomes vibrant when people contribute, share and participate together." },
+  {
+    name: "Community first",
+    desc:
+      "ValMia is built around people, not algorithms. We value real interaction, participation, and connection—circles and events exist so neighbours can show up for each other in person.",
+  },
+  {
+    name: "Real experiences",
+    desc:
+      "We encourage authentic activities, meaningful encounters, and real-world experiences. A good post on ValMia should help someone know when, where, and why to step away from the screen.",
+  },
+  {
+    name: "Respect & kindness",
+    desc:
+      "Healthy communities are built on respect, openness, and positive interaction. Disagreement is fine; hostility, exclusion, and harassment are not.",
+  },
+  {
+    name: "Local culture matters",
+    desc:
+      "Every destination has its own character, rhythms, and unwritten rules. ValMia should strengthen local identity and help visitors participate thoughtfully—not replace what makes a place distinct.",
+  },
+  {
+    name: "Participation creates life",
+    desc:
+      "A destination becomes vibrant when people contribute, share, and participate together. Showing up, hosting small gatherings, and inviting others in is how a circle stays alive.",
+  },
 ];
 
 export const COMMUNITY_PRINCIPLES: string[] = [

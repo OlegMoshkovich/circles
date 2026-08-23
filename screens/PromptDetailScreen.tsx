@@ -115,6 +115,10 @@ export default function PromptDetailScreen({ route, navigation }: Props) {
           <Text style={styles.meta}>{meta}</Text>
         )}
 
+        {description.trim().length > 0 && (
+          <Text style={styles.description}>{description}</Text>
+        )}
+
         <View style={styles.divider} />
 
         <MapPlaceholder />
@@ -190,6 +194,12 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginBottom: spacing.sm,
     marginLeft: 36 + spacing.md,
+  },
+  description: {
+    ...typography.body,
+    color: colors.text,
+    lineHeight: 24,
+    marginBottom: spacing.sm,
   },
   divider: {
     height: 1,
