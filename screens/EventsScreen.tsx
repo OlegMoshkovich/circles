@@ -10,8 +10,6 @@ import { ScreenHeaderCard } from "../src/components/layout/ScreenHeaderCard";
 import { NavbarTitle } from "../src/components/layout/NavbarTitle";
 import { TextBlock } from "../src/components/blocks/TextBlock";
 import { EventCard } from "../src/components/cards/EventCard";
-import { LazyCirclesMapView } from "../src/components/maps/LazyCirclesMapView";
-import type { MapCircle } from "../src/components/maps/CirclesMapView";
 import { CreateEventModal, NewEventData } from "../src/components/modals/CreateEventModal";
 import { Spinner } from "../src/components/loaders/Spinner";
 import { Colors } from "../src/theme/colors";
@@ -19,7 +17,6 @@ import { Colors } from "../src/theme/colors";
 import { useUser } from "@clerk/clerk-expo";
 import { useLanguage } from "../src/i18n/LanguageContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
-import { useCirclesMapView } from "../src/contexts/CirclesMapViewContext";
 import { fetchHiddenAuthorIds, fetchReportedHiddenContentIds } from "../lib/contentReports";
 import { isObjectionableContentError, OBJECTIONABLE_CONTENT_MESSAGE } from "../lib/contentModeration";
 import { fetchEventNoteStats } from "../lib/activityStats";
@@ -34,7 +31,6 @@ type SortBy = "newest" | "recent" | "popular" | "activity" | "new_activity";
 type RsvpFilter = "all" | "going" | "maybe";
 type ContentType = "all" | "events" | "activity";
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-const MAP_GLASS_TEXT = "#2C2A26";
 
 // Snapshot of everything a render needs, cached in memory so returning to
 // this tab paints instantly while a silent refetch runs in the background.
@@ -109,9 +105,7 @@ export default function EventsScreen() {
   const navigation = useNavigation<Nav>();
   const { t } = useLanguage();
   const { user } = useUser();
-  const { setMapViewActive } = useCirclesMapView();
   const [modalVisible, setModalVisible] = useState(false);
-  const [mapView, setMapView] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
   const [contentType, setContentType] = useState<ContentType>("all");
   const [showFilterPanel, setShowFilterPanel] = useState(false);
@@ -130,13 +124,6 @@ export default function EventsScreen() {
   const [showPastEvents, setShowPastEvents] = useState(false);
 
   const cacheKey = user ? `events_${user.id}_${filter}` : null;
-
-  useFocusEffect(
-    useCallback(() => {
-      setMapViewActive(mapView);
-      return () => setMapViewActive(false);
-    }, [mapView, setMapViewActive])
-  );
 
   const applySnapshot = useCallback((snap: EventsSnapshot) => {
     setEvents(snap.events);
@@ -426,33 +413,6 @@ export default function EventsScreen() {
     [showDismissed, visibleEvents, displayedEvents, dismissedIds]
   );
 
-  const eventsShownOnMap = React.useMemo(
-    () =>
-      showDismissed
-        ? events.filter((event) => dismissedIds.has(event.id))
-        : events.filter((event) => !dismissedIds.has(event.id)),
-    [events, dismissedIds, showDismissed]
-  );
-
-  const mapEvents = React.useMemo<MapCircle[]>(
-    () =>
-      eventsShownOnMap.map((event) => ({
-        id: event.id,
-        name: event.title,
-        location: event.location,
-        event_count: (event.going ?? 0) + (event.maybe ?? 0),
-      })),
-    [eventsShownOnMap]
-  );
-
-  const handleMapEventPress = useCallback(
-    (mapEvent: MapCircle) => {
-      const event = eventsShownOnMap.find((candidate) => candidate.id === mapEvent.id);
-      if (event) handleOpenEvent(event, false);
-    },
-    [eventsShownOnMap, handleOpenEvent]
-  );
-
   const renderEventRow = useCallback(
     ({ item }: { item: EventWithCircle }) => (
       <EventRow
@@ -483,17 +443,15 @@ export default function EventsScreen() {
   return (
     <>
       <ScreenLayout
-        backgroundColor={mapView ? "transparent" : screenBgColor}
+        backgroundColor={screenBgColor}
         contentStyle={loading ? styles.scrollContentLoader : undefined}
-        fillContent={mapView}
-        fullBleed={mapView}
         onRefresh={async () => { setRefreshing(true); try { await fetchEvents(true); } finally { setRefreshing(false); } }}
         refreshing={refreshing}
-        listData={mapView ? undefined : loading ? [] : listEvents}
-        renderItem={mapView ? undefined : renderEventRow}
-        keyExtractor={mapView ? undefined : eventKeyExtractor}
+        listData={loading ? [] : listEvents}
+        renderItem={renderEventRow}
+        keyExtractor={eventKeyExtractor}
         listEmptyComponent={
-          mapView ? null : loading ? (
+          loading ? (
             <View style={styles.loader}>
               <Spinner size="large" />
             </View>
@@ -509,35 +467,13 @@ export default function EventsScreen() {
             </View>
           )
         }
-        stickyTop={<ScreenHeaderCard glass={mapView} style={mapView ? styles.mapHeaderCard : undefined}>
+        stickyTop={<ScreenHeaderCard>
           <NavbarTitle
             title={t.nav.events}
-            textColor={mapView ? MAP_GLASS_TEXT : undefined}
             rightElement={
               <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
                 <TouchableOpacity
-                  style={[
-                    styles.filterIconButton,
-                    mapView && styles.mapFilterIconButton,
-                    mapView && styles.mapFilterIconButtonActive,
-                  ]}
-                  onPress={() => setMapView((current) => !current)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name={mapView ? "list-outline" : "map-outline"}
-                    size={17}
-                    color={mapView ? MAP_GLASS_TEXT : colors.textMuted}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.filterIconButton,
-                    mapView && styles.mapFilterIconButton,
-                    (filter !== "all" || filterActive) &&
-                      (mapView ? styles.mapFilterIconButtonActive : styles.filterIconButtonActive),
-                  ]}
+                  style={[styles.filterIconButton, (filter !== "all" || filterActive) && styles.filterIconButtonActive]}
                   onPress={() => setShowFilterPanel((v) => !v)}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   activeOpacity={0.7}
@@ -545,21 +481,15 @@ export default function EventsScreen() {
                   <Ionicons
                     name="options-outline"
                     size={17}
-                    color={
-                      mapView
-                        ? MAP_GLASS_TEXT
-                        : (filter !== "all" || filterActive)
-                          ? colors.iconbBg
-                          : colors.textMuted
-                    }
+                    color={(filter !== "all" || filterActive) ? colors.iconbBg : colors.textMuted}
                   />
                 </TouchableOpacity>
                 <TouchableOpacity
                   hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                  style={[styles.addButton, mapView && styles.mapAddButton]}
+                  style={styles.addButton}
                   onPress={() => setModalVisible(true)}
                 >
-                  <Ionicons name="add" size={16} color={mapView ? MAP_GLASS_TEXT : colors.textOnIconBg} />
+                  <Ionicons name="add" size={16} color={colors.textOnIconBg} />
                 </TouchableOpacity>
               </View>
             }
@@ -674,17 +604,7 @@ export default function EventsScreen() {
             </View>
           )}
         </ScreenHeaderCard>}
-      >
-        {mapView ? (
-          <LazyCirclesMapView
-            circles={mapEvents}
-            onCirclePress={handleMapEventPress}
-            emptyMessage="No events with a location to show on the map."
-            geocodeFailedMessage="Could not place events on the map."
-            spreadOverlappingMarkers
-          />
-        ) : null}
-      </ScreenLayout>
+      />
 
       <CreateEventModal
         visible={modalVisible}
@@ -733,20 +653,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
   filterIconButtonActive: {
     borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.iconbBg,
     backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
-  },
-  mapHeaderCard: {
-    backgroundColor: "transparent",
-  },
-  mapFilterIconButton: {
-    borderColor: "rgba(255,255,255,0.55)",
-    backgroundColor: "rgba(255,255,255,0.28)",
-  },
-  mapFilterIconButtonActive: {
-    borderColor: "rgba(255,255,255,0.65)",
-    backgroundColor: "rgba(255,255,255,0.46)",
-  },
-  mapAddButton: {
-    backgroundColor: "rgba(255,255,255,0.28)",
   },
   filterPanel: {
     backgroundColor: colors.card,

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -123,6 +123,8 @@ export default function CirclesScreen() {
   const { setMapViewActive } = useCirclesMapView();
   const [modalVisible, setModalVisible] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [mapView, setMapView] = useState(false);
 
   useFocusEffect(
@@ -389,9 +391,24 @@ export default function CirclesScreen() {
 
   // Derived lists are memoized so toggling UI state (filter panel, modals)
   // doesn't re-filter/re-sort the whole array on every render.
+  const normalizedSearch = searchQuery.trim().toLocaleLowerCase();
+  const matchesSearch = useCallback(
+    (circle: CircleWithCount) => {
+      if (!normalizedSearch) return true;
+      return [
+        circle.name,
+        circle.description,
+        circle.category,
+        circle.location,
+        circle.organizer,
+      ].some((value) => (value ?? "").toLocaleLowerCase().includes(normalizedSearch));
+    },
+    [normalizedSearch]
+  );
+
   const dismissedCircles = React.useMemo(
-    () => circles.filter((c) => dismissedIds.has(c.id)),
-    [circles, dismissedIds]
+    () => circles.filter((circle) => dismissedIds.has(circle.id) && matchesSearch(circle)),
+    [circles, dismissedIds, matchesSearch]
   );
 
   const displayedCircles = React.useMemo(
@@ -399,6 +416,7 @@ export default function CirclesScreen() {
       circles
         .filter((circle) => {
           if (dismissedIds.has(circle.id)) return false;
+          if (!matchesSearch(circle)) return false;
           if (roleFilter === "owner" && memberStatusMap[circle.id] !== "owner") return false;
           if (roleFilter === "active" && memberStatusMap[circle.id] !== "active") return false;
           if (roleFilter === "invited" && memberStatusMap[circle.id] !== "invited") return false;
@@ -417,7 +435,7 @@ export default function CirclesScreen() {
           if (sortBy === "events") return (b.event_count ?? 0) - (a.event_count ?? 0);
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         }),
-    [circles, dismissedIds, roleFilter, categoryFilter, locationFilter, nearMe, nearMeCity, sortBy, memberStatusMap, activityMap, lastViewedMap]
+    [circles, dismissedIds, roleFilter, categoryFilter, locationFilter, nearMe, nearMeCity, sortBy, memberStatusMap, activityMap, lastViewedMap, matchesSearch]
   );
 
   const handleOpenCircle = useCallback((circle: CircleWithCount, fromDismissed: boolean) => {
@@ -518,6 +536,12 @@ export default function CirclesScreen() {
             <View style={styles.loader}>
               <Text style={{ fontSize: 14, fontFamily: "Lora_400Regular", color: colors.textMuted }}>{t.circles.noDismissed}</Text>
             </View>
+          ) : normalizedSearch ? (
+            <View style={styles.loader}>
+              <Text style={{ fontSize: 14, fontFamily: "Lora_400Regular", color: colors.textMuted }}>
+                {t.circles.noSearchResults}
+              </Text>
+            </View>
           ) : null
         }
         stickyTop={<ScreenHeaderCard glass={mapView} style={mapView ? styles.mapHeaderCard : undefined}>
@@ -526,6 +550,29 @@ export default function CirclesScreen() {
             textColor={mapView ? MAP_GLASS_TEXT : undefined}
             rightElement={
               <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                <TouchableOpacity
+                  style={[
+                    styles.filterIconButton,
+                    mapView && styles.mapFilterIconButton,
+                    (showSearch || normalizedSearch) &&
+                      (mapView ? styles.mapFilterIconButtonActive : styles.filterIconButtonActive),
+                  ]}
+                  onPress={() => setShowSearch((visible) => !visible)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="search-outline"
+                    size={17}
+                    color={
+                      mapView
+                        ? MAP_GLASS_TEXT
+                        : showSearch || normalizedSearch
+                          ? colors.textOnIconBg
+                          : colors.textMuted
+                    }
+                  />
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={[
                     styles.filterIconButton,
@@ -578,6 +625,39 @@ export default function CirclesScreen() {
             }
           />
           {/* <TextBlock subtitle={t.circles.subtitle} /> */}
+
+          {showSearch && (
+            <View style={[styles.searchBar, mapView && styles.mapSearchBar]}>
+              <Ionicons
+                name="search-outline"
+                size={17}
+                color={mapView ? MAP_GLASS_TEXT : colors.textMuted}
+              />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder={t.circles.searchPlaceholder}
+                placeholderTextColor={mapView ? "rgba(44,42,38,0.55)" : colors.textMuted}
+                style={[styles.searchInput, { color: mapView ? MAP_GLASS_TEXT : colors.text }]}
+                autoFocus
+                autoCorrect={false}
+                returnKeyType="search"
+                clearButtonMode="never"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setSearchQuery("")}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons
+                    name="close-circle"
+                    size={18}
+                    color={mapView ? "rgba(44,42,38,0.6)" : colors.textMuted}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
           {showFilterPanel && (
             <View style={[styles.filterPanel, mapView && styles.mapFilterPanel]}>
@@ -750,6 +830,29 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
   },
   mapAddButton: {
     backgroundColor: "rgba(255,255,255,0.28)",
+  },
+  searchBar: {
+    minHeight: 42,
+    marginBottom: 14,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  mapSearchBar: {
+    backgroundColor: "rgba(255,255,255,0.72)",
+    borderColor: "rgba(255,255,255,0.65)",
+  },
+  searchInput: {
+    flex: 1,
+    minHeight: 42,
+    paddingVertical: 8,
+    fontSize: 14,
+    fontFamily: "Lora_400Regular",
   },
   filterPanel: {
     backgroundColor: colors.card,
