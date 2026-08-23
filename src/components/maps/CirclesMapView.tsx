@@ -20,6 +20,9 @@ type Coords = { latitude: number; longitude: number };
 type Props = {
   circles: MapCircle[];
   onCirclePress: (circle: MapCircle) => void;
+  emptyMessage?: string;
+  geocodeFailedMessage?: string;
+  spreadOverlappingMarkers?: boolean;
 };
 
 const DEFAULT_REGION: Region = {
@@ -47,7 +50,13 @@ async function geocodeAddress(address: string): Promise<Coords | null> {
   }
 }
 
-export function CirclesMapView({ circles, onCirclePress }: Props) {
+export function CirclesMapView({
+  circles,
+  onCirclePress,
+  emptyMessage,
+  geocodeFailedMessage,
+  spreadOverlappingMarkers = false,
+}: Props) {
   const { t } = useLanguage();
   const colors = useColors();
   const mapRef = useRef<MapView>(null);
@@ -72,10 +81,26 @@ export function CirclesMapView({ circles, onCirclePress }: Props) {
       for (const address of uniqueLocations) {
         const coords = await geocodeAddress(address);
         if (cancelled || !coords) continue;
-        for (const circle of locatedCircles) {
-          if ((circle.location ?? "").trim() === address) {
+        const matches = locatedCircles.filter(
+          (circle) => (circle.location ?? "").trim() === address
+        );
+        for (const [index, circle] of matches.entries()) {
+          if (!spreadOverlappingMarkers || matches.length === 1) {
             next[circle.id] = coords;
+            continue;
           }
+
+          // Events frequently share a venue. Place their markers in a small
+          // ring so every event remains visible and tappable.
+          const angle = (index / matches.length) * Math.PI * 2;
+          const radius = 0.008 + Math.floor(index / 8) * 0.004;
+          next[circle.id] = {
+            latitude: coords.latitude + Math.sin(angle) * radius,
+            longitude:
+              coords.longitude +
+              (Math.cos(angle) * radius) /
+                Math.max(0.3, Math.cos((coords.latitude * Math.PI) / 180)),
+          };
         }
       }
 
@@ -89,7 +114,7 @@ export function CirclesMapView({ circles, onCirclePress }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [locatedCircles]);
+  }, [locatedCircles, spreadOverlappingMarkers]);
 
   useEffect(() => {
     const points = Object.values(coordsById);
@@ -97,7 +122,7 @@ export function CirclesMapView({ circles, onCirclePress }: Props) {
     const id = setTimeout(() => {
       mapRef.current?.fitToCoordinates(points, {
         edgePadding: { top: 120, right: 32, bottom: 120, left: 32 },
-        animated: true,
+        animated: Platform.OS !== "ios",
       });
     }, 300);
     return () => clearTimeout(id);
@@ -151,7 +176,7 @@ export function CirclesMapView({ circles, onCirclePress }: Props) {
       {!loading && locatedCircles.length === 0 && (
         <View style={styles.emptyOverlay}>
           <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-            {t.circles.mapNoLocations}
+            {emptyMessage ?? t.circles.mapNoLocations}
           </Text>
         </View>
       )}
@@ -159,7 +184,7 @@ export function CirclesMapView({ circles, onCirclePress }: Props) {
       {!loading && locatedCircles.length > 0 && Object.keys(coordsById).length === 0 && (
         <View style={styles.emptyOverlay}>
           <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-            {t.circles.mapGeocodeFailed}
+            {geocodeFailedMessage ?? t.circles.mapGeocodeFailed}
           </Text>
         </View>
       )}

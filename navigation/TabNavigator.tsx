@@ -68,7 +68,6 @@ const renderGlassBackground = () => <GlassBackground />;
 
 function TabNavigatorInner() {
   const insets = useSafeAreaInsets();
-  const { mapViewActive } = useCirclesMapView();
   const tabBarBottom = insets.bottom > 0 ? insets.bottom - 8 : 16;
 
   const tabBarStyle = useMemo(
@@ -97,9 +96,6 @@ function TabNavigatorInner() {
         headerShown: false,
         tabBarStyle,
         tabBarBackground: renderGlassBackground,
-        sceneContainerStyle: mapViewActive
-          ? { backgroundColor: "transparent" }
-          : undefined,
       }}
     >
       <Tab.Screen

@@ -10,6 +10,9 @@ const CirclesMapViewInner = React.lazy(() =>
 type Props = {
   circles: MapCircle[];
   onCirclePress: (circle: MapCircle) => void;
+  emptyMessage?: string;
+  geocodeFailedMessage?: string;
+  spreadOverlappingMarkers?: boolean;
 };
 
 export function LazyCirclesMapView(props: Props) {
