@@ -26,9 +26,11 @@ import { useLanguage } from "../src/i18n/LanguageContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
 import { supabase, getAuthClient, Circle, CircleMember, CircleNote, Event, UserProfile } from "../lib/supabase";
-import { belongsToPlace, isKeptCircle, placeLocationKey } from "../lib/allowedPlaces";
+import { belongsToPlace, isKeptCircle, isKeptEvent, placeLocationKey } from "../lib/allowedPlaces";
 import { CircleCard } from "../src/components/cards/CircleCard";
 import { CreateCircleModal, NewCircleData } from "../src/components/modals/CreateCircleModal";
+import { LazyEventsMapView } from "../src/components/maps/LazyEventsMapView";
+import type { MapEvent } from "../src/components/maps/EventsMapView";
 import { buildEventShareMessage, shareMessage } from "../lib/shareLinks";
 import { isPastEvent } from "../lib/events";
 import {
@@ -204,6 +206,9 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [createEventVisible, setCreateEventVisible] = useState(false);
   const [createCircleVisible, setCreateCircleVisible] = useState(false);
   const [placeInfoVisible, setPlaceInfoVisible] = useState(false);
+  const [placeMapVisible, setPlaceMapVisible] = useState(false);
+  const [mapEvents, setMapEvents] = useState<Event[]>([]);
+  const [loadingMapEvents, setLoadingMapEvents] = useState(false);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [didAutoSelectInitialTab, setDidAutoSelectInitialTab] = useState(false);
 
@@ -430,6 +435,56 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
     setCreateCircleVisible(false);
     await fetchPlaceCircles();
+  }
+
+  const fetchMapEvents = useCallback(async () => {
+    setLoadingMapEvents(true);
+    const circleIds = isCircleView
+      ? [id]
+      : [id, ...placeCircles.map((circle) => circle.id)];
+    const { data, error } = await supabase
+      .from("events")
+      .select("*")
+      .in("circle_id", circleIds)
+      .order("created_at", { ascending: false });
+    const rows = !error && data ? (data as Event[]) : [];
+    setMapEvents(
+      rows.filter((event) => !isPastEvent(event) && isKeptEvent(event))
+    );
+    setLoadingMapEvents(false);
+  }, [id, isCircleView, placeCircles]);
+
+  function handleTogglePlaceMap() {
+    const next = !placeMapVisible;
+    setPlaceMapVisible(next);
+    if (next) {
+      setActiveTab("events");
+      void fetchMapEvents();
+    }
+  }
+
+  function handleMapEventPress(event: MapEvent) {
+    const full = mapEvents.find((row) => row.id === event.id);
+    if (!full) return;
+    nav.navigate("EventDetail", {
+      id: full.id,
+      title: full.title,
+      organizer: full.organizer,
+      date: full.date_label,
+      time: full.time_label,
+      location: full.location,
+      going: full.going,
+      maybe: full.maybe,
+      description: full.description,
+      image_url: full.image_url ?? null,
+      max_participants: full.max_participants ?? null,
+      contact_info: full.contact_info ?? null,
+      price_info: full.price_info ?? null,
+      event_url: full.event_url ?? null,
+      created_by: full.created_by,
+      circleName: name,
+      circle_id: full.circle_id ?? id,
+    });
   }
 
   async function handleSaveEvent(data: NewEventData) {
@@ -818,14 +873,30 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       <View style={[styles.headerCard, styles.headerCardOuter]}>
         <View style={styles.titleRow}>
           <Text style={styles.title}>{name}</Text>
-          <TouchableOpacity
-            style={styles.titleCircleButton}
-            onPress={() => setPlaceInfoVisible(true)}
-            activeOpacity={0.8}
-            accessibilityLabel={t.circles.about}
-          >
-            <Text style={styles.titleCircleButtonText}>i</Text>
-          </TouchableOpacity>
+          <View style={styles.titleActions}>
+            {activeTab === "events" ? (
+              <TouchableOpacity
+                style={[styles.titleCircleButton, placeMapVisible && styles.titleCircleButtonActive]}
+                onPress={handleTogglePlaceMap}
+                activeOpacity={0.8}
+                accessibilityLabel={t.events.filterAll}
+              >
+                <Ionicons
+                  name={placeMapVisible ? "list-outline" : "map-outline"}
+                  size={14}
+                  color="#35412A"
+                />
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity
+              style={styles.titleCircleButton}
+              onPress={() => setPlaceInfoVisible(true)}
+              activeOpacity={0.8}
+              accessibilityLabel={t.circles.about}
+            >
+              <Text style={styles.titleCircleButtonText}>i</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Tabs */}
@@ -834,26 +905,38 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
             {!isCircleView ? (
               <TouchableOpacity
                 style={[styles.tab, activeTab === "circles" && styles.tabActive]}
-                onPress={() => setActiveTab("circles")}
+                onPress={() => {
+                  setPlaceMapVisible(false);
+                  setActiveTab("circles");
+                }}
               >
                 <Text style={[styles.tabText, activeTab === "circles" && styles.tabTextActive]}>{t.circles.circlesTab}</Text>
               </TouchableOpacity>
             ) : null}
             <TouchableOpacity
               style={[styles.tab, activeTab === "events" && styles.tabActive]}
-              onPress={() => setActiveTab("events")}
+              onPress={() => {
+                setPlaceMapVisible(false);
+                setActiveTab("events");
+              }}
             >
               <Text style={[styles.tabText, activeTab === "events" && styles.tabTextActive]}>{t.circles.eventsTab}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.tab, activeTab === "feed" && styles.tabActive]}
-              onPress={() => setActiveTab("feed")}
+              onPress={() => {
+                setPlaceMapVisible(false);
+                setActiveTab("feed");
+              }}
             >
               <Text style={[styles.tabText, activeTab === "feed" && styles.tabTextActive]}>{t.circles.feed}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.tab, activeTab === "members" && styles.tabActive]}
-              onPress={() => setActiveTab("members")}
+              onPress={() => {
+                setPlaceMapVisible(false);
+                setActiveTab("members");
+              }}
             >
               <View style={styles.tabWithBadge}>
                 <Text style={[styles.tabText, activeTab === "members" && styles.tabTextActive]}>{t.circles.members}</Text>
@@ -868,8 +951,27 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         </View>
       </View>
 
+      {placeMapVisible ? (
+        <View style={styles.placeMapContainer}>
+          {loadingMapEvents ? (
+            <View style={styles.loader}>
+              <Spinner size="small" />
+            </View>
+          ) : (
+            <LazyEventsMapView
+              events={mapEvents.map((event) => ({
+                id: event.id,
+                title: event.title,
+                location: event.location,
+              }))}
+              onEventPress={handleMapEventPress}
+            />
+          )}
+        </View>
+      ) : null}
+
       {/* Feed tab: sticky compose + scrollable notes */}
-      {activeTab === "feed" && (
+      {!placeMapVisible && activeTab === "feed" && (
         <View style={styles.feedContainer}>
           {loadingFeed && notes.length === 0 ? (
             <View style={styles.loader}>
@@ -990,7 +1092,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       )}
 
       {/* Other tabs: scrollable content */}
-      {activeTab !== "feed" && (
+      {!placeMapVisible && activeTab !== "feed" && (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           {activeTab === "circles" && (
             <>
@@ -1198,7 +1300,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
       {/* Fixed footer: join/leave or invite */}
       <View style={[styles.footer, { paddingBottom: footerBottomInset }]}>
-        {!isCircleView && activeTab === "circles" && user ? (
+        {!placeMapVisible && !isCircleView && activeTab === "circles" && user ? (
           <TouchableOpacity
             style={[styles.actionButton, styles.joinButton]}
             onPress={() => setCreateCircleVisible(true)}
@@ -1398,6 +1500,20 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     justifyContent: "space-between",
     gap: spacing.md,
     marginBottom: spacing.sm,
+  },
+  titleActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  titleCircleButtonActive: {
+    backgroundColor: "#E4DDD0",
+  },
+  placeMapContainer: {
+    flex: 1,
+    marginHorizontal: spacing.pageHorizontal,
+    marginBottom: spacing.md,
+    minHeight: 280,
   },
   title: {
     flex: 1,
