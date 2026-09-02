@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -26,7 +26,7 @@ import { useCirclesMapView } from "../src/contexts/CirclesMapViewContext";
 import { fetchHiddenAuthorIds, fetchReportedHiddenContentIds } from "../lib/contentReports";
 import { fetchCircleLatestActivity } from "../lib/activityStats";
 import { supabase, getAuthClient, Circle } from "../lib/supabase";
-import { isKeptCircle } from "../lib/allowedPlaces";
+import { belongsToPlace, isKeptCircle, isPlaceLevelCircle } from "../lib/allowedPlaces";
 import { isPastEvent } from "../lib/events";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -77,6 +77,7 @@ type CircleRowProps = {
   memberStatus: "owner" | "active" | "requested" | "invited" | null;
   pendingRequests: number;
   hasNewActivity: boolean;
+  circleCount: number;
   onOpen: (circle: CircleWithCount, fromDismissed: boolean) => void;
   onDismiss: (circle: CircleWithCount) => void;
   onRestore: (circle: CircleWithCount) => void;
@@ -90,6 +91,7 @@ const CircleRow = React.memo(function CircleRow({
   memberStatus,
   pendingRequests,
   hasNewActivity,
+  circleCount,
   onOpen,
   onDismiss,
   onRestore,
@@ -101,6 +103,7 @@ const CircleRow = React.memo(function CircleRow({
       category={circle.category}
       visibility={circle.visibility}
       memberCount={circle.member_count}
+      circleCount={circleCount}
       eventCount={circle.event_count ?? 0}
       memberStatus={memberStatus}
       location={circle.location}
@@ -439,6 +442,7 @@ export default function CirclesScreen() {
       circles
         .filter((circle) => {
           if (dismissedIds.has(circle.id)) return false;
+          if (!isPlaceLevelCircle(circle, circles)) return false;
           if (!matchesSearch(circle)) return false;
           if (roleFilter === "owner" && memberStatusMap[circle.id] !== "owner") return false;
           if (roleFilter === "active" && memberStatusMap[circle.id] !== "active") return false;
@@ -474,6 +478,7 @@ export default function CirclesScreen() {
       owner_id: circle.owner_id,
       member_count: circle.member_count,
       organizer: circle.organizer,
+      location: circle.location,
     });
   }, [navigation]);
 
@@ -497,6 +502,13 @@ export default function CirclesScreen() {
   }, [user?.id]);
 
   const showLoader = loading && circles.length === 0;
+  const circleCountByPlaceId = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const place of circles) {
+      counts[place.id] = circles.filter((c) => belongsToPlace(c, place)).length;
+    }
+    return counts;
+  }, [circles]);
   const listCircles = React.useMemo(
     () => (showLoader ? [] : showDismissed ? dismissedCircles : displayedCircles),
     [showLoader, showDismissed, dismissedCircles, displayedCircles]
@@ -520,12 +532,13 @@ export default function CirclesScreen() {
         hasNewActivity={
           !showDismissed && !!lastViewedMap[item.id] && (activityMap[item.id] ?? 0) > lastViewedMap[item.id]
         }
+        circleCount={circleCountByPlaceId[item.id] ?? 0}
         onOpen={handleOpenCircle}
         onDismiss={handleDismissCircle}
         onRestore={handleRestoreCircle}
       />
     ),
-    [showDismissed, memberStatusMap, pendingRequestsMap, lastViewedMap, activityMap, handleOpenCircle, handleDismissCircle, handleRestoreCircle]
+    [showDismissed, memberStatusMap, pendingRequestsMap, lastViewedMap, activityMap, circleCountByPlaceId, handleOpenCircle, handleDismissCircle, handleRestoreCircle]
   );
 
   return (

@@ -318,13 +318,23 @@ async function handleAccept(notif: AppNotification) {
             </Text>
           )}
         </View>
-        <TouchableOpacity
-          onPress={() => handleSignOut(signOut)}
-          style={styles.iconButton}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Ionicons name="log-out-outline" size={16} color={colors.textOnIconBg} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={cycleTheme}
+            style={styles.iconButton}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityLabel="Cycle theme"
+          >
+            <Ionicons name="color-palette-outline" size={16} color={colors.textOnIconBg} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleSignOut(signOut)}
+            style={styles.iconButton}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons name="log-out-outline" size={16} color={colors.textOnIconBg} />
+          </TouchableOpacity>
+        </View>
       </View>
     </ScreenHeaderCard>
   );
@@ -1015,6 +1025,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     paletteAnchor: {
       position: "relative",
       alignItems: "center",
+    },
+    headerActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
     },
     iconButton: {
       width: 30,

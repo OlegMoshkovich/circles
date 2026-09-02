@@ -4,6 +4,7 @@ import {
   Alert,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -15,7 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { useUser } from "@clerk/clerk-expo";
+import { useAuth, useUser } from "@clerk/clerk-expo";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../types";
@@ -24,7 +25,10 @@ import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { useLanguage } from "../src/i18n/LanguageContext";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
-import { supabase, CircleMember, CircleNote, Event, UserProfile } from "../lib/supabase";
+import { supabase, getAuthClient, Circle, CircleMember, CircleNote, Event, UserProfile } from "../lib/supabase";
+import { belongsToPlace, isKeptCircle, placeLocationKey } from "../lib/allowedPlaces";
+import { CircleCard } from "../src/components/cards/CircleCard";
+import { CreateCircleModal, NewCircleData } from "../src/components/modals/CreateCircleModal";
 import { buildEventShareMessage, shareMessage } from "../lib/shareLinks";
 import { isPastEvent } from "../lib/events";
 import {
@@ -49,7 +53,21 @@ import { Spinner } from "../src/components/loaders/Spinner";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CircleDetail">;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-type Tab = "events" | "feed" | "members" | "description";
+type Tab = "circles" | "events" | "feed" | "members";
+type PlaceCircle = Circle & { member_count: number; event_count: number };
+
+function defaultCircleForPlace(placeName: string): Partial<NewCircleData> {
+  const key = placeLocationKey(placeName);
+  if (key === "zurich" || key === "zuerich") {
+    return {
+      name: "Kreis 5",
+      description: "Neighborhood circle for Zürich Kreis 5.",
+      category: "Neighborhood",
+      location: "Zurich, Kreis 5, Switzerland",
+    };
+  }
+  return { location: placeName };
+}
 type FeedItem =
   | { kind: "event"; data: Event }
   | { kind: "note"; data: CircleNote };
@@ -61,6 +79,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const insets = useSafeAreaInsets();
   const footerBottomInset = insets.bottom > 0 ? 0 : 24;
   const { user } = useUser();
+  const { getToken } = useAuth();
   const nav = useNavigation<Nav>();
   const { report } = useReport();
 
@@ -84,19 +103,16 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     };
   }, [owner_id, isOwner, navigation]);
 
-  const visibilityLabel: Record<string, string> = {
-    public: t.circles.public,
-    request: t.circles.visibilityRequestToJoin,
-    private: t.circles.private,
-  };
-
   // Mutable display fields (can be updated via edit modal)
   const [name, setName] = useState(route.params.name);
   const [description, setDescription] = useState(route.params.description ?? "");
   const [visibility, setVisibility] = useState(route.params.visibility);
   const [organizer] = useState(route.params.organizer ?? null);
+  const [location, setLocation] = useState(route.params.location ?? null);
 
-  const [activeTab, setActiveTab] = useState<Tab>("events");
+  const [activeTab, setActiveTab] = useState<Tab>("circles");
+  const [placeCircles, setPlaceCircles] = useState<PlaceCircle[]>([]);
+  const [loadingPlaceCircles, setLoadingPlaceCircles] = useState(false);
   const [memberCount, setMemberCount] = useState(route.params.member_count);
   const [membership, setMembership] = useState<CircleMember | null>(null);
   const [members, setMembers] = useState<CircleMember[]>([]);
@@ -127,6 +143,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         setName(data.name);
         setDescription(data.description ?? "");
         setVisibility(data.visibility);
+        setLocation((data as { location?: string | null }).location ?? null);
         if (typeof (data as { member_count?: number }).member_count === "number") {
           setMemberCount((data as { member_count?: number }).member_count as number);
         }
@@ -135,6 +152,39 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       cancelled = true;
     };
   }, [id, route.params.name]);
+
+  const fetchPlaceCircles = useCallback(async () => {
+    if (!name) return;
+    setLoadingPlaceCircles(true);
+    const { data, error } = await supabase
+      .from("circles")
+      .select("*, circle_members(count), events(count)")
+      .order("created_at", { ascending: false });
+    if (error || !data) {
+      setPlaceCircles([]);
+      setLoadingPlaceCircles(false);
+      return;
+    }
+    const mapped = (data as any[]).map((row) => ({
+      ...row,
+      member_count: row.circle_members?.[0]?.count ?? 0,
+      event_count: row.events?.[0]?.count ?? 0,
+    })) as PlaceCircle[];
+    setPlaceCircles(
+      mapped.filter(
+        (circle) =>
+          belongsToPlace(circle, { id, name }) &&
+          isKeptCircle(circle) &&
+          (circle.visibility !== "private" || circle.owner_id === user?.id)
+      )
+    );
+    setLoadingPlaceCircles(false);
+  }, [id, name, user?.id]);
+
+  useEffect(() => {
+    void fetchPlaceCircles();
+  }, [fetchPlaceCircles]);
+
   const [loadingFeed, setLoadingFeed] = useState(false);
   const hasLoadedFeedRef = useRef(false);
   const [loadingMembers, setLoadingMembers] = useState(false);
@@ -144,6 +194,8 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [circleInviteVisible, setCircleInviteVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [createEventVisible, setCreateEventVisible] = useState(false);
+  const [createCircleVisible, setCreateCircleVisible] = useState(false);
+  const [placeInfoVisible, setPlaceInfoVisible] = useState(false);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [didAutoSelectInitialTab, setDidAutoSelectInitialTab] = useState(false);
 
@@ -305,13 +357,6 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         setNotes(noteRows);
       }
       if (!didAutoSelectInitialTab) {
-        const nextTab: Tab =
-          eventRows.length > 0
-            ? "events"
-            : noteRows.length > 0
-              ? "feed"
-              : "description";
-        setActiveTab(nextTab);
         setDidAutoSelectInitialTab(true);
       }
       hasLoadedFeedRef.current = true;
@@ -338,6 +383,46 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       loadFeed();
     }, [activeTab, loadFeed])
   );
+
+  async function handleCreateCircle(data: NewCircleData) {
+    if (!user) throw new Error("Not signed in.");
+    const token = await getToken({ template: "supabase" });
+    if (!token) throw new Error("Could not authenticate. Please sign in again.");
+    const client = getAuthClient(token);
+
+    const { data: inserted, error } = await client
+      .from("circles")
+      .insert({
+        name: data.name,
+        description: data.description || null,
+        category: data.category || null,
+        visibility: data.visibility,
+        location: data.location || null,
+        organizer: data.organizer || null,
+        owner_id: user.id,
+      })
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    const memberPayload = {
+      circle_id: inserted.id,
+      user_id: user.id,
+      role: "owner" as const,
+      status: "active" as const,
+    };
+    const { error: memberError } = await client.from("circle_members").insert({
+      ...memberPayload,
+      display_name: user.fullName ?? user.firstName ?? user.username ?? null,
+    });
+    if (memberError) {
+      await client.from("circle_members").insert(memberPayload);
+    }
+
+    setCreateCircleVisible(false);
+    await fetchPlaceCircles();
+  }
 
   async function handleSaveEvent(data: NewEventData) {
     const { data: createdEvent, error } = await supabase.from("events").insert({
@@ -671,7 +756,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
           <Ionicons name="chevron-back" size={18} color={colors.text} />
-          <Text style={styles.backLabel}>{t.common.back}</Text>
+          <Text style={styles.backLabel}>{route.params.backLabel ?? t.nav.circles}</Text>
         </TouchableOpacity>
         {(isOwner || isMember || (user && !isOwner)) ? (
           <View style={styles.headerActions}>
@@ -723,11 +808,27 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
       {/* Header card - fixed, not scrollable */}
       <View style={[styles.headerCard, styles.headerCardOuter]}>
-        <Text style={styles.title}>{name}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>{name}</Text>
+          <TouchableOpacity
+            style={styles.titleCircleButton}
+            onPress={() => setPlaceInfoVisible(true)}
+            activeOpacity={0.8}
+            accessibilityLabel={t.circles.about}
+          >
+            <Text style={styles.titleCircleButtonText}>i</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Tabs */}
         <View style={styles.tabRow}>
           <View style={styles.tabList}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === "circles" && styles.tabActive]}
+              onPress={() => setActiveTab("circles")}
+            >
+              <Text style={[styles.tabText, activeTab === "circles" && styles.tabTextActive]}>{t.circles.circlesTab}</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={[styles.tab, activeTab === "events" && styles.tabActive]}
               onPress={() => setActiveTab("events")}
@@ -744,14 +845,8 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
               style={[styles.tab, activeTab === "members" && styles.tabActive]}
               onPress={() => setActiveTab("members")}
             >
-              <Text style={[styles.tabText, activeTab === "members" && styles.tabTextActive]}>{t.circles.members}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === "description" && styles.tabActive]}
-              onPress={() => setActiveTab("description")}
-            >
               <View style={styles.tabWithBadge}>
-                <Text style={[styles.tabText, activeTab === "description" && styles.tabTextActive]}>{t.circles.descriptionTab}</Text>
+                <Text style={[styles.tabText, activeTab === "members" && styles.tabTextActive]}>{t.circles.members}</Text>
                 {isOwner && requestCount > 0 && (
                   <View style={styles.tabBadge}>
                     <Text style={styles.tabBadgeText}>{requestCount}</Text>
@@ -887,6 +982,62 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       {/* Other tabs: scrollable content */}
       {activeTab !== "feed" && (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          {activeTab === "circles" && (
+            <>
+              {loadingPlaceCircles && placeCircles.length === 0 ? (
+                <View style={styles.loader}>
+                  <Spinner size="small" />
+                </View>
+              ) : (
+                <View style={styles.tabContentCard}>
+                  {placeCircles.length === 0 ? (
+                    <View>
+                      <Text style={styles.emptyText}>{t.circles.noPlaceCircles}</Text>
+                      {user ? (
+                        <TouchableOpacity
+                          style={styles.createCircleEmptyButton}
+                          onPress={() => setCreateCircleVisible(true)}
+                          activeOpacity={0.8}
+                        >
+                          <Ionicons name="add" size={16} color="#35412A" />
+                          <Text style={styles.createCircleEmptyButtonText}>{t.circles.createAction}</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  ) : (
+                    placeCircles.map((circle) => (
+                      <CircleCard
+                        key={circle.id}
+                        name={circle.name}
+                        description={circle.description}
+                        category={circle.category}
+                        visibility={circle.visibility}
+                        memberCount={circle.member_count}
+                        eventCount={circle.event_count}
+                        memberStatus={circle.owner_id === user?.id ? "owner" : null}
+                        location={circle.location}
+                        organizer={circle.organizer}
+                        onPress={() =>
+                          nav.navigate("CircleDetail", {
+                            id: circle.id,
+                            name: circle.name,
+                            description: circle.description,
+                            visibility: circle.visibility,
+                            owner_id: circle.owner_id,
+                            member_count: circle.member_count,
+                            organizer: circle.organizer,
+                            location: circle.location,
+                            backLabel: name,
+                          })
+                        }
+                      />
+                    ))
+                  )}
+                </View>
+              )}
+            </>
+          )}
+
           {/* Circle Events tab */}
           {activeTab === "events" && (
             <>
@@ -959,11 +1110,11 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
           {/* Members tab */}
           {activeTab === "members" && (
-            loadingMembers ? (
+            loadingMembers || (isOwner && loadingRequests) ? (
               <View style={styles.loader}>
                 <Spinner size="small" />
               </View>
-            ) : members.length === 0 && invitedUsers.length === 0 ? (
+            ) : members.length === 0 && invitedUsers.length === 0 && !(isOwner && requests.length > 0) ? (
               <Text style={styles.emptyText}>{t.circles.noMembers}</Text>
             ) : (
               <View style={styles.membersPanel}>
@@ -994,45 +1145,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                     </View>
                   );
                 })}
-              </View>
-            )
-          )}
-
-          {/* Description tab */}
-          {activeTab === "description" && (
-            loadingRequests ? (
-              <View style={styles.loader}>
-                <Spinner size="small" />
-              </View>
-            ) : (
-              <View style={styles.descriptionPanel}>
-                <Text style={styles.sectionTitle}>{t.circles.about}</Text>
-                <Text style={styles.descriptionBody}>
-                  {description?.trim() ? description : t.circles.noDescription}
-                </Text>
-
-                <View style={styles.descriptionMetaList}>
-                  <View style={styles.descriptionMetaRow}>
-                    <Text style={styles.descriptionMetaLabel}>{t.circles.visibility}</Text>
-                    <Text style={styles.descriptionMetaValue}>{visibilityLabel[visibility]}</Text>
-                  </View>
-                  {organizer ? (
-                    <TouchableOpacity
-                      style={styles.descriptionMetaRow}
-                      onPress={() => setProfileModalVisible(true)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.descriptionMetaLabel}>{t.circles.organizer}</Text>
-                      <Text style={[styles.descriptionMetaValue, styles.descriptionMetaLink]}>{organizer}</Text>
-                    </TouchableOpacity>
-                  ) : null}
-                  <View style={styles.descriptionMetaRow}>
-                    <Text style={styles.descriptionMetaLabel}>{t.circles.members}</Text>
-                    <Text style={styles.descriptionMetaValue}>{memberCount}</Text>
-                  </View>
-                </View>
-
-                {isOwner && (
+                {isOwner ? (
                   <>
                     <View style={[styles.ownerSectionHeader, styles.ownerSectionHeaderAfterMeta]}>
                       <Text style={styles.sectionTitle}>{t.circles.pendingRequestsLabel}</Text>
@@ -1046,20 +1159,20 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                       <Text style={styles.emptyText}>{t.circles.noPendingRequests}</Text>
                     ) : (
                       requests.map((req) => {
-                        const name =
+                        const requestName =
                           (req.user_id === user?.id && (user?.fullName ?? user?.firstName))
                             ? (user.fullName ?? user.firstName ?? req.user_id)
                             : (profileMap[req.user_id] ?? req.display_name ?? req.user_id);
-                        const parts = name.trim().split(" ");
+                        const parts = requestName.trim().split(" ");
                         const initials = parts.length >= 2
                           ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-                          : name.slice(0, 2).toUpperCase();
+                          : requestName.slice(0, 2).toUpperCase();
                         return (
                           <View key={req.id} style={styles.requestRow}>
                             <View style={styles.avatar}>
                               <Text style={styles.avatarText}>{initials}</Text>
                             </View>
-                            <Text style={styles.memberUserId} numberOfLines={1}>{name}</Text>
+                            <Text style={styles.memberUserId} numberOfLines={1}>{requestName}</Text>
                             <TouchableOpacity
                               style={styles.acceptButton}
                               onPress={() => handleAccept(req)}
@@ -1077,7 +1190,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                       })
                     )}
                   </>
-                )}
+                ) : null}
               </View>
             )
           )}
@@ -1086,7 +1199,15 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
       {/* Fixed footer: join/leave or invite */}
       <View style={[styles.footer, { paddingBottom: footerBottomInset }]}>
-        {isOwner ? (
+        {activeTab === "circles" && user ? (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.joinButton]}
+            onPress={() => setCreateCircleVisible(true)}
+          >
+            <Ionicons name="add" size={18} color="#35412A" />
+            <Text style={styles.joinButtonText}>{t.circles.createAction}</Text>
+          </TouchableOpacity>
+        ) : isOwner ? (
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => setCircleInviteVisible(true)}
@@ -1111,6 +1232,45 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         userId={owner_id}
         displayName={organizer ?? name}
         onBlocked={() => navigation.goBack()}
+      />
+
+      <Modal
+        visible={placeInfoVisible}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setPlaceInfoVisible(false)}
+      >
+        <View style={styles.placeInfoOverlay}>
+          <TouchableOpacity
+            style={StyleSheet.absoluteFill}
+            activeOpacity={1}
+            onPress={() => setPlaceInfoVisible(false)}
+          />
+          <View style={styles.placeInfoCard}>
+            <View style={styles.placeInfoHeader}>
+              <Text style={styles.placeInfoTitle}>{name}</Text>
+              <TouchableOpacity
+                onPress={() => setPlaceInfoVisible(false)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Ionicons name="close" size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.placeInfoBody}>
+              {description?.trim() ? description : t.circles.noDescription}
+            </Text>
+            {location ? (
+              <Text style={styles.placeInfoMeta}>{location}</Text>
+            ) : null}
+          </View>
+        </View>
+      </Modal>
+
+      <CreateCircleModal
+        visible={createCircleVisible}
+        onClose={() => setCreateCircleVisible(false)}
+        onSave={handleCreateCircle}
+        initialValues={defaultCircleForPlace(name)}
       />
 
       <CreateEventModal
@@ -1233,12 +1393,68 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     paddingTop: spacing.sm,
     paddingBottom: spacing.xl,
   },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    marginBottom: spacing.sm,
+  },
   title: {
+    flex: 1,
     fontSize: 32,
     fontFamily: "CormorantGaramond_300Light",
     color: colors.text,
     lineHeight: 38,
+  },
+  titleCircleButton: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#F5EFE3",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  titleCircleButtonText: {
+    fontSize: 14,
+    fontFamily: "Lora_400Regular",
+    fontStyle: "italic",
+    color: "#35412A",
+    lineHeight: 16,
+  },
+  placeInfoOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "center",
+    paddingHorizontal: spacing.pageHorizontal,
+  },
+  placeInfoCard: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: spacing.cardPadding,
+  },
+  placeInfoHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: spacing.sm,
+  },
+  placeInfoTitle: {
+    flex: 1,
+    fontSize: 24,
+    fontFamily: "CormorantGaramond_300Light",
+    color: colors.text,
+    marginRight: spacing.sm,
+  },
+  placeInfoBody: {
+    ...typography.body,
+    color: colors.textMuted,
+    lineHeight: 22,
+  },
+  placeInfoMeta: {
+    ...typography.bodySmall,
+    color: colors.textMuted,
+    marginTop: spacing.md,
   },
   description: {
     ...typography.body,
@@ -1302,6 +1518,23 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     color: colors.textMuted,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.cardPadding,
+  },
+  createCircleEmptyButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    marginHorizontal: spacing.cardPadding,
+    marginBottom: spacing.md,
+    backgroundColor: "#F5EFE3",
+    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  createCircleEmptyButtonText: {
+    ...typography.bodySmall,
+    color: "#35412A",
+    fontWeight: "600" as const,
   },
   membersPanel: {
     backgroundColor: colors.card,

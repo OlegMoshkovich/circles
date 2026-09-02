@@ -35,6 +35,7 @@ type Props = {
   visible: boolean;
   onClose: () => void;
   onSave: (circle: NewCircleData) => Promise<void>;
+  initialValues?: Partial<NewCircleData>;
 };
 
 const VISIBILITY_OPTIONS: { value: "public" | "private"; label: string }[] = [
@@ -44,7 +45,7 @@ const VISIBILITY_OPTIONS: { value: "public" | "private"; label: string }[] = [
 
 const PRESET_CATEGORIES = ["Culture", "Friends", "Nature", "Sport", "Food", "Travel"];
 
-export function CreateCircleModal({ visible, onClose, onSave }: Props) {
+export function CreateCircleModal({ visible, onClose, onSave, initialValues }: Props) {
   const { user } = useUser();
   const { bgOption } = useBackground();
 
@@ -71,13 +72,15 @@ export function CreateCircleModal({ visible, onClose, onSave }: Props) {
 
   useEffect(() => {
     if (visible) {
-      setName("");
-      setOrganizer(defaultOrganizer());
-      setDescription("");
-      setCategoryPreset("");
-      setCustomCategoryText("");
-      setVisibility("public");
-      setLocation("");
+      setName(initialValues?.name ?? "");
+      setOrganizer(initialValues?.organizer || defaultOrganizer());
+      setDescription(initialValues?.description ?? "");
+      const preset = initialValues?.category ?? "";
+      const known = PRESET_CATEGORIES.includes(preset);
+      setCategoryPreset(preset ? (known ? preset : "custom") : "");
+      setCustomCategoryText(preset && !known ? preset : "");
+      setVisibility(initialValues?.visibility ?? "public");
+      setLocation(initialValues?.location ?? "");
       setShowMap(false);
       setError(null);
     }

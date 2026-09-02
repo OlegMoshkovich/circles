@@ -5,7 +5,7 @@ import CirclesScreen from "../screens/CirclesScreen";
 import MyProfileScreen from "../screens/MyProfileScreen";
 import { colors } from "../src/theme/colors";
 import { BlurView } from "expo-blur";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLanguage, Language } from "../src/i18n/LanguageContext";
 import { Translations } from "../src/i18n/translations";
@@ -62,20 +62,22 @@ function makeTabButton(getLabel: (t: Translations) => string, showBadge = false)
 }
 
 const CirclesTabButton = makeTabButton((t) => t.nav.circles);
-const EventsTabButton = makeTabButton((t) => t.nav.events);
 const ProfileTabButton = makeTabButton((t) => t.nav.profile, true);
 const renderGlassBackground = () => <GlassBackground />;
 
+const TAB_PILL_WIDTH = 216;
+
 function TabNavigatorInner() {
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const tabBarBottom = insets.bottom > 0 ? insets.bottom - 8 : 16;
 
   const tabBarStyle = useMemo(
     () => ({
       position: "absolute" as const,
       bottom: tabBarBottom,
-      left: 28,
-      right: 28,
+      left: (windowWidth - TAB_PILL_WIDTH) / 2,
+      width: TAB_PILL_WIDTH,
       borderRadius: 32,
       height: 56,
       backgroundColor: "transparent",
@@ -87,7 +89,7 @@ function TabNavigatorInner() {
       shadowOpacity: 0.08,
       shadowRadius: 20,
     }),
-    [tabBarBottom]
+    [tabBarBottom, windowWidth]
   );
 
   return (
@@ -109,7 +111,8 @@ function TabNavigatorInner() {
         name="Events"
         component={EventsScreen}
         options={{
-          tabBarButton: EventsTabButton,
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: "none" },
         }}
       />
       <Tab.Screen

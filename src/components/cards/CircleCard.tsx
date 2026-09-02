@@ -15,6 +15,7 @@ type CircleCardProps = {
   category: string | null;
   visibility: "public" | "private" | "request";
   memberCount: number;
+  circleCount?: number;
   eventCount?: number;
   memberStatus: MemberStatus;
   location?: string | null;
@@ -37,6 +38,7 @@ export function CircleCard({
   category,
   visibility,
   memberCount,
+  circleCount,
   eventCount = 0,
   memberStatus,
   location,
@@ -82,6 +84,14 @@ export function CircleCard({
 
       <View style={styles.footer}>
         <View style={styles.footerLeft}>
+          {circleCount != null ? (
+            <View style={styles.footerRow}>
+              <Ionicons name="ellipse-outline" size={14} color={colors.textMuted} style={styles.footerIcon} />
+              <Text style={styles.footerText}>
+                {circleCount} {circleCount === 1 ? t.circles.typeCircle.toLowerCase() : t.circles.circlesTab.toLowerCase()}
+              </Text>
+            </View>
+          ) : null}
           <View style={styles.footerRow}>
             <Ionicons name="calendar-outline" size={14} color={colors.textMuted} style={styles.footerIcon} />
             <Text style={styles.footerText}>

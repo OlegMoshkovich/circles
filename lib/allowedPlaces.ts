@@ -36,6 +36,31 @@ export function isKeptCircle(circle: {
   return matchesKeptPlace(circle.name) || matchesKeptPlace(circle.location);
 }
 
+/** First segment of a location ("Zurich, Switzerland" → "zurich"). */
+export function placeLocationKey(value: string | null | undefined): string {
+  return normalizePlaceText((value ?? "").split(",")[0] ?? "").trim();
+}
+
+/** Circles whose location city matches this place name, excluding the place itself. */
+export function belongsToPlace(
+  circle: { id?: string; location?: string | null },
+  place: { id?: string; name?: string | null }
+): boolean {
+  if (circle.id && place.id && circle.id === place.id) return false;
+  const key = placeLocationKey(place.name);
+  if (!key) return false;
+  const locKey = placeLocationKey(circle.location);
+  return locKey === key || locKey.startsWith(`${key} `);
+}
+
+/** Places list should only show top-level places, not circles nested inside them. */
+export function isPlaceLevelCircle(
+  circle: { id?: string; location?: string | null },
+  all: { id?: string; name?: string | null }[]
+): boolean {
+  return !all.some((place) => matchesKeptPlace(place.name) && belongsToPlace(circle, place));
+}
+
 export function isKeptEvent(event: {
   location?: string | null;
   circles?: { name?: string | null; category?: string | null } | null;

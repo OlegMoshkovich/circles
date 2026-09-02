@@ -45,6 +45,8 @@ export type CircleDetailParams = {
   owner_id: string;
   member_count: number;
   organizer?: string | null;
+  location?: string | null;
+  backLabel?: string;
 };
 
 export type RootStackParamList = {
