@@ -27,6 +27,7 @@ import { fetchHiddenAuthorIds, fetchReportedHiddenContentIds } from "../lib/cont
 import { fetchCircleLatestActivity } from "../lib/activityStats";
 import { supabase, getAuthClient, Circle } from "../lib/supabase";
 import { isKeptCircle } from "../lib/allowedPlaces";
+import { isPastEvent } from "../lib/events";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 const MAP_GLASS_TEXT = "#2C2A26";
@@ -266,13 +267,33 @@ export default function CirclesScreen() {
           // Hide private circles unless the user is already a member/owner
           .filter((circle) => circle.visibility !== "private" || map[circle.id] != null)
           .filter(isKeptCircle);
-        const [reportedCircleIds, hiddenAuthorIds, pendingResult] = await Promise.all([
-          fetchReportedHiddenContentIds("circle", mapped.map((c: any) => c.id)),
+        const circleIds = mapped.map((c: any) => c.id);
+        const [reportedCircleIds, hiddenAuthorIds, pendingResult, eventsResult] = await Promise.all([
+          fetchReportedHiddenContentIds("circle", circleIds),
           fetchHiddenAuthorIds(mapped.map((c: any) => c.owner_id).filter((id: any): id is string => !!id), user?.id),
           ownedIds.length > 0
             ? client.from("circle_members").select("circle_id").in("circle_id", ownedIds).eq("status", "requested")
             : Promise.resolve({ data: [], error: null }),
+          circleIds.length > 0
+            ? client
+                .from("events")
+                .select("circle_id, date_label, time_label, duration_minutes")
+                .in("circle_id", circleIds)
+            : Promise.resolve({ data: [], error: null }),
         ]);
+        const upcomingByCircle: Record<string, number> = {};
+        for (const event of (eventsResult.data ?? []) as {
+          circle_id: string | null;
+          date_label: string;
+          time_label: string;
+          duration_minutes?: number | null;
+        }[]) {
+          if (!event.circle_id || isPastEvent(event)) continue;
+          upcomingByCircle[event.circle_id] = (upcomingByCircle[event.circle_id] ?? 0) + 1;
+        }
+        for (const circle of mapped) {
+          circle.event_count = upcomingByCircle[circle.id] ?? 0;
+        }
         const visibleCircles = mapped.filter((c: any) => {
           const isOwn = c.owner_id === user?.id;
           if (isOwn) return true;

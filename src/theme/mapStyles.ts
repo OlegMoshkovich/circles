@@ -34,7 +34,3 @@ export const GRAYSCALE_MAP_STYLE = [
     stylers: [{ visibility: "off" }],
   },
 ];
-
-/** Carto Positron — light grayscale tiles. Works on iOS (Apple Maps) and Android. */
-export const GRAYSCALE_TILE_URL =
-  "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png";

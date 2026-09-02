@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Platform, StyleSheet, Text, View } from "react-native";
-import MapView, { Marker, PROVIDER_GOOGLE, Region, UrlTile } from "react-native-maps";
+import MapView, { Marker, PROVIDER_GOOGLE, Region } from "react-native-maps";
 import * as Location from "expo-location";
 import { useLanguage } from "../../i18n/LanguageContext";
 import { useColors } from "../../contexts/BackgroundContext";
-import { GRAYSCALE_MAP_STYLE, GRAYSCALE_TILE_URL } from "../../theme/mapStyles";
+import { GRAYSCALE_MAP_STYLE } from "../../theme/mapStyles";
 import { greenColors } from "../../theme/colors";
 import { Spinner } from "../loaders/Spinner";
 
@@ -110,18 +110,11 @@ export function CirclesMapView({ circles, onCirclePress }: Props) {
         style={StyleSheet.absoluteFill}
         initialRegion={DEFAULT_REGION}
         provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
-        mapType={Platform.OS === "ios" ? "mutedStandard" : "none"}
+        mapType={Platform.OS === "ios" ? "mutedStandard" : "standard"}
         customMapStyle={Platform.OS === "android" ? GRAYSCALE_MAP_STYLE : undefined}
         showsUserLocation
         showsMyLocationButton={false}
       >
-        <UrlTile
-          urlTemplate={GRAYSCALE_TILE_URL}
-          maximumZ={20}
-          minimumZ={0}
-          tileSize={256}
-          shouldReplaceMapContent
-        />
         {locatedCircles.map((circle) => {
           const coords = coordsById[circle.id];
           if (!coords) return null;
@@ -192,12 +185,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   markerOuter: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 29,
+    height: 29,
+    borderRadius: 15,
     backgroundColor: greenColors.background,
-    borderWidth: 1,
-    borderColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
@@ -208,8 +199,8 @@ const styles = StyleSheet.create({
   },
   markerCount: {
     color: greenColors.text,
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: "Lora_700Bold",
-    lineHeight: 13,
+    lineHeight: 14,
   },
 });
