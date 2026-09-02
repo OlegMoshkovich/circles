@@ -26,6 +26,7 @@ import { useCirclesMapView } from "../src/contexts/CirclesMapViewContext";
 import { fetchHiddenAuthorIds, fetchReportedHiddenContentIds } from "../lib/contentReports";
 import { fetchCircleLatestActivity } from "../lib/activityStats";
 import { supabase, getAuthClient, Circle } from "../lib/supabase";
+import { isKeptCircle } from "../lib/allowedPlaces";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 const MAP_GLASS_TEXT = "#2C2A26";
@@ -189,7 +190,7 @@ export default function CirclesScreen() {
       // back to the spinner when there's nothing cached to show.
       const cached = !hasLoadedOnceRef.current && user ? await readCirclesCache(user.id) : null;
       if (cached) {
-        setCircles(cached.circles);
+        setCircles(cached.circles.filter(isKeptCircle));
         setMemberStatusMap(cached.memberStatusMap);
         setPendingRequestsMap(cached.pendingRequestsMap);
         setActivityMap(cached.activityMap);
@@ -263,7 +264,8 @@ export default function CirclesScreen() {
             event_count: row.events?.[0]?.count ?? 0,
           }))
           // Hide private circles unless the user is already a member/owner
-          .filter((circle) => circle.visibility !== "private" || map[circle.id] != null);
+          .filter((circle) => circle.visibility !== "private" || map[circle.id] != null)
+          .filter(isKeptCircle);
         const [reportedCircleIds, hiddenAuthorIds, pendingResult] = await Promise.all([
           fetchReportedHiddenContentIds("circle", mapped.map((c: any) => c.id)),
           fetchHiddenAuthorIds(mapped.map((c: any) => c.owner_id).filter((id: any): id is string => !!id), user?.id),
@@ -554,6 +556,22 @@ export default function CirclesScreen() {
                   style={[
                     styles.filterIconButton,
                     mapView && styles.mapFilterIconButton,
+                    mapView && styles.mapFilterIconButtonActive,
+                  ]}
+                  onPress={() => setMapView((v) => !v)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={mapView ? "list-outline" : "map-outline"}
+                    size={17}
+                    color={mapView ? MAP_GLASS_TEXT : colors.textMuted}
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.filterIconButton,
+                    mapView && styles.mapFilterIconButton,
                     (showSearch || normalizedSearch) &&
                       (mapView ? styles.mapFilterIconButtonActive : styles.filterIconButtonActive),
                   ]}
@@ -571,22 +589,6 @@ export default function CirclesScreen() {
                           ? colors.textOnIconBg
                           : colors.textMuted
                     }
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.filterIconButton,
-                    mapView && styles.mapFilterIconButton,
-                    mapView && styles.mapFilterIconButtonActive,
-                  ]}
-                  onPress={() => setMapView((v) => !v)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name={mapView ? "list-outline" : "map-outline"}
-                    size={17}
-                    color={mapView ? MAP_GLASS_TEXT : colors.textMuted}
                   />
                 </TouchableOpacity>
                 <TouchableOpacity

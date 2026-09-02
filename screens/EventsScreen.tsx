@@ -23,6 +23,7 @@ import { fetchEventNoteStats } from "../lib/activityStats";
 import { supabase, Event } from "../lib/supabase";
 import { buildEventShareMessage, shareMessage } from "../lib/shareLinks";
 import { parseEventDateTime, isPastEvent } from "../lib/events";
+import { isKeptEvent } from "../lib/allowedPlaces";
 import { getCachedScreenData, setCachedScreenData } from "../lib/screenCache";
 
 type EventWithCircle = Event & { circles?: { name: string } | null };
@@ -135,7 +136,7 @@ export default function EventsScreen() {
   const cacheKey = user ? `events_${user.id}_${filter}` : null;
 
   const applySnapshot = useCallback((snap: EventsSnapshot) => {
-    setEvents(snap.events);
+    setEvents(snap.events.filter(isKeptEvent));
     setRsvpStatusMap(snap.rsvpStatusMap);
     setNoteCountMap(snap.noteCountMap);
     setActivityMap(snap.activityMap);
@@ -212,6 +213,7 @@ export default function EventsScreen() {
       ]);
 
       const visible = rows.filter((e) => {
+        if (!isKeptEvent(e)) return false;
         const isOwn = e.created_by === user?.id;
         if (isOwn) return true;
         if (reportedEventIds.has(e.id)) return false;

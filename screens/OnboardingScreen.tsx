@@ -26,6 +26,7 @@ import { colors, glassColors, lightColors, onboardingColors, Colors } from "../s
 import { BgOption, useBackground } from "../src/contexts/BackgroundContext";
 import { fetchReportedHiddenContentIds, fetchHiddenAuthorIds } from "../lib/contentReports";
 import { supabase, getAuthClient, Circle } from "../lib/supabase";
+import { isKeptCircle } from "../lib/allowedPlaces";
 import { Spinner } from "../src/components/loaders/Spinner";
 import {
   COMMUNITY_TAGLINE,
@@ -823,7 +824,10 @@ function CircleSuggestionsStep({
       if (!cancelled) {
         setCircles(
           (rows as Circle[]).filter(
-            (c) => !hidden.has(c.id) && !hiddenAuthorIds.has(c.owner_id)
+            (c) =>
+              isKeptCircle(c) &&
+              !hidden.has(c.id) &&
+              !hiddenAuthorIds.has(c.owner_id)
           )
         );
         setLoading(false);
