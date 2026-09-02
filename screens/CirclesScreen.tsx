@@ -479,6 +479,7 @@ export default function CirclesScreen() {
       member_count: circle.member_count,
       organizer: circle.organizer,
       location: circle.location,
+      mode: "place",
     });
   }, [navigation]);
 

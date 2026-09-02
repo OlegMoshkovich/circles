@@ -47,6 +47,8 @@ export type CircleDetailParams = {
   organizer?: string | null;
   location?: string | null;
   backLabel?: string;
+  /** place = Circles tab + Places back; circle = Events-first, parent place as back */
+  mode?: "place" | "circle";
 };
 
 export type RootStackParamList = {

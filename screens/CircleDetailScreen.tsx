@@ -110,7 +110,8 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [organizer] = useState(route.params.organizer ?? null);
   const [location, setLocation] = useState(route.params.location ?? null);
 
-  const [activeTab, setActiveTab] = useState<Tab>("circles");
+  const isCircleView = route.params.mode === "circle";
+  const [activeTab, setActiveTab] = useState<Tab>(isCircleView ? "events" : "circles");
   const [placeCircles, setPlaceCircles] = useState<PlaceCircle[]>([]);
   const [loadingPlaceCircles, setLoadingPlaceCircles] = useState(false);
   const [memberCount, setMemberCount] = useState(route.params.member_count);
@@ -153,8 +154,10 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     };
   }, [id, route.params.name]);
 
+  const didPickInitialPlaceTab = useRef(isCircleView);
+
   const fetchPlaceCircles = useCallback(async () => {
-    if (!name) return;
+    if (!name) return [];
     setLoadingPlaceCircles(true);
     const { data, error } = await supabase
       .from("circles")
@@ -163,27 +166,32 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     if (error || !data) {
       setPlaceCircles([]);
       setLoadingPlaceCircles(false);
-      return;
+      return [];
     }
     const mapped = (data as any[]).map((row) => ({
       ...row,
       member_count: row.circle_members?.[0]?.count ?? 0,
       event_count: row.events?.[0]?.count ?? 0,
     })) as PlaceCircle[];
-    setPlaceCircles(
-      mapped.filter(
-        (circle) =>
-          belongsToPlace(circle, { id, name }) &&
-          isKeptCircle(circle) &&
-          (circle.visibility !== "private" || circle.owner_id === user?.id)
-      )
+    const nested = mapped.filter(
+      (circle) =>
+        belongsToPlace(circle, { id, name }) &&
+        isKeptCircle(circle) &&
+        (circle.visibility !== "private" || circle.owner_id === user?.id)
     );
+    setPlaceCircles(nested);
     setLoadingPlaceCircles(false);
+    return nested;
   }, [id, name, user?.id]);
 
   useEffect(() => {
-    void fetchPlaceCircles();
-  }, [fetchPlaceCircles]);
+    if (isCircleView) return;
+    void fetchPlaceCircles().then((nested) => {
+      if (didPickInitialPlaceTab.current || !name) return;
+      didPickInitialPlaceTab.current = true;
+      if (nested.length === 0) setActiveTab("events");
+    });
+  }, [fetchPlaceCircles, isCircleView]);
 
   const [loadingFeed, setLoadingFeed] = useState(false);
   const hasLoadedFeedRef = useRef(false);
@@ -823,12 +831,14 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         {/* Tabs */}
         <View style={styles.tabRow}>
           <View style={styles.tabList}>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === "circles" && styles.tabActive]}
-              onPress={() => setActiveTab("circles")}
-            >
-              <Text style={[styles.tabText, activeTab === "circles" && styles.tabTextActive]}>{t.circles.circlesTab}</Text>
-            </TouchableOpacity>
+            {!isCircleView ? (
+              <TouchableOpacity
+                style={[styles.tab, activeTab === "circles" && styles.tabActive]}
+                onPress={() => setActiveTab("circles")}
+              >
+                <Text style={[styles.tabText, activeTab === "circles" && styles.tabTextActive]}>{t.circles.circlesTab}</Text>
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
               style={[styles.tab, activeTab === "events" && styles.tabActive]}
               onPress={() => setActiveTab("events")}
@@ -991,19 +1001,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
               ) : (
                 <View style={styles.tabContentCard}>
                   {placeCircles.length === 0 ? (
-                    <View>
-                      <Text style={styles.emptyText}>{t.circles.noPlaceCircles}</Text>
-                      {user ? (
-                        <TouchableOpacity
-                          style={styles.createCircleEmptyButton}
-                          onPress={() => setCreateCircleVisible(true)}
-                          activeOpacity={0.8}
-                        >
-                          <Ionicons name="add" size={16} color="#35412A" />
-                          <Text style={styles.createCircleEmptyButtonText}>{t.circles.createAction}</Text>
-                        </TouchableOpacity>
-                      ) : null}
-                    </View>
+                    <Text style={styles.emptyText}>{t.circles.noPlaceCircles}</Text>
                   ) : (
                     placeCircles.map((circle) => (
                       <CircleCard
@@ -1018,7 +1016,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                         location={circle.location}
                         organizer={circle.organizer}
                         onPress={() =>
-                          nav.navigate("CircleDetail", {
+                          nav.push("CircleDetail", {
                             id: circle.id,
                             name: circle.name,
                             description: circle.description,
@@ -1028,6 +1026,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                             organizer: circle.organizer,
                             location: circle.location,
                             backLabel: name,
+                            mode: "circle",
                           })
                         }
                       />
@@ -1199,7 +1198,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
       {/* Fixed footer: join/leave or invite */}
       <View style={[styles.footer, { paddingBottom: footerBottomInset }]}>
-        {activeTab === "circles" && user ? (
+        {!isCircleView && activeTab === "circles" && user ? (
           <TouchableOpacity
             style={[styles.actionButton, styles.joinButton]}
             onPress={() => setCreateCircleVisible(true)}
@@ -1237,7 +1236,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       <Modal
         visible={placeInfoVisible}
         animationType="fade"
-        transparent
+        transparent={false}
         onRequestClose={() => setPlaceInfoVisible(false)}
       >
         <View style={styles.placeInfoOverlay}>
@@ -1424,12 +1423,12 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   placeInfoOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    backgroundColor: "#35412A",
     justifyContent: "center",
     paddingHorizontal: spacing.pageHorizontal,
   },
   placeInfoCard: {
-    backgroundColor: colors.card,
+    backgroundColor: "#35412A",
     borderRadius: 16,
     padding: spacing.cardPadding,
   },
@@ -1518,23 +1517,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     color: colors.textMuted,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.cardPadding,
-  },
-  createCircleEmptyButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 6,
-    marginHorizontal: spacing.cardPadding,
-    marginBottom: spacing.md,
-    backgroundColor: "#F5EFE3",
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  createCircleEmptyButtonText: {
-    ...typography.bodySmall,
-    color: "#35412A",
-    fontWeight: "600" as const,
   },
   membersPanel: {
     backgroundColor: colors.card,
