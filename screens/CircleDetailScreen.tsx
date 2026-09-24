@@ -32,7 +32,7 @@ import { CreateCircleModal, NewCircleData } from "../src/components/modals/Creat
 import { LazyEventsMapView } from "../src/components/maps/LazyEventsMapView";
 import type { MapEvent } from "../src/components/maps/EventsMapView";
 import { buildEventShareMessage, shareMessage } from "../lib/shareLinks";
-import { isPastEvent } from "../lib/events";
+import { isPastEvent, parseEventDateTime } from "../lib/events";
 import {
   fetchHiddenAuthorIds,
   fetchReportedHiddenContentIds,
@@ -207,6 +207,10 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [createCircleVisible, setCreateCircleVisible] = useState(false);
   const [placeInfoVisible, setPlaceInfoVisible] = useState(false);
   const [placeMapVisible, setPlaceMapVisible] = useState(false);
+  const [showEventFilters, setShowEventFilters] = useState(false);
+  const [eventSort, setEventSort] = useState<"date" | "newest" | "popular">("date");
+  const [eventCategory, setEventCategory] = useState("all");
+  const [eventType, setEventType] = useState<"all" | "events" | "activity">("all");
   const [mapEvents, setMapEvents] = useState<Event[]>([]);
   const [loadingMapEvents, setLoadingMapEvents] = useState(false);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
@@ -876,6 +880,20 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           <View style={styles.titleActions}>
             {activeTab === "events" ? (
               <TouchableOpacity
+                style={[
+                  styles.titleCircleButton,
+                  (showEventFilters || eventSort !== "date" || eventCategory !== "all" || eventType !== "all") &&
+                    styles.titleCircleButtonActive,
+                ]}
+                onPress={() => setShowEventFilters((v) => !v)}
+                activeOpacity={0.8}
+                accessibilityLabel={t.common.sort}
+              >
+                <Ionicons name="options-outline" size={14} color="#35412A" />
+              </TouchableOpacity>
+            ) : null}
+            {activeTab === "events" ? (
+              <TouchableOpacity
                 style={[styles.titleCircleButton, placeMapVisible && styles.titleCircleButtonActive]}
                 onPress={handleTogglePlaceMap}
                 activeOpacity={0.8}
@@ -949,6 +967,62 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
             </TouchableOpacity>
           </View>
         </View>
+        {activeTab === "events" && showEventFilters ? (
+          <View style={styles.eventFilterPanel}>
+            <Text style={styles.eventFilterLabel}>{t.common.sort}</Text>
+            <View style={styles.eventFilterRow}>
+              {(["date", "newest", "popular"] as const).map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  style={[styles.eventFilterChip, eventSort === opt && styles.eventFilterChipActive]}
+                  onPress={() => setEventSort(opt)}
+                >
+                  <Text style={[styles.eventFilterChipText, eventSort === opt && styles.eventFilterChipTextActive]}>
+                    {opt === "date" ? t.events.sortRecent : opt === "newest" ? t.events.sortNewest : t.events.sortPopular}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.eventFilterLabel}>{t.events.contentTypeLabel}</Text>
+            <View style={styles.eventFilterRow}>
+              {(["all", "events", "activity"] as const).map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  style={[styles.eventFilterChip, eventType === opt && styles.eventFilterChipActive]}
+                  onPress={() => setEventType(opt)}
+                >
+                  <Text style={[styles.eventFilterChipText, eventType === opt && styles.eventFilterChipTextActive]}>
+                    {opt === "all" ? t.events.contentTypeAll : opt === "events" ? t.events.contentTypeEvents : t.events.contentTypeActivity}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {(() => {
+              const topics = Array.from(
+                new Set(events.map((e) => e.category).filter((c): c is string => !!c))
+              ).sort();
+              if (topics.length === 0) return null;
+              return (
+                <>
+                  <Text style={styles.eventFilterLabel}>Topic</Text>
+                  <View style={styles.eventFilterRow}>
+                    {["all", ...topics].map((opt) => (
+                      <TouchableOpacity
+                        key={opt}
+                        style={[styles.eventFilterChip, eventCategory === opt && styles.eventFilterChipActive]}
+                        onPress={() => setEventCategory(opt)}
+                      >
+                        <Text style={[styles.eventFilterChipText, eventCategory === opt && styles.eventFilterChipTextActive]}>
+                          {opt === "all" ? t.common.all : opt}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              );
+            })()}
+          </View>
+        ) : null}
       </View>
 
       {placeMapVisible ? (
@@ -1149,9 +1223,21 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
               ) : (() => {
                 // Hide events that have already happened -- the Events tab only
                 // surfaces upcoming events. (Unparseable dates are kept.)
-                const sortedEvents = [...events]
+                const sortedEvents = events
                   .filter((e) => !isPastEvent(e))
-                  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                  .filter((e) => eventCategory === "all" || e.category === eventCategory)
+                  .filter((e) => {
+                    if (eventType === "events") return !e.is_activity;
+                    if (eventType === "activity") return !!e.is_activity;
+                    return true;
+                  })
+                  .sort((a, b) => {
+                    if (eventSort === "newest") {
+                      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                    }
+                    if (eventSort === "popular") return (b.going + b.maybe) - (a.going + a.maybe);
+                    return parseEventDateTime(a.date_label, a.time_label) - parseEventDateTime(b.date_label, b.time_label);
+                  });
 
                 return (
                   <View style={styles.tabContentCard}>
@@ -1176,6 +1262,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                         maybe={event.maybe}
                         maxParticipants={event.max_participants ?? null}
                         isActivity={event.is_activity ?? false}
+                        category={event.category ?? null}
                         noteCount={eventNoteCountMap[event.id] ?? 0}
                         hasNewActivity={isNewEvent}
                         onSharePress={() => handleShareEvent(event)}
@@ -1536,6 +1623,39 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     fontStyle: "italic",
     color: "#35412A",
     lineHeight: 16,
+  },
+  eventFilterPanel: {
+    marginTop: spacing.md,
+    gap: 12,
+  },
+  eventFilterLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 0.8,
+    color: colors.textMuted,
+    textTransform: "uppercase",
+  },
+  eventFilterRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  eventFilterChip: {
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: colors.badgeBg,
+  },
+  eventFilterChipActive: {
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : colors.text,
+  },
+  eventFilterChipText: {
+    fontSize: 13,
+    fontFamily: "Lora_400Regular",
+    color: colors.textMuted,
+  },
+  eventFilterChipTextActive: {
+    color: isOnboarding ? colors.text : colors.background,
   },
   placeInfoOverlay: {
     flex: 1,
