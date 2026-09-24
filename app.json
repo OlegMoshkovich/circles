@@ -2,7 +2,7 @@
   "expo": {
     "name": "ValMia",
     "slug": "communitycircles",
-    "version": "1.0.4",
+    "version": "1.3.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "valmia",
@@ -29,6 +29,7 @@
         "applinks:clerk.helping.lemming-64.lclstage.dev"
       ],
       "bundleIdentifier": "ch.valmia.app",
+      "buildNumber": "1",
       "appleTeamId": "Q8RCPVAZM5",
       "entitlements": {
         "aps-environment": "production"
