@@ -278,6 +278,7 @@ export default function EventsScreen() {
       max_participants: event.max_participants,
       contact_info: event.contact_info || null,
       price_info: event.price_info || null,
+      category: event.category,
       event_url: event.event_url || null,
       visibility: event.visibility,
       circle_id: event.circle_id,

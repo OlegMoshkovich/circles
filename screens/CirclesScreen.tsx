@@ -858,6 +858,8 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
   },
   mapFilterPanel: {
     backgroundColor: "rgba(255,255,255,0.72)",
+    borderRadius: 16,
+    padding: 14,
   },
   mapFilterIconButton: {
     backgroundColor: "rgba(255,255,255,0.28)",
@@ -892,9 +894,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     fontFamily: "Lora_400Regular",
   },
   filterPanel: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 14,
     marginBottom: 14,
     gap: 12,
   },
@@ -917,7 +916,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     paddingVertical: 5,
     paddingHorizontal: 12,
     borderRadius: 999,
-    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+    backgroundColor: colors.badgeBg,
   },
   filterChipNearMe: {
     flexDirection: "row",

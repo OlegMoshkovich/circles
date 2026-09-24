@@ -641,6 +641,7 @@ function LocationStep({
       <MapView
         ref={mapRef}
         style={StyleSheet.absoluteFill}
+        userInterfaceStyle="light"
         initialRegion={region}
         onRegionChangeComplete={handleRegionChangeComplete}
         showsUserLocation

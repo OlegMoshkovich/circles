@@ -117,6 +117,7 @@ export function EventsMapView({ events, onEventPress }: Props) {
         style={StyleSheet.absoluteFill}
         initialRegion={DEFAULT_REGION}
         provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
+        userInterfaceStyle="light"
         mapType={Platform.OS === "ios" ? "mutedStandard" : "standard"}
         customMapStyle={Platform.OS === "android" ? GRAYSCALE_MAP_STYLE : undefined}
         showsUserLocation
@@ -151,13 +152,6 @@ export function EventsMapView({ events, onEventPress }: Props) {
         </View>
       )}
 
-      {!loading && locatedEvents.length > 0 && Object.keys(coordsById).length === 0 && (
-        <View style={styles.emptyOverlay}>
-          <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-            {t.circles.mapGeocodeFailed}
-          </Text>
-        </View>
-      )}
     </View>
   );
 }

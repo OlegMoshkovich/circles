@@ -39,6 +39,7 @@ export type NewEventData = {
   contact_info: string;
   price_info: string;
   event_url: string;
+  category: string | null;
   visibility: "public" | "circle" | "friends" | "private";
   circle_id: string | null;
   invited_user_ids: string[];
@@ -67,6 +68,8 @@ function fmtDate(d: Date) {
 function fmtTime(d: Date) {
   return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 }
+
+const EVENT_LABELS = ["Culture", "Family & Kids", "Wellness", "Music", "Food", "Creativity", "Outdoor & Sport", "Film"];
 
 const DURATION_ITEM_HEIGHT = 44;
 const DURATION_VISIBLE_ITEMS = 5;
@@ -130,6 +133,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
   const [friendsSearchResults, setFriendsSearchResults] = useState<{ user_id: string; display_name: string }[]>([]);
   const [selectedFriends, setSelectedFriends] = useState<{ user_id: string; display_name: string }[]>([]);
   const [isActivity, setIsActivity] = useState(false);
+  const [category, setCategory] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
@@ -206,6 +210,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
       contact_info: contactInfo.trim(),
       price_info: priceInfo.trim(),
       event_url: eventUrl.trim(),
+      category,
       visibility: eventVisibility,
       circle_id: eventVisibility === "circle" ? selectedCircleId : null,
       invited_user_ids: eventVisibility === "friends" ? selectedFriends.map((f) => f.user_id) : [],
@@ -245,6 +250,7 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
     setFriendsSearchResults([]);
     setSelectedFriends([]);
     setIsActivity(false);
+    setCategory(null);
   }
 
   function handlePickerChange(_: DateTimePickerEvent, date?: Date) {
@@ -401,6 +407,22 @@ export function CreateEventModal({ visible, onClose, onSave, defaultCircleId }: 
                 </View>
 
                 <Field label="Description" value={description} onChangeText={setDescription} placeholder="A few words about the event…" multiline />
+                <View style={styles.fieldContainer}>
+                  <Text style={styles.fieldLabel}>Label</Text>
+                  <View style={styles.labelRow}>
+                    {EVENT_LABELS.map((label) => (
+                      <TouchableOpacity
+                        key={label}
+                        style={[styles.labelChip, category === label && styles.labelChipActive]}
+                        onPress={() => setCategory(category === label ? null : label)}
+                      >
+                        <Text style={[styles.labelChipText, category === label && styles.labelChipTextActive]}>
+                          {label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
                 <Field
                   label="Maximum Participants"
                   value={maxParticipants}
@@ -868,6 +890,18 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : colors.text,
     borderColor: isOnboarding ? "rgba(239,237,225,0.38)" : colors.text,
   },
+  labelRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  labelChip: {
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: colors.badgeBg,
+  },
+  labelChipActive: {
+    backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : colors.text,
+  },
+  labelChipText: { fontSize: 13, fontFamily: "Lora_400Regular", color: colors.textMuted },
+  labelChipTextActive: { color: isOnboarding ? colors.text : colors.background },
   toggleText: { fontSize: 14, fontFamily: "Lora_400Regular", color: colors.textMuted },
   toggleTextActive: { color: isOnboarding ? colors.text : colors.background },
   // Circles

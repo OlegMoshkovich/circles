@@ -504,6 +504,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       max_participants: data.max_participants,
       contact_info: data.contact_info || null,
       price_info: data.price_info || null,
+      category: data.category,
       event_url: data.event_url || null,
       visibility: data.visibility === "circle" ? "circle" : data.visibility,
       circle_id: id,
@@ -760,17 +761,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   function renderJoinButton() {
     if (isOwner) return null;
 
-    if (isMember) {
-      return (
-        <TouchableOpacity
-          style={[styles.actionButton, styles.actionButtonOutline]}
-          onPress={handleLeave}
-          disabled={submitting}
-        >
-          <Text style={styles.actionButtonTextOutline}>{t.circles.leave}</Text>
-        </TouchableOpacity>
-      );
-    }
+    if (isMember) return null;
 
     if (isRequested) {
       return (
@@ -832,7 +823,26 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                 onPress={() => setCreateEventVisible(true)}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
-                <Ionicons name="calendar-outline" size={18} color={colors.text} />
+                <Ionicons name="add" size={22} color={colors.text} />
+              </TouchableOpacity>
+            ) : null}
+            {isMember && !isOwner ? (
+              <TouchableOpacity
+                onPress={handleLeave}
+                disabled={submitting}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityLabel={t.circles.leave}
+              >
+                <Ionicons name="exit-outline" size={18} color={colors.text} />
+              </TouchableOpacity>
+            ) : null}
+            {isOwner ? (
+              <TouchableOpacity
+                onPress={() => setCircleInviteVisible(true)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityLabel={t.common.inviteMembers}
+              >
+                <Ionicons name="person-add-outline" size={18} color={colors.text} />
               </TouchableOpacity>
             ) : null}
             {isOwner ? (
@@ -1033,11 +1043,18 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
             </View>
           ) : (
             <LazyEventsMapView
-              events={mapEvents.map((event) => ({
-                id: event.id,
-                title: event.title,
-                location: event.location,
-              }))}
+              events={mapEvents
+                .filter((event) => eventCategory === "all" || event.category === eventCategory)
+                .filter((event) => {
+                  if (eventType === "events") return !event.is_activity;
+                  if (eventType === "activity") return !!event.is_activity;
+                  return true;
+                })
+                .map((event) => ({
+                  id: event.id,
+                  title: event.title,
+                  location: event.location,
+                }))}
               onEventPress={handleMapEventPress}
             />
           )}
@@ -1385,27 +1402,22 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         </ScrollView>
       )}
 
-      {/* Fixed footer: join/leave or invite */}
-      <View style={[styles.footer, { paddingBottom: footerBottomInset }]}>
-        {!placeMapVisible && !isCircleView && activeTab === "circles" && user ? (
-          <TouchableOpacity
-            style={[styles.actionButton, styles.joinButton]}
-            onPress={() => setCreateCircleVisible(true)}
-          >
-            <Ionicons name="add" size={18} color="#35412A" />
-            <Text style={styles.joinButtonText}>{t.circles.createAction}</Text>
-          </TouchableOpacity>
-        ) : isOwner ? (
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => setCircleInviteVisible(true)}
-          >
-            <Text style={styles.actionButtonText}>{t.common.inviteMembers}</Text>
-          </TouchableOpacity>
-        ) : (
-          renderJoinButton()
-        )}
-      </View>
+      {/* Fixed footer: create a circle on a place, or join when you are not a member */}
+      {(!placeMapVisible && !isCircleView && activeTab === "circles" && user) || (!isOwner && !isMember) ? (
+        <View style={[styles.footer, { paddingBottom: footerBottomInset }]}>
+          {!placeMapVisible && !isCircleView && activeTab === "circles" && user ? (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.joinButton]}
+              onPress={() => setCreateCircleVisible(true)}
+            >
+              <Ionicons name="add" size={18} color="#35412A" />
+              <Text style={styles.joinButtonText}>{t.circles.createAction}</Text>
+            </TouchableOpacity>
+          ) : (
+            renderJoinButton()
+          )}
+        </View>
+      ) : null}
 
       <CircleInviteModal
         visible={circleInviteVisible}
