@@ -23,6 +23,7 @@ type CircleCardProps = {
   pendingRequests?: number;
   hasNewActivity?: boolean;
   onPress?: () => void;
+  onJoinPress?: () => void;
   onActionPress?: () => void;
   actionIcon?: keyof typeof Ionicons.glyphMap;
 };
@@ -46,6 +47,7 @@ export function CircleCard({
   pendingRequests = 0,
   hasNewActivity = false,
   onPress,
+  onJoinPress,
   onActionPress,
   actionIcon,
 }: CircleCardProps) {
@@ -146,9 +148,14 @@ export function CircleCard({
             </View>
           )}
           {memberStatus === null && visibility !== "private" && (
-            <View style={styles.joinButton}>
+            <TouchableOpacity
+              style={styles.joinButton}
+              onPress={onJoinPress}
+              disabled={!onJoinPress}
+              activeOpacity={0.8}
+            >
               <Text style={styles.joinButtonText}>{t.circles.typeJoin}</Text>
-            </View>
+            </TouchableOpacity>
           )}
         </View>
       </View>

@@ -183,6 +183,12 @@ export const en = {
     mapNoEvents: "No events with a location to show on the map.",
     mapGeocodeFailed: "Could not place circles on the map.",
     visibilityRequestToJoin: "Request to join",
+    feedbackTitle: "Feedback",
+    feedbackPlaceholder: "Tell us what you think…",
+    feedbackSend: "Send",
+    feedbackSending: "Sending…",
+    feedbackThanks: "Thanks, we received your feedback.",
+    feedbackError: "Could not send feedback. Please try again.",
   },
 };
 
@@ -369,6 +375,12 @@ export const de: Translations = {
     mapNoEvents: "Keine Veranstaltungen mit Standort auf der Karte.",
     mapGeocodeFailed: "Kreise konnten nicht auf der Karte platziert werden.",
     visibilityRequestToJoin: "Beitritt anfragen",
+    feedbackTitle: "Feedback",
+    feedbackPlaceholder: "Sag uns, was du denkst…",
+    feedbackSend: "Senden",
+    feedbackSending: "Wird gesendet…",
+    feedbackThanks: "Danke, wir haben dein Feedback erhalten.",
+    feedbackError: "Feedback konnte nicht gesendet werden. Bitte versuche es erneut.",
   },
 };
 
@@ -555,6 +567,12 @@ export const fr: Translations = {
     mapNoEvents: "Aucun événement avec un lieu à afficher sur la carte.",
     mapGeocodeFailed: "Impossible de placer les cercles sur la carte.",
     visibilityRequestToJoin: "Sur demande",
+    feedbackTitle: "Avis",
+    feedbackPlaceholder: "Dites-nous ce que vous en pensez…",
+    feedbackSend: "Envoyer",
+    feedbackSending: "Envoi…",
+    feedbackThanks: "Merci, nous avons bien reçu votre avis.",
+    feedbackError: "Impossible d'envoyer l'avis. Veuillez réessayer.",
   },
 };
 
@@ -741,6 +759,12 @@ export const it: Translations = {
     mapNoEvents: "Nessun evento con una posizione da mostrare sulla mappa.",
     mapGeocodeFailed: "Impossibile posizionare i cerchi sulla mappa.",
     visibilityRequestToJoin: "Su richiesta",
+    feedbackTitle: "Feedback",
+    feedbackPlaceholder: "Dicci cosa ne pensi…",
+    feedbackSend: "Invia",
+    feedbackSending: "Invio…",
+    feedbackThanks: "Grazie, abbiamo ricevuto il tuo feedback.",
+    feedbackError: "Impossibile inviare il feedback. Riprova.",
   },
 };
 

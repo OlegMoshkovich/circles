@@ -37,6 +37,7 @@ type Props = {
   onSave: (circle: NewCircleData) => Promise<void>;
   initialValues?: Partial<NewCircleData>;
   title?: string;
+  saveLabel?: string;
 };
 
 const VISIBILITY_OPTIONS: { value: "public" | "private"; label: string }[] = [
@@ -46,7 +47,7 @@ const VISIBILITY_OPTIONS: { value: "public" | "private"; label: string }[] = [
 
 const PRESET_CATEGORIES = ["Culture", "Friends", "Nature", "Sport", "Food", "Travel"];
 
-export function CreateCircleModal({ visible, onClose, onSave, initialValues, title = "New Circle" }: Props) {
+export function CreateCircleModal({ visible, onClose, onSave, initialValues, title = "New Circle", saveLabel = "Create Circle" }: Props) {
   const { user } = useUser();
   const { bgOption } = useBackground();
 
@@ -255,7 +256,7 @@ export function CreateCircleModal({ visible, onClose, onSave, initialValues, tit
                 onPress={handleSave}
                 disabled={!canSave}
               >
-                <Text style={styles.saveButtonText}>{saving ? "Creating…" : "Create Circle"}</Text>
+                <Text style={styles.saveButtonText}>{saving ? "Creating…" : saveLabel}</Text>
               </TouchableOpacity>
             </View>
             </View>

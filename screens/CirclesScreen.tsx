@@ -15,6 +15,7 @@ import { CircleCard } from "../src/components/cards/CircleCard";
 import { LazyCirclesMapView } from "../src/components/maps/LazyCirclesMapView";
 import type { MapCircle } from "../src/components/maps/CirclesMapView";
 import { CreateCircleModal, NewCircleData } from "../src/components/modals/CreateCircleModal";
+import { FeedbackModal } from "../src/components/modals/FeedbackModal";
 import { Spinner } from "../src/components/loaders/Spinner";
 import { SplashLoadingView } from "../src/components/loaders/SplashLoadingView";
 import { Colors } from "../src/theme/colors";
@@ -26,7 +27,7 @@ import { useCirclesMapView } from "../src/contexts/CirclesMapViewContext";
 import { fetchHiddenAuthorIds, fetchReportedHiddenContentIds } from "../lib/contentReports";
 import { fetchCircleLatestActivity } from "../lib/activityStats";
 import { supabase, getAuthClient, Circle } from "../lib/supabase";
-import { belongsToPlace, isKeptCircle, isPlaceLevelCircle } from "../lib/allowedPlaces";
+import { belongsToPlace, isKeptCircle, isPlaceLevelCircle, pinnedPlaceRank } from "../lib/allowedPlaces";
 import { isPastEvent } from "../lib/events";
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -79,6 +80,7 @@ type CircleRowProps = {
   hasNewActivity: boolean;
   circleCount: number;
   onOpen: (circle: CircleWithCount, fromDismissed: boolean) => void;
+  onJoin: (circle: CircleWithCount) => void;
   onDismiss: (circle: CircleWithCount) => void;
   onRestore: (circle: CircleWithCount) => void;
 };
@@ -93,6 +95,7 @@ const CircleRow = React.memo(function CircleRow({
   hasNewActivity,
   circleCount,
   onOpen,
+  onJoin,
   onDismiss,
   onRestore,
 }: CircleRowProps) {
@@ -115,6 +118,7 @@ const CircleRow = React.memo(function CircleRow({
         dismissedView ? () => onRestore(circle) : memberStatus === "owner" ? undefined : () => onDismiss(circle)
       }
       onPress={() => onOpen(circle, dismissedView)}
+      onJoinPress={memberStatus === null && circle.visibility !== "private" ? () => onJoin(circle) : undefined}
     />
   );
 });
@@ -127,10 +131,11 @@ export default function CirclesScreen() {
   const { markHomeReady } = useHomeReady();
   const { setMapViewActive } = useCirclesMapView();
   const [modalVisible, setModalVisible] = useState(false);
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [mapView, setMapView] = useState(false);
+  const mapView = false;
 
   useFocusEffect(
     useCallback(() => {
@@ -143,13 +148,6 @@ export default function CirclesScreen() {
   const [locationFilter, setLocationFilter] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<"owner" | "active" | "invited" | null>(null);
   const [nearMe, setNearMe] = useState(false);
-  const placesFiltersActive =
-    showFilterPanel ||
-    sortBy !== "newest" ||
-    categoryFilter !== null ||
-    locationFilter !== null ||
-    nearMe ||
-    roleFilter !== null;
   const [nearMeCity, setNearMeCity] = useState<string | null>(null);
   const [nearMeLoading, setNearMeLoading] = useState(false);
   const [circles, setCircles] = useState<CircleWithCount[]>([]);
@@ -262,6 +260,11 @@ export default function CirclesScreen() {
           }
         }
       }
+      if (user && !circlesResult.error && circlesResult.data) {
+        for (const row of circlesResult.data as { id: string; owner_id?: string | null }[]) {
+          if (row.owner_id === user.id) map[row.id] = "owner";
+        }
+      }
       setMemberStatusMap(map);
 
       // Post-filtering (reported/hidden) and owner pending-request counts both depend
@@ -274,9 +277,10 @@ export default function CirclesScreen() {
             member_count: row.circle_members?.[0]?.count ?? 0,
             event_count: row.events?.[0]?.count ?? 0,
           }))
-          // Hide private circles unless the user is already a member/owner
+          // Hide private circles unless the user is already a member/owner.
+          // Always keep places this user created, even outside the catalog cities.
           .filter((circle) => circle.visibility !== "private" || map[circle.id] != null)
-          .filter(isKeptCircle);
+          .filter((circle) => isKeptCircle(circle) || circle.owner_id === user?.id);
         const circleIds = mapped.map((c: any) => c.id);
         const [reportedCircleIds, hiddenAuthorIds, pendingResult, eventsResult] = await Promise.all([
           fetchReportedHiddenContentIds("circle", circleIds),
@@ -460,6 +464,12 @@ export default function CirclesScreen() {
           return true;
         })
         .sort((a, b) => {
+          const aPin = pinnedPlaceRank(a.name);
+          const bPin = pinnedPlaceRank(b.name);
+          if (aPin >= 0 || bPin >= 0) {
+            if (aPin >= 0 && bPin >= 0) return aPin - bPin;
+            return aPin >= 0 ? -1 : 1;
+          }
           if (sortBy === "new_activity") {
             const aNew = (activityMap[a.id] ?? 0) > (lastViewedMap[a.id] ?? 0) ? 1 : 0;
             const bNew = (activityMap[b.id] ?? 0) > (lastViewedMap[b.id] ?? 0) ? 1 : 0;
@@ -500,6 +510,33 @@ export default function CirclesScreen() {
       }).then(() => {});
     }
   }, [user?.id]);
+
+  const handleJoinCircle = useCallback(async (circle: CircleWithCount) => {
+    if (!user) return;
+    const status = circle.visibility === "request" ? "requested" : "active";
+    const payload = {
+      circle_id: circle.id,
+      user_id: user.id,
+      role: "member" as const,
+      status,
+    };
+    let { error } = await supabase.from("circle_members").insert({
+      ...payload,
+      display_name: user.fullName ?? user.firstName ?? user.username ?? null,
+    });
+    if (error) {
+      ({ error } = await supabase.from("circle_members").insert(payload));
+    }
+    if (error) return;
+    setMemberStatusMap((prev) => ({ ...prev, [circle.id]: status }));
+    if (status === "active") {
+      setCircles((prev) =>
+        prev.map((item) =>
+          item.id === circle.id ? { ...item, member_count: item.member_count + 1 } : item
+        )
+      );
+    }
+  }, [user]);
 
   const handleRestoreCircle = useCallback((circle: CircleWithCount) => {
     setDismissedIds((prev) => { const next = new Set(prev); next.delete(circle.id); return next; });
@@ -542,11 +579,12 @@ export default function CirclesScreen() {
         }
         circleCount={circleCountByPlaceId[item.id] ?? 0}
         onOpen={handleOpenCircle}
+        onJoin={handleJoinCircle}
         onDismiss={handleDismissCircle}
         onRestore={handleRestoreCircle}
       />
     ),
-    [showDismissed, memberStatusMap, pendingRequestsMap, lastViewedMap, activityMap, circleCountByPlaceId, handleOpenCircle, handleDismissCircle, handleRestoreCircle]
+    [showDismissed, memberStatusMap, pendingRequestsMap, lastViewedMap, activityMap, circleCountByPlaceId, handleOpenCircle, handleJoinCircle, handleDismissCircle, handleRestoreCircle]
   );
 
   return (
@@ -595,66 +633,13 @@ export default function CirclesScreen() {
             rightElement={
               <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
                 <TouchableOpacity
-                  style={[
-                    styles.filterIconButton,
-                    mapView && styles.mapFilterIconButton,
-                    mapView && styles.mapFilterIconButtonActive,
-                  ]}
-                  onPress={() => setMapView((v) => !v)}
+                  style={styles.filterIconButton}
+                  onPress={() => setFeedbackVisible(true)}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   activeOpacity={0.7}
+                  accessibilityLabel={t.circles.feedbackTitle}
                 >
-                  <Ionicons
-                    name={mapView ? "list-outline" : "map-outline"}
-                    size={17}
-                    color={mapView ? MAP_GLASS_TEXT : colors.textMuted}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.filterIconButton,
-                    mapView && styles.mapFilterIconButton,
-                    (showSearch || normalizedSearch) &&
-                      (mapView ? styles.mapFilterIconButtonActive : styles.filterIconButtonActive),
-                  ]}
-                  onPress={() => setShowSearch((visible) => !visible)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name="search-outline"
-                    size={17}
-                    color={
-                      mapView
-                        ? MAP_GLASS_TEXT
-                        : showSearch || normalizedSearch
-                          ? colors.textOnIconBg
-                          : colors.textMuted
-                    }
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.filterIconButton,
-                    mapView && !placesFiltersActive && styles.mapFilterIconButton,
-                    placesFiltersActive && styles.filterIconButtonOn,
-                  ]}
-                  onPress={() => setShowFilterPanel((v) => !v)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons
-                    name="options-outline"
-                    size={17}
-                    color={placesFiltersActive ? "#F5EFE3" : mapView ? MAP_GLASS_TEXT : colors.textMuted}
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                  style={[styles.addButton, mapView && styles.mapAddButton]}
-                  onPress={() => setModalVisible(true)}
-                >
-                  <Ionicons name="add" size={16} color={mapView ? MAP_GLASS_TEXT : colors.textOnIconBg} />
+                  <Ionicons name="chatbubble-ellipses-outline" size={17} color={colors.textMuted} />
                 </TouchableOpacity>
               </View>
             }
@@ -809,7 +794,9 @@ export default function CirclesScreen() {
         onClose={() => setModalVisible(false)}
         onSave={handleSave}
         title="New Place"
+        saveLabel="Create Place"
       />
+      <FeedbackModal visible={feedbackVisible} onClose={() => setFeedbackVisible(false)} />
       </>
       )}
     </>

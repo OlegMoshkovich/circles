@@ -30,6 +30,7 @@ import { useNotificationContext } from "../src/contexts/NotificationContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { DeleteConfirmationModal } from "../src/components/modals/DeleteConfirmationModal";
 import { CommunityValuesModal } from "../src/components/modals/CommunityValuesModal";
+import { FeedbackModal } from "../src/components/modals/FeedbackModal";
 import { OnboardingRestartContext } from "../src/contexts/OnboardingRestartContext";
 
 async function handleSignOut(signOut: () => Promise<void>) {
@@ -82,6 +83,7 @@ const { language, setLanguage, t } = useLanguage();
   const [editInterests, setEditInterests] = useState<string[]>([]);
   const editInputRef = useRef<TextInput>(null);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
   const [valuesModalVisible, setValuesModalVisible] = useState(false);
   const [deleteConfirming, setDeleteConfirming] = useState(false);
   const [deleteTyped, setDeleteTyped] = useState("");
@@ -658,6 +660,27 @@ async function handleAccept(notif: AppNotification) {
       >
         <TouchableOpacity
           style={styles.row}
+          onPress={() => setFeedbackVisible(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.rowLabel}>{t.circles.feedbackTitle}</Text>
+          <Ionicons name="chatbubble-ellipses-outline" size={16} color={colors.text} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.sectionGap} />
+
+      <View
+        style={[
+          styles.card,
+          {
+            borderWidth: 1,
+            borderColor: colors.cardBorder,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.row}
           onPress={() => setDeleteModalVisible(true)}
           activeOpacity={0.7}
         >
@@ -766,6 +789,7 @@ async function handleAccept(notif: AppNotification) {
       visible={valuesModalVisible}
       onClose={() => setValuesModalVisible(false)}
     />
+    <FeedbackModal visible={feedbackVisible} onClose={() => setFeedbackVisible(false)} />
     </>
   );
 }

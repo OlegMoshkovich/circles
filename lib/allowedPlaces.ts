@@ -36,6 +36,14 @@ export function isKeptCircle(circle: {
   return matchesKeptPlace(circle.name) || matchesKeptPlace(circle.location);
 }
 
+const PINNED_PLACE_ORDER = ["zurich", "zug", "baden"] as const;
+
+/** Places that stay at the top of the list, in this order. -1 if not pinned. */
+export function pinnedPlaceRank(name: string | null | undefined): number {
+  const key = normalizePlaceText(name ?? "");
+  return PINNED_PLACE_ORDER.indexOf(key as (typeof PINNED_PLACE_ORDER)[number]);
+}
+
 /** First segment of a location ("Zurich, Switzerland" → "zurich"). */
 export function placeLocationKey(value: string | null | undefined): string {
   return normalizePlaceText((value ?? "").split(",")[0] ?? "").trim();

@@ -147,6 +147,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const isCircleView = route.params.mode === "circle";
   const [activeTab, setActiveTab] = useState<Tab>(isCircleView ? "events" : "circles");
   const [placeCircles, setPlaceCircles] = useState<PlaceCircle[]>([]);
+  const [nestedMemberStatus, setNestedMemberStatus] = useState<Record<string, "active" | "requested" | "invited">>({});
   const [loadingPlaceCircles, setLoadingPlaceCircles] = useState(false);
   const [memberCount, setMemberCount] = useState(route.params.member_count);
   const [membership, setMembership] = useState<CircleMember | null>(null);
@@ -226,6 +227,29 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       if (nested.length === 0) setActiveTab("events");
     });
   }, [fetchPlaceCircles, isCircleView]);
+
+  useEffect(() => {
+    if (!user || placeCircles.length === 0) return;
+    let cancelled = false;
+    supabase
+      .from("circle_members")
+      .select("circle_id, status")
+      .eq("user_id", user.id)
+      .in("circle_id", placeCircles.map((circle) => circle.id))
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        const next: Record<string, "active" | "requested" | "invited"> = {};
+        for (const row of data as { circle_id: string; status: string }[]) {
+          if (row.status === "active" || row.status === "requested" || row.status === "invited") {
+            next[row.circle_id] = row.status;
+          }
+        }
+        setNestedMemberStatus(next);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, placeCircles]);
 
   const [loadingFeed, setLoadingFeed] = useState(false);
   const hasLoadedFeedRef = useRef(false);
@@ -765,6 +789,36 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     setSubmitting(false);
   }
 
+  async function handleJoinNested(circle: PlaceCircle) {
+    if (!user || submitting) return;
+    setSubmitting(true);
+    const status = circle.visibility === "request" ? "requested" : "active";
+    const payload = {
+      circle_id: circle.id,
+      user_id: user.id,
+      role: "member" as const,
+      status,
+    };
+    let { error } = await supabase.from("circle_members").insert({
+      ...payload,
+      display_name: user.fullName ?? user.firstName ?? user.username ?? null,
+    });
+    if (error) {
+      ({ error } = await supabase.from("circle_members").insert(payload));
+    }
+    if (!error) {
+      setNestedMemberStatus((prev) => ({ ...prev, [circle.id]: status }));
+      if (status === "active") {
+        setPlaceCircles((prev) =>
+          prev.map((item) =>
+            item.id === circle.id ? { ...item, member_count: item.member_count + 1 } : item
+          )
+        );
+      }
+    }
+    setSubmitting(false);
+  }
+
   async function handleLeave() {
     if (!user || submitting) return;
     setSubmitting(true);
@@ -1219,7 +1273,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                 )}
                 <ScrollView
                   style={styles.fill}
-                  contentContainerStyle={{ paddingBottom: showJoinFooter ? spacing.sm : insets.bottom + spacing.sm }}
+                  contentContainerStyle={{ paddingBottom: insets.bottom + spacing.sm }}
                   showsVerticalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
                 >
@@ -1307,7 +1361,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           style={styles.fill}
           contentContainerStyle={[
             styles.content,
-            { paddingBottom: showJoinFooter ? spacing.sm : insets.bottom + spacing.sm },
+            { paddingBottom: insets.bottom + spacing.sm },
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -1332,9 +1386,18 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                         visibility={circle.visibility}
                         memberCount={circle.member_count}
                         eventCount={circle.event_count}
-                        memberStatus={circle.owner_id === user?.id ? "owner" : null}
+                        memberStatus={
+                          circle.owner_id === user?.id
+                            ? "owner"
+                            : nestedMemberStatus[circle.id] ?? null
+                        }
                         location={circle.location}
                         organizer={circle.organizer}
+                        onJoinPress={
+                          circle.owner_id !== user?.id && !nestedMemberStatus[circle.id] && circle.visibility !== "private"
+                            ? () => handleJoinNested(circle)
+                            : undefined
+                        }
                         onPress={() =>
                           nav.push("CircleDetail", {
                             id: circle.id,
@@ -1992,6 +2055,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   footer: {
     paddingHorizontal: spacing.pageHorizontal,
+    paddingTop: spacing.sm,
     paddingBottom: 16,
     backgroundColor: isOnboarding ? "transparent" : colors.background,
   },

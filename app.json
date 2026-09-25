@@ -29,7 +29,7 @@
         "applinks:clerk.helping.lemming-64.lclstage.dev"
       ],
       "bundleIdentifier": "ch.valmia.app",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "appleTeamId": "Q8RCPVAZM5",
       "entitlements": {
         "aps-environment": "production"
@@ -37,7 +37,9 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Used to help you set a meeting location for events and circles.",
         "ITSAppUsesNonExemptEncryption": false,
-        "LSApplicationQueriesSchemes": ["comgooglemaps"]
+        "LSApplicationQueriesSchemes": [
+          "comgooglemaps"
+        ]
       }
     },
     "android": {
