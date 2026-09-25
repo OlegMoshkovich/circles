@@ -31,7 +31,7 @@ import { CircleCard } from "../src/components/cards/CircleCard";
 import { CreateCircleModal, NewCircleData } from "../src/components/modals/CreateCircleModal";
 import { LazyEventsMapView } from "../src/components/maps/LazyEventsMapView";
 import type { MapEvent } from "../src/components/maps/EventsMapView";
-import { buildEventShareMessage, shareMessage } from "../lib/shareLinks";
+import { buildCircleShareMessage, buildEventShareMessage, shareMessage } from "../lib/shareLinks";
 import { isPastEvent, parseEventDateTime } from "../lib/events";
 import {
   fetchHiddenAuthorIds,
@@ -75,6 +75,38 @@ type FeedItem =
   | { kind: "note"; data: CircleNote };
 
 // VISIBILITY_LABEL is now built dynamically with translations (see visibilityLabel() inside the component)
+
+const WEEK_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function weekStartMs(timestamp: number): number | null {
+  if (!timestamp) return null;
+  const date = new Date(timestamp);
+  const day = date.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  date.setDate(date.getDate() + diff);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime();
+}
+
+function weekPillLabel(startMs: number): string {
+  const start = new Date(startMs);
+  const end = new Date(startMs);
+  end.setDate(end.getDate() + 6);
+  const startLabel = `${start.getDate()} ${WEEK_MONTHS[start.getMonth()]}`;
+  const endLabel =
+    start.getMonth() === end.getMonth()
+      ? `${end.getDate()}`
+      : `${end.getDate()} ${WEEK_MONTHS[end.getMonth()]}`;
+  return `${startLabel}–${endLabel}`;
+}
+
+function matchesEventWeek(
+  event: { date_label: string | null; time_label: string | null },
+  week: number | null
+): boolean {
+  if (week === null) return true;
+  return weekStartMs(parseEventDateTime(event.date_label, event.time_label)) === week;
+}
 
 export default function CircleDetailScreen({ route, navigation }: Props) {
   const { id, owner_id } = route.params;
@@ -211,6 +243,9 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [eventSort, setEventSort] = useState<"date" | "newest" | "popular">("date");
   const [eventCategory, setEventCategory] = useState("all");
   const [eventType, setEventType] = useState<"all" | "events" | "activity">("all");
+  const [eventWeek, setEventWeek] = useState<number | null>(null);
+  const eventFiltersActive =
+    showEventFilters || eventSort !== "date" || eventCategory !== "all" || eventType !== "all" || eventWeek !== null;
   const [mapEvents, setMapEvents] = useState<Event[]>([]);
   const [loadingMapEvents, setLoadingMapEvents] = useState(false);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
@@ -570,6 +605,20 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
     setPostingNote(false);
   }
 
+  async function handleSharePlaceOrCircle() {
+    const { message } = buildCircleShareMessage({
+      id,
+      name: name ?? "",
+      description,
+      location,
+    });
+    try {
+      await shareMessage(message, name ?? undefined);
+    } catch {
+      Alert.alert("Error", "Could not open share menu.");
+    }
+  }
+
   async function handleShareEvent(event: Event) {
     const { message } = buildEventShareMessage({
       id: event.id,
@@ -792,7 +841,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         disabled={submitting}
       >
         <Text style={styles.joinButtonText}>
-          {visibility === "request" ? t.circles.requestToJoin : t.circles.join}
+          {visibility === "request" ? t.circles.requestToJoin : isCircleView ? t.circles.join : t.circles.joinPlace}
         </Text>
       </TouchableOpacity>
     );
@@ -816,14 +865,52 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           <Ionicons name="chevron-back" size={18} color={colors.text} />
           <Text style={styles.backLabel}>{route.params.backLabel ?? t.nav.circles}</Text>
         </TouchableOpacity>
-        {(isOwner || isMember || (user && !isOwner)) ? (
-          <View style={styles.headerActions}>
+        <View style={styles.headerActions}>
+            {(isOwner || isMember) && !isCircleView ? (
+              <TouchableOpacity
+                onPress={() => setCreateCircleVisible(true)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityLabel={t.circles.createAction}
+              >
+                <Ionicons name="people-outline" size={20} color={colors.text} />
+              </TouchableOpacity>
+            ) : null}
             {(isOwner || isMember) ? (
               <TouchableOpacity
                 onPress={() => setCreateEventVisible(true)}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityLabel={t.circles.eventsTab}
               >
-                <Ionicons name="add" size={22} color={colors.text} />
+                <Ionicons
+                  name={isCircleView ? "add" : "calendar-outline"}
+                  size={isCircleView ? 22 : 18}
+                  color={colors.text}
+                />
+              </TouchableOpacity>
+            ) : null}
+            <TouchableOpacity
+              onPress={handleSharePlaceOrCircle}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityLabel={isCircleView ? t.circles.typeCircle : t.nav.circles}
+            >
+              <Ionicons name="share-outline" size={18} color={colors.text} />
+            </TouchableOpacity>
+            {user && !isOwner ? (
+              <TouchableOpacity
+                onPress={() =>
+                  report({
+                    reporterUserId: user.id,
+                    targetType: "circle",
+                    targetId: id,
+                    reportedUserId: owner_id,
+                    onReported: (_t, { restrict }) => {
+                      if (restrict) nav.goBack();
+                    },
+                  })
+                }
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <Ionicons name="flag-outline" size={18} color={colors.text} />
               </TouchableOpacity>
             ) : null}
             {isMember && !isOwner ? (
@@ -861,26 +948,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                 <Ionicons name="trash-outline" size={18} color={colors.text} />
               </TouchableOpacity>
             ) : null}
-            {user && !isOwner ? (
-              <TouchableOpacity
-                onPress={() =>
-                  report({
-                    reporterUserId: user.id,
-                    targetType: "circle",
-                    targetId: id,
-                    reportedUserId: owner_id,
-                    onReported: (_t, { restrict }) => {
-                      if (restrict) nav.goBack();
-                    },
-                  })
-                }
-                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              >
-                <Ionicons name="ellipsis-horizontal" size={18} color={colors.text} />
-              </TouchableOpacity>
-            ) : null}
           </View>
-        ) : null}
       </View>
 
       {/* Header card - fixed, not scrollable */}
@@ -892,14 +960,17 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
               <TouchableOpacity
                 style={[
                   styles.titleCircleButton,
-                  (showEventFilters || eventSort !== "date" || eventCategory !== "all" || eventType !== "all") &&
-                    styles.titleCircleButtonActive,
+                  eventFiltersActive && styles.titleFilterButtonActive,
                 ]}
                 onPress={() => setShowEventFilters((v) => !v)}
                 activeOpacity={0.8}
                 accessibilityLabel={t.common.sort}
               >
-                <Ionicons name="options-outline" size={14} color="#35412A" />
+                <Ionicons
+                  name="options-outline"
+                  size={14}
+                  color={eventFiltersActive ? "#F5EFE3" : "#35412A"}
+                />
               </TouchableOpacity>
             ) : null}
             {activeTab === "events" ? (
@@ -1031,6 +1102,47 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                 </>
               );
             })()}
+            {(() => {
+              const weekStarts = Array.from(
+                new Set(
+                  events
+                    .filter((event) => !isPastEvent(event))
+                    .map((event) => weekStartMs(parseEventDateTime(event.date_label, event.time_label)))
+                    .filter((start): start is number => start !== null)
+                )
+              ).sort((a, b) => a - b);
+              if (weekStarts.length === 0) return null;
+              return (
+                <>
+                  <Text style={styles.eventFilterLabel}>Week</Text>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.eventWeekRow}
+                  >
+                    <TouchableOpacity
+                      style={[styles.eventFilterChip, eventWeek === null && styles.eventFilterChipActive]}
+                      onPress={() => setEventWeek(null)}
+                    >
+                      <Text style={[styles.eventFilterChipText, eventWeek === null && styles.eventFilterChipTextActive]}>
+                        {t.common.all}
+                      </Text>
+                    </TouchableOpacity>
+                    {weekStarts.map((start) => (
+                      <TouchableOpacity
+                        key={start}
+                        style={[styles.eventFilterChip, eventWeek === start && styles.eventFilterChipActive]}
+                        onPress={() => setEventWeek(eventWeek === start ? null : start)}
+                      >
+                        <Text style={[styles.eventFilterChipText, eventWeek === start && styles.eventFilterChipTextActive]}>
+                          {weekPillLabel(start)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </>
+              );
+            })()}
           </View>
         ) : null}
       </View>
@@ -1050,6 +1162,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                   if (eventType === "activity") return !!event.is_activity;
                   return true;
                 })
+                .filter((event) => matchesEventWeek(event, eventWeek))
                 .map((event) => ({
                   id: event.id,
                   title: event.title,
@@ -1154,7 +1267,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                                   }
                                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                                 >
-                                  <Ionicons name="ellipsis-horizontal" size={14} color={colors.textMuted} />
+                                  <Ionicons name="flag-outline" size={14} color={colors.textMuted} />
                                 </TouchableOpacity>
                               ) : null}
                               {note.user_id === user?.id ? (
@@ -1248,6 +1361,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                     if (eventType === "activity") return !!e.is_activity;
                     return true;
                   })
+                  .filter((e) => matchesEventWeek(e, eventWeek))
                   .sort((a, b) => {
                     if (eventSort === "newest") {
                       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
@@ -1402,20 +1516,9 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         </ScrollView>
       )}
 
-      {/* Fixed footer: create a circle on a place, or join when you are not a member */}
-      {(!placeMapVisible && !isCircleView && activeTab === "circles" && user) || (!isOwner && !isMember) ? (
+      {!isOwner && !isMember ? (
         <View style={[styles.footer, { paddingBottom: footerBottomInset }]}>
-          {!placeMapVisible && !isCircleView && activeTab === "circles" && user ? (
-            <TouchableOpacity
-              style={[styles.actionButton, styles.joinButton]}
-              onPress={() => setCreateCircleVisible(true)}
-            >
-              <Ionicons name="add" size={18} color="#35412A" />
-              <Text style={styles.joinButtonText}>{t.circles.createAction}</Text>
-            </TouchableOpacity>
-          ) : (
-            renderJoinButton()
-          )}
+          {renderJoinButton()}
         </View>
       ) : null}
 
@@ -1608,6 +1711,9 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   titleCircleButtonActive: {
     backgroundColor: "#E4DDD0",
   },
+  titleFilterButtonActive: {
+    backgroundColor: "#35412A",
+  },
   placeMapContainer: {
     flex: 1,
     marginHorizontal: spacing.pageHorizontal,
@@ -1651,6 +1757,11 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
+  },
+  eventWeekRow: {
+    flexDirection: "row",
+    gap: 6,
+    paddingRight: 4,
   },
   eventFilterChip: {
     paddingVertical: 5,

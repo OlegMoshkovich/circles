@@ -143,6 +143,13 @@ export default function CirclesScreen() {
   const [locationFilter, setLocationFilter] = useState<string | null>(null);
   const [roleFilter, setRoleFilter] = useState<"owner" | "active" | "invited" | null>(null);
   const [nearMe, setNearMe] = useState(false);
+  const placesFiltersActive =
+    showFilterPanel ||
+    sortBy !== "newest" ||
+    categoryFilter !== null ||
+    locationFilter !== null ||
+    nearMe ||
+    roleFilter !== null;
   const [nearMeCity, setNearMeCity] = useState<string | null>(null);
   const [nearMeLoading, setNearMeLoading] = useState(false);
   const [circles, setCircles] = useState<CircleWithCount[]>([]);
@@ -629,9 +636,8 @@ export default function CirclesScreen() {
                 <TouchableOpacity
                   style={[
                     styles.filterIconButton,
-                    mapView && styles.mapFilterIconButton,
-                    (sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null) &&
-                      (mapView ? styles.mapFilterIconButtonActive : styles.filterIconButtonActive),
+                    mapView && !placesFiltersActive && styles.mapFilterIconButton,
+                    placesFiltersActive && styles.filterIconButtonOn,
                   ]}
                   onPress={() => setShowFilterPanel((v) => !v)}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -640,15 +646,7 @@ export default function CirclesScreen() {
                   <Ionicons
                     name="options-outline"
                     size={17}
-                    color={
-                      sortBy !== "newest" || categoryFilter !== null || locationFilter !== null || nearMe || roleFilter !== null
-                        ? mapView
-                          ? MAP_GLASS_TEXT
-                          : colors.iconbBg
-                        : mapView
-                          ? MAP_GLASS_TEXT
-                          : colors.textMuted
-                    }
+                    color={placesFiltersActive ? "#F5EFE3" : mapView ? MAP_GLASS_TEXT : colors.textMuted}
                   />
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -810,6 +808,7 @@ export default function CirclesScreen() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSave={handleSave}
+        title="New Place"
       />
       </>
       )}
@@ -852,6 +851,9 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
   },
   filterIconButtonActive: {
     backgroundColor: isOnboarding ? "rgba(255,255,255,0.16)" : colors.iconbBg,
+  },
+  filterIconButtonOn: {
+    backgroundColor: "#35412A",
   },
   mapHeaderCard: {
     backgroundColor: "transparent",

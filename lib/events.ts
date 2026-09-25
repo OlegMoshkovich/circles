@@ -121,14 +121,19 @@ type EventLike = {
 };
 
 /**
- * Whether an event has already finished. An event counts as past once its end
- * (start + duration, or just start when there's no duration) is before now.
- * Events whose date can't be parsed are never considered past, so a bad label
- * never silently hides an event.
+ * Whether an event should be hidden as already over. A listed date before today
+ * is past even when a long duration would still be running. An event dated
+ * today is past once its end (start + duration, or just start) is before now.
+ * Events whose date can't be parsed are never considered past.
  */
 export function isPastEvent(event: EventLike): boolean {
   const start = parseEventDateTime(event.date_label, event.time_label);
   if (!(start > 0)) return false;
+  const startDay = new Date(start);
+  startDay.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (startDay.getTime() < today.getTime()) return true;
   const end = start + (event.duration_minutes ?? 0) * 60 * 1000;
   return end < Date.now();
 }

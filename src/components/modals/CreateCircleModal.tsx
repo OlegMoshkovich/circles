@@ -36,6 +36,7 @@ type Props = {
   onClose: () => void;
   onSave: (circle: NewCircleData) => Promise<void>;
   initialValues?: Partial<NewCircleData>;
+  title?: string;
 };
 
 const VISIBILITY_OPTIONS: { value: "public" | "private"; label: string }[] = [
@@ -45,7 +46,7 @@ const VISIBILITY_OPTIONS: { value: "public" | "private"; label: string }[] = [
 
 const PRESET_CATEGORIES = ["Culture", "Friends", "Nature", "Sport", "Food", "Travel"];
 
-export function CreateCircleModal({ visible, onClose, onSave, initialValues }: Props) {
+export function CreateCircleModal({ visible, onClose, onSave, initialValues, title = "New Circle" }: Props) {
   const { user } = useUser();
   const { bgOption } = useBackground();
 
@@ -150,7 +151,7 @@ export function CreateCircleModal({ visible, onClose, onSave, initialValues }: P
               <View style={styles.handle} />
 
               <View style={styles.header}>
-                <Text style={styles.headerTitle}>New Circle</Text>
+                <Text style={styles.headerTitle}>{title}</Text>
                 <TouchableOpacity onPress={handleClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                   <Ionicons name="close" size={20} color={colors.textMuted} />
                 </TouchableOpacity>

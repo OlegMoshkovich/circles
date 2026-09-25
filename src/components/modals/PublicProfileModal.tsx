@@ -151,7 +151,7 @@ export function PublicProfileModal({ visible, onClose, userId, displayName, onBl
                     }}
                     hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                   >
-                    <Ionicons name="ellipsis-horizontal" size={18} color={colors.textMuted} />
+                    <Ionicons name="flag-outline" size={18} color={colors.textMuted} />
                   </TouchableOpacity>
                 ) : null}
                 <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>

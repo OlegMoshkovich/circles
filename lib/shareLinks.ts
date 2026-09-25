@@ -62,12 +62,14 @@ type CircleShareInput = {
   id: string;
   name: string;
   description?: string | null;
+  location?: string | null;
 };
 
 export function buildCircleShareMessage(c: CircleShareInput): { url: string; message: string } {
   const url = circleShareUrl(c.id);
   const lines: (string | null)[] = [
     c.name,
+    c.location?.trim() ? c.location.trim() : null,
     c.description?.trim() ? c.description.trim() : null,
     "",
     url,
