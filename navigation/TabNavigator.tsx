@@ -44,6 +44,8 @@ function makeTabButton(getLabel: (t: Translations) => string, showBadge = false)
       ? (focused ? "rgba(255, 255, 255, 0.96)" : "rgba(255, 255, 255, 0.72)")
       : bgOption === "glass"
         ? (focused ? "rgba(255, 255, 255, 0.96)" : "rgba(255, 255, 255, 0.72)")
+      : bgOption === "light"
+        ? (focused ? colors.textOnIconBg : "rgba(240, 235, 224, 0.72)")
       : (focused ? colors.text : colors.textMuted);
 
     return (
@@ -63,7 +65,17 @@ function makeTabButton(getLabel: (t: Translations) => string, showBadge = false)
 
 const CirclesTabButton = makeTabButton((t) => t.nav.circles);
 const ProfileTabButton = makeTabButton((t) => t.nav.profile, true);
-const renderGlassBackground = () => <GlassBackground />;
+
+function TabBarBackground() {
+  const { bgOption } = useBackground();
+  const { mapViewActive } = useCirclesMapView();
+  if (bgOption === "light" && !mapViewActive) {
+    return <View style={[StyleSheet.absoluteFill, styles.lightBar]} />;
+  }
+  return <GlassBackground />;
+}
+
+const renderTabBarBackground = () => <TabBarBackground />;
 
 const TAB_PILL_WIDTH = 216;
 
@@ -97,7 +109,7 @@ function TabNavigatorInner() {
       screenOptions={{
         headerShown: false,
         tabBarStyle,
-        tabBarBackground: renderGlassBackground,
+        tabBarBackground: renderTabBarBackground,
       }}
     >
       <Tab.Screen
@@ -140,6 +152,10 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: "rgba(255, 255, 255, 0.55)",
+  },
+  lightBar: {
+    backgroundColor: colors.iconbBg,
+    borderRadius: 32,
   },
   tabButton: {
     flex: 1,

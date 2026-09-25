@@ -255,14 +255,16 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     },
     metaRow: {
       flexDirection: "row",
-      alignItems: "center",
+      alignItems: "flex-start",
       marginBottom: spacing.sm,
     },
     metaIcon: {
       marginRight: spacing.sm,
+      marginTop: 2,
     },
     metaText: {
       ...typography.bodySmall,
+      flex: 1,
       color: colors.text,
       fontFamily: "Lora_400Regular",
     },

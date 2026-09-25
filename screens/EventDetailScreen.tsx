@@ -38,6 +38,39 @@ import { useReport } from "../src/contexts/ReportProvider";
 import { InviteModal } from "../src/components/modals/InviteModal";
 import { EditEventModal, EditEventData } from "../src/components/modals/EditEventModal";
 import { PublicProfileModal } from "../src/components/modals/PublicProfileModal";
+
+function chooseMapApp(address: string) {
+  const query = encodeURIComponent(address.trim());
+  const appleUrl = `http://maps.apple.com/?q=${query}`;
+  const googleAppUrl = `comgooglemaps://?q=${query}`;
+  const googleWebUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+
+  function open(url: string) {
+    Linking.openURL(url).catch(() =>
+      Alert.alert("Could not open map", "No maps app is available for this address.")
+    );
+  }
+
+  async function openGoogle() {
+    try {
+      const canOpenApp = await Linking.canOpenURL(googleAppUrl);
+      open(canOpenApp ? googleAppUrl : googleWebUrl);
+    } catch {
+      open(googleWebUrl);
+    }
+  }
+
+  if (Platform.OS !== "ios") {
+    void openGoogle();
+    return;
+  }
+
+  Alert.alert("Open in", undefined, [
+    { text: "Apple Maps", onPress: () => open(appleUrl) },
+    { text: "Google Maps", onPress: () => { void openGoogle(); } },
+    { text: "Cancel", style: "cancel" },
+  ]);
+}
 import { ThemedBackground } from "../src/components/layout/ThemedBackground";
 
 type Props = NativeStackScreenProps<RootStackParamList, "EventDetail">;
@@ -532,10 +565,16 @@ export default function EventDetailScreen({ route, navigation }: Props) {
             <Ionicons name="time-outline" size={14} color={colors.textMuted} style={[styles.metaIcon, { marginLeft: 12 }]} />
             <Text style={styles.metaText}>{time}</Text>
           </View>
-          <View style={styles.metaRow}>
-            <Ionicons name="location-outline" size={14} color={colors.textMuted} style={styles.metaIcon} />
-            <Text style={styles.metaText}>{location}</Text>
-          </View>
+          {location.trim() ? (
+            <TouchableOpacity
+              style={[styles.metaRow, styles.locationRow]}
+              onPress={() => chooseMapApp(location)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="location-outline" size={14} color={colors.textMuted} style={[styles.metaIcon, { marginTop: 3 }]} />
+              <Text style={[styles.metaText, styles.locationText]}>{location}</Text>
+            </TouchableOpacity>
+          ) : null}
 
           {(description ?? "").trim().length > 0 ? (
             <>
@@ -921,6 +960,12 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   metaText: {
     ...typography.body,
     color: colors.text,
+  },
+  locationRow: {
+    alignItems: "flex-start",
+  },
+  locationText: {
+    flex: 1,
   },
   metaLink: {
     flex: 1,

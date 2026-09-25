@@ -785,6 +785,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
   const isMember = membership?.status === "active";
   const isRequested = membership?.status === "requested";
+  const showJoinFooter = !isOwner && !isMember && (visibility !== "private" || !!pendingInviteId || isRequested);
 
   function handleDelete() {
     Alert.alert(
@@ -854,7 +855,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={0}
       >
-      <View style={[styles.wrapper, { paddingBottom: insets.bottom }]}>
+      <View style={[styles.wrapper, showJoinFooter && { paddingBottom: insets.bottom }]}>
       {/* Back button */}
       <View style={[styles.backRow, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity
@@ -1216,7 +1217,12 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                     )}
                   </View>
                 )}
-                <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                <ScrollView
+                  style={styles.fill}
+                  contentContainerStyle={{ paddingBottom: showJoinFooter ? spacing.sm : insets.bottom + spacing.sm }}
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                >
                   {sortedNotes.length === 0 ? (
                     <Text style={styles.emptyText}>{t.circles.noFeed}</Text>
                   ) : (
@@ -1297,7 +1303,15 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
       {/* Other tabs: scrollable content */}
       {!placeMapVisible && activeTab !== "feed" && (
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          style={styles.fill}
+          contentContainerStyle={[
+            styles.content,
+            { paddingBottom: showJoinFooter ? spacing.sm : insets.bottom + spacing.sm },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {activeTab === "circles" && (
             <>
               {loadingPlaceCircles && placeCircles.length === 0 ? (
@@ -1516,7 +1530,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
         </ScrollView>
       )}
 
-      {!isOwner && !isMember ? (
+      {showJoinFooter ? (
         <View style={[styles.footer, { paddingBottom: footerBottomInset }]}>
           {renderJoinButton()}
         </View>
@@ -1651,6 +1665,9 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     flex: 1,
     backgroundColor: isOnboarding ? "transparent" : colors.background,
   },
+  fill: {
+    flex: 1,
+  },
   headerCard: {
     backgroundColor: colors.card,
     borderRadius: 16,
@@ -1694,7 +1711,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   content: {
     paddingHorizontal: spacing.pageHorizontal,
     paddingTop: spacing.sm,
-    paddingBottom: spacing.xl,
   },
   titleRow: {
     flexDirection: "row",

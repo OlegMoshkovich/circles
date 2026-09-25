@@ -36,7 +36,8 @@
       },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Used to help you set a meeting location for events and circles.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "LSApplicationQueriesSchemes": ["comgooglemaps"]
       }
     },
     "android": {
