@@ -1105,15 +1105,6 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
               <Text style={[styles.tabText, activeTab === "events" && styles.tabTextActive]}>{t.circles.eventsTab}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.tab, activeTab === "feed" && styles.tabActive]}
-              onPress={() => {
-                setPlaceMapVisible(false);
-                setActiveTab("feed");
-              }}
-            >
-              <Text style={[styles.tabText, activeTab === "feed" && styles.tabTextActive]}>{t.circles.feed}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
               style={[styles.tab, activeTab === "members" && styles.tabActive]}
               onPress={() => {
                 setPlaceMapVisible(false);
@@ -1975,7 +1966,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   },
   tabText: {
     fontSize: 14,
-    fontWeight: "500" as const,
+    fontFamily: "Lora_400Regular",
     color: colors.textMuted,
     flexShrink: 1,
   },

@@ -204,6 +204,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     },
     name: {
       fontSize: 18,
+      fontFamily: "Lora_400Regular",
       color: colors.text,
       flex: 1,
       marginRight: spacing.sm,
@@ -226,7 +227,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     },
     badgeText: {
       fontSize: 11,
-      fontWeight: "600" as const,
+      fontFamily: "Lora_400Regular",
       letterSpacing: 0.6,
       color: colors.textMuted,
       textTransform: "uppercase" as const,
@@ -262,6 +263,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     },
     footerText: {
       ...typography.bodySmall,
+      fontFamily: "Lora_400Regular",
       color: colors.textMuted,
     },
     statusBadge: {
@@ -280,7 +282,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     },
     statusBadgeText: {
       fontSize: 11,
-      fontWeight: "600" as const,
+      fontFamily: "Lora_400Regular",
       letterSpacing: 0.4,
       color: colors.textMuted,
     },
@@ -292,7 +294,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     },
     joinButtonText: {
       fontSize: 12,
-      fontWeight: "600" as const,
+      fontFamily: "Lora_400Regular",
       color: isOnboarding ? colors.text : colors.background,
       letterSpacing: 0.3,
     },
@@ -313,7 +315,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     requestDotText: {
       color: colors.background,
       fontSize: 10,
-      fontWeight: "700" as const,
+      fontFamily: "Lora_700Bold",
     },
   });
 }

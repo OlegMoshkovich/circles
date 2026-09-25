@@ -185,7 +185,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     },
     title: {
       fontSize: 18,
-      fontWeight: "400" as const,
+      fontFamily: "Lora_400Regular",
       color: colors.text,
       flex: 1,
       marginRight: spacing.sm,

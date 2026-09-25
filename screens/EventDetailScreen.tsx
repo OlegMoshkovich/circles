@@ -132,6 +132,10 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   } | null>(null);
 
   function handleBack() {
+    if (showChat) {
+      setShowChat(false);
+      return;
+    }
     if (openedFromShareLink.current && circle_id) {
       const circleParams = shareCircleParams ?? {
         id: circle_id,
@@ -636,6 +640,34 @@ export default function EventDetailScreen({ route, navigation }: Props) {
               <Text style={styles.attendeeLabel}>{t.events.rsvpMaybe}</Text>
             </View>
           </View>
+
+          {notes.length > 0 ? (
+            <>
+              <View style={styles.divider} />
+              {notes.map((note) => {
+                const n = note.display_name ?? "?";
+                const parts = n.trim().split(" ");
+                const initials = parts.length >= 2
+                  ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+                  : n.slice(0, 2).toUpperCase();
+                return (
+                  <View key={note.id} style={styles.commentRow}>
+                    <View style={styles.commentAvatar}>
+                      {note.avatar_url ? (
+                        <Image source={{ uri: note.avatar_url }} style={styles.commentAvatarImage} />
+                      ) : (
+                        <Text style={styles.commentAvatarText}>{initials}</Text>
+                      )}
+                    </View>
+                    <View style={styles.commentBubble}>
+                      <Text style={styles.commentAuthor}>{note.display_name ?? "Guest"}</Text>
+                      <Text style={styles.commentText}>{note.content}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </>
+          ) : null}
 
           <View style={styles.divider} />
           </View>
@@ -1177,6 +1209,50 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     color: "#35412A",
     fontSize: 14,
     fontWeight: "600" as const,
+  },
+  commentRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 8,
+    marginBottom: spacing.sm,
+  },
+  commentAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.badgeBg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  commentAvatarImage: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+  commentAvatarText: {
+    fontSize: 11,
+    fontFamily: "Lora_400Regular",
+    color: colors.text,
+  },
+  commentBubble: {
+    flex: 1,
+    backgroundColor: colors.badgeBg,
+    borderRadius: 16,
+    borderBottomLeftRadius: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  commentAuthor: {
+    fontSize: 12,
+    fontFamily: "Lora_400Regular",
+    color: colors.textMuted,
+    marginBottom: 2,
+  },
+  commentText: {
+    fontSize: 15,
+    fontFamily: "Lora_400Regular",
+    color: colors.text,
+    lineHeight: 21,
   },
   noteCard: {
     backgroundColor: colors.card,
