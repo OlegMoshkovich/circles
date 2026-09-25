@@ -56,7 +56,6 @@ export function EventCard({
   isOwner = false,
   circleName,
   noteCount = 0,
-  hasNewActivity = false,
   onPress,
   onSharePress,
   onActionPress,
@@ -74,12 +73,6 @@ export function EventCard({
       <View style={styles.header}>
         <Text style={styles.title}>{title}</Text>
         <View style={styles.headerRight}>
-          {hasNewActivity && (
-            <View style={styles.activityBell}>
-              <Ionicons name="notifications-outline" size={11} color="#FFFFFF" />
-            </View>
-          )}
-
           {isOwner ? (
             <View style={[styles.badge, styles.badgeGoing]}>
               <Text style={[styles.badgeText, styles.badgeTextGoing]}>{t.events.badgeHost}</Text>
@@ -180,13 +173,13 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     },
     header: {
       flexDirection: "row",
-      alignItems: "center",
+      alignItems: "flex-start",
       justifyContent: "space-between",
       marginBottom: spacing.xs,
     },
     headerRight: {
       flexDirection: "row",
-      alignItems: "center",
+      alignItems: "flex-start",
       justifyContent: "flex-end",
       flexShrink: 0,
     },
@@ -306,15 +299,6 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     },
     footerLabel: {
       color: colors.textMuted,
-    },
-    activityBell: {
-      backgroundColor: "#FF4D00",
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 999,
-      marginRight: spacing.sm,
-      alignItems: "center",
-      justifyContent: "center",
     },
     headerAction: {
       minWidth: 28,

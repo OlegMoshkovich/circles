@@ -81,8 +81,6 @@ type CircleRowProps = {
   circleCount: number;
   onOpen: (circle: CircleWithCount, fromDismissed: boolean) => void;
   onJoin: (circle: CircleWithCount) => void;
-  onDismiss: (circle: CircleWithCount) => void;
-  onRestore: (circle: CircleWithCount) => void;
 };
 
 // Memoized so list-wide state changes (filter panel, unrelated rows) don't
@@ -96,8 +94,6 @@ const CircleRow = React.memo(function CircleRow({
   circleCount,
   onOpen,
   onJoin,
-  onDismiss,
-  onRestore,
 }: CircleRowProps) {
   return (
     <CircleCard
@@ -113,10 +109,6 @@ const CircleRow = React.memo(function CircleRow({
       organizer={circle.organizer}
       pendingRequests={pendingRequests}
       hasNewActivity={hasNewActivity}
-      actionIcon={dismissedView ? "refresh" : memberStatus === "owner" ? undefined : "close"}
-      onActionPress={
-        dismissedView ? () => onRestore(circle) : memberStatus === "owner" ? undefined : () => onDismiss(circle)
-      }
       onPress={() => onOpen(circle, dismissedView)}
       onJoinPress={memberStatus === null && circle.visibility !== "private" ? () => onJoin(circle) : undefined}
     />
@@ -158,7 +150,7 @@ export default function CirclesScreen() {
   const [activityMap, setActivityMap] = useState<Record<string, number>>({});
   const [lastViewedMap, setLastViewedMap] = useState<Record<string, number>>({});
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
-  const [showDismissed, setShowDismissed] = useState(false);
+  const showDismissed = false;
   const hasLoadedOnceRef = useRef(false);
   // Guards markHomeReady against a brief premature mount during the login
   // transition that immediately unmounts -- without this its in-flight fetch
@@ -452,7 +444,6 @@ export default function CirclesScreen() {
     () =>
       circles
         .filter((circle) => {
-          if (dismissedIds.has(circle.id)) return false;
           if (!isPlaceLevelCircle(circle, circles)) return false;
           if (!matchesSearch(circle)) return false;
           if (roleFilter === "owner" && memberStatusMap[circle.id] !== "owner") return false;
@@ -479,7 +470,7 @@ export default function CirclesScreen() {
           if (sortBy === "events") return (b.event_count ?? 0) - (a.event_count ?? 0);
           return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
         }),
-    [circles, dismissedIds, roleFilter, categoryFilter, locationFilter, nearMe, nearMeCity, sortBy, memberStatusMap, activityMap, lastViewedMap, matchesSearch]
+    [circles, roleFilter, categoryFilter, locationFilter, nearMe, nearMeCity, sortBy, memberStatusMap, activityMap, lastViewedMap, matchesSearch]
   );
 
   const handleOpenCircle = useCallback((circle: CircleWithCount, fromDismissed: boolean) => {
@@ -499,17 +490,6 @@ export default function CirclesScreen() {
       mode: "place",
     });
   }, [navigation]);
-
-  const handleDismissCircle = useCallback((circle: CircleWithCount) => {
-    setDismissedIds((prev) => new Set(prev).add(circle.id));
-    if (user) {
-      supabase.from("dismissed_items").insert({
-        user_id: user.id,
-        item_type: "circle",
-        item_id: circle.id,
-      }).then(() => {});
-    }
-  }, [user?.id]);
 
   const handleJoinCircle = useCallback(async (circle: CircleWithCount) => {
     if (!user) return;
@@ -537,14 +517,6 @@ export default function CirclesScreen() {
       );
     }
   }, [user]);
-
-  const handleRestoreCircle = useCallback((circle: CircleWithCount) => {
-    setDismissedIds((prev) => { const next = new Set(prev); next.delete(circle.id); return next; });
-    if (user) {
-      supabase.from("dismissed_items").delete()
-        .eq("user_id", user.id).eq("item_type", "circle").eq("item_id", circle.id).then(() => {});
-    }
-  }, [user?.id]);
 
   const showLoader = loading && circles.length === 0;
   const circleCountByPlaceId = useMemo(() => {
@@ -580,11 +552,9 @@ export default function CirclesScreen() {
         circleCount={circleCountByPlaceId[item.id] ?? 0}
         onOpen={handleOpenCircle}
         onJoin={handleJoinCircle}
-        onDismiss={handleDismissCircle}
-        onRestore={handleRestoreCircle}
       />
     ),
-    [showDismissed, memberStatusMap, pendingRequestsMap, lastViewedMap, activityMap, circleCountByPlaceId, handleOpenCircle, handleJoinCircle, handleDismissCircle, handleRestoreCircle]
+    [showDismissed, memberStatusMap, pendingRequestsMap, lastViewedMap, activityMap, circleCountByPlaceId, handleOpenCircle, handleJoinCircle]
   );
 
   return (
@@ -763,19 +733,6 @@ export default function CirclesScreen() {
                     />
                     <Text style={[styles.filterChipText, nearMe && styles.filterChipTextActive]}>
                       {nearMeLoading ? t.common.locating : nearMe && nearMeCity ? nearMeCity : t.common.nearMe}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-              <View style={styles.filterSection}>
-                <Text style={styles.filterSectionLabel}>{t.common.view}</Text>
-                <View style={styles.filterChipRow}>
-                  <TouchableOpacity
-                    style={[styles.filterChip, showDismissed && styles.filterChipActive]}
-                    onPress={() => setShowDismissed((v) => !v)}
-                  >
-                    <Text style={[styles.filterChipText, showDismissed && styles.filterChipTextActive]}>
-                      {t.common.dismissed}
                     </Text>
                   </TouchableOpacity>
                 </View>

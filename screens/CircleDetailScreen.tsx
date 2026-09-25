@@ -155,6 +155,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [invitedUsers, setInvitedUsers] = useState<{ user_id: string; name: string }[]>([]);
   const [profileMap, setProfileMap] = useState<Record<string, string>>({});
   const [events, setEvents] = useState<Event[]>([]);
+  const [dismissedEventIds, setDismissedEventIds] = useState<Set<string>>(new Set());
   const [eventNoteCountMap, setEventNoteCountMap] = useState<Record<string, number>>({});
   const [prevViewedEventsAt, setPrevViewedEventsAt] = useState<number>(0);
   const lastViewedKey = `lastViewed_circle_events_${id}`;
@@ -274,6 +275,33 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [loadingMapEvents, setLoadingMapEvents] = useState(false);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
   const [didAutoSelectInitialTab, setDidAutoSelectInitialTab] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    supabase
+      .from("dismissed_items")
+      .select("item_id")
+      .eq("user_id", user.id)
+      .eq("item_type", "event")
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        setDismissedEventIds(new Set((data as { item_id: string }[]).map((row) => row.item_id)));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
+
+  function handleDismissEvent(eventId: string) {
+    setDismissedEventIds((prev) => new Set(prev).add(eventId));
+    if (!user) return;
+    supabase.from("dismissed_items").insert({
+      user_id: user.id,
+      item_type: "event",
+      item_id: eventId,
+    }).then(() => {});
+  }
 
   // Load current user's membership status
   useEffect(() => {
@@ -1211,6 +1239,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           ) : (
             <LazyEventsMapView
               events={mapEvents
+                .filter((event) => !dismissedEventIds.has(event.id))
                 .filter((event) => eventCategory === "all" || event.category === eventCategory)
                 .filter((event) => {
                   if (eventType === "events") return !event.is_activity;
@@ -1431,6 +1460,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                 // Hide events that have already happened -- the Events tab only
                 // surfaces upcoming events. (Unparseable dates are kept.)
                 const sortedEvents = events
+                  .filter((e) => !dismissedEventIds.has(e.id))
                   .filter((e) => !isPastEvent(e))
                   .filter((e) => eventCategory === "all" || e.category === eventCategory)
                   .filter((e) => {
@@ -1473,6 +1503,12 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                         category={event.category ?? null}
                         noteCount={eventNoteCountMap[event.id] ?? 0}
                         hasNewActivity={isNewEvent}
+                        actionIcon={user && event.created_by !== user.id ? "close" : undefined}
+                        onActionPress={
+                          user && event.created_by !== user.id
+                            ? () => handleDismissEvent(event.id)
+                            : undefined
+                        }
                         onSharePress={() => handleShareEvent(event)}
                         onPress={() =>
                           nav.navigate("EventDetail", {
