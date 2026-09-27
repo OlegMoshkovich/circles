@@ -32,6 +32,12 @@ import { DeleteConfirmationModal } from "../src/components/modals/DeleteConfirma
 import { CommunityValuesModal } from "../src/components/modals/CommunityValuesModal";
 import { FeedbackModal } from "../src/components/modals/FeedbackModal";
 import { OnboardingRestartContext } from "../src/contexts/OnboardingRestartContext";
+import { NativeSettingsForm } from "../src/components/experiments/NativeSettingsForm";
+
+// POC flag: on iOS, render the Settings controls with native SwiftUI (@expo/ui)
+// instead of the hand-built RN rows. Android/web always use the RN rows.
+// Flip to false to compare against the original UI.
+const USE_NATIVE_SETTINGS = true;
 
 async function handleSignOut(signOut: () => Promise<void>) {
   try {
@@ -578,6 +584,11 @@ async function handleAccept(notif: AppNotification) {
         </TouchableOpacity>
 
         {settingsExpanded && (
+          USE_NATIVE_SETTINGS && Platform.OS === "ios" ? (
+            <View style={styles.nativeSettingsWrap}>
+              <NativeSettingsForm onOpenMission={() => setValuesModalVisible(true)} />
+            </View>
+          ) : (
           <>
             <View style={styles.rowDivider} />
 
@@ -644,6 +655,7 @@ async function handleAccept(notif: AppNotification) {
               <Ionicons name="refresh" size={16} color={colors.textMuted} />
             </TouchableOpacity>
           </>
+          )
         )}
       </View>
 
@@ -1140,6 +1152,10 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       color: "#fff",
       fontSize: 13,
       fontWeight: "600" as const,
+    },
+    nativeSettingsWrap: {
+      paddingHorizontal: spacing.cardPadding,
+      paddingBottom: 8,
     },
     languageRow: {
       flexDirection: "row",
