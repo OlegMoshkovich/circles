@@ -9,6 +9,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -31,6 +32,7 @@ export function FeedbackModal({ visible, onClose }: Props) {
   const { t } = useLanguage();
   const { bgOption } = useBackground();
   const colors = useColors();
+  const { height: windowHeight } = useWindowDimensions();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
@@ -78,12 +80,16 @@ export function FeedbackModal({ visible, onClose }: Props) {
       <View style={styles.overlay}>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.kav}>
           <View style={styles.sheetBacking}>
-            <View style={styles.sheet}>
+            <View style={[styles.sheet, { height: windowHeight * 0.9 }]}>
               <View style={styles.handle} />
               <View style={styles.header}>
                 <Text style={styles.headerTitle}>{t.circles.feedbackTitle}</Text>
-                <TouchableOpacity onPress={handleClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-                  <Ionicons name="close" size={20} color={colors.textMuted} />
+                <TouchableOpacity
+                  onPress={handleClose}
+                  style={styles.closeButton}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                >
+                  <Ionicons name="close" size={16} color={colors.text} />
                 </TouchableOpacity>
               </View>
 
@@ -167,6 +173,16 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       fontFamily: "CormorantGaramond_300Light",
       color: colors.text,
     },
+    closeButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: isOnboarding ? "rgba(15,13,10,0.68)" : colors.card,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
+    },
     inputRow: {
       minHeight: 52,
       justifyContent: "center",
@@ -178,6 +194,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       paddingVertical: 8,
     },
     inputRowMultiline: {
+      flex: 1,
       minHeight: 140,
       alignItems: "flex-start",
       paddingTop: 12,
@@ -190,6 +207,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       width: "100%",
     },
     inputMultiline: {
+      flex: 1,
       minHeight: 116,
       textAlignVertical: "top",
     },

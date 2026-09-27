@@ -4,29 +4,15 @@ import EventsScreen from "../screens/EventsScreen";
 import CirclesScreen from "../screens/CirclesScreen";
 import MyProfileScreen from "../screens/MyProfileScreen";
 import { colors } from "../src/theme/colors";
-import { BlurView } from "expo-blur";
 import { StyleSheet, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLanguage, Language } from "../src/i18n/LanguageContext";
 import { Translations } from "../src/i18n/translations";
 import { useNotificationContext } from "../src/contexts/NotificationContext";
-import { useBackground } from "../src/contexts/BackgroundContext";
+import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { CirclesMapViewProvider, useCirclesMapView } from "../src/contexts/CirclesMapViewContext";
 
 const Tab = createBottomTabNavigator();
-
-function GlassBackground() {
-  return (
-    <>
-      <BlurView
-        intensity={72}
-        tint="systemUltraThinMaterialLight"
-        style={StyleSheet.absoluteFill}
-      />
-      <View style={[StyleSheet.absoluteFill, styles.glassOverlay]} />
-    </>
-  );
-}
 
 // Note: tab button components are created once at module scope (below).
 // Creating them inside render would give each render a new component type,
@@ -45,7 +31,7 @@ function makeTabButton(getLabel: (t: Translations) => string, showBadge = false)
       : bgOption === "glass"
         ? (focused ? "rgba(255, 255, 255, 0.96)" : "rgba(255, 255, 255, 0.72)")
       : bgOption === "light"
-        ? (focused ? colors.textOnIconBg : "rgba(240, 235, 224, 0.72)")
+        ? (focused ? colors.text : colors.textMuted)
       : (focused ? colors.text : colors.textMuted);
 
     return (
@@ -67,12 +53,23 @@ const CirclesTabButton = makeTabButton((t) => t.nav.circles);
 const ProfileTabButton = makeTabButton((t) => t.nav.profile, true);
 
 function TabBarBackground() {
-  const { bgOption } = useBackground();
-  const { mapViewActive } = useCirclesMapView();
-  if (bgOption === "light" && !mapViewActive) {
-    return <View style={[StyleSheet.absoluteFill, styles.lightBar]} />;
-  }
-  return <GlassBackground />;
+  const themeColors = useColors();
+  return (
+    <View
+      style={[
+        StyleSheet.absoluteFill,
+        {
+          backgroundColor: themeColors.background,
+          borderRadius: 28,
+          borderWidth: 1,
+          borderColor: themeColors.cardBorder,
+          overflow: "hidden",
+        },
+      ]}
+    >
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: themeColors.card }]} />
+    </View>
+  );
 }
 
 const renderTabBarBackground = () => <TabBarBackground />;
@@ -90,22 +87,19 @@ function TabNavigatorInner() {
       bottom: tabBarBottom,
       left: (windowWidth - TAB_PILL_WIDTH) / 2,
       width: TAB_PILL_WIDTH,
-      borderRadius: 32,
+      borderRadius: 28,
       height: 56,
       backgroundColor: "transparent",
       borderTopWidth: 0,
       elevation: 0,
-      overflow: "hidden" as const,
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 20,
+      shadowOpacity: 0,
     }),
     [tabBarBottom, windowWidth]
   );
 
   return (
     <Tab.Navigator
+      safeAreaInsets={{ bottom: 0 }}
       screenOptions={{
         headerShown: false,
         tabBarStyle,
@@ -147,16 +141,6 @@ export default function TabNavigator() {
 }
 
 const styles = StyleSheet.create({
-  glassOverlay: {
-    backgroundColor: "rgba(255, 255, 255, 0.18)",
-    borderRadius: 32,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(255, 255, 255, 0.55)",
-  },
-  lightBar: {
-    backgroundColor: colors.iconbBg,
-    borderRadius: 32,
-  },
   tabButton: {
     flex: 1,
     height: 56,

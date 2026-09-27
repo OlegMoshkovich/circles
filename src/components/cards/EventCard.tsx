@@ -1,5 +1,5 @@
 import React from "react";
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../../theme/colors";
 import { useBackground, useColors } from "../../contexts/BackgroundContext";
@@ -90,7 +90,7 @@ export function EventCard({
           ) : null}
           {actionIcon && onActionPress ? (
             <TouchableOpacity style={styles.headerAction} onPress={onActionPress} activeOpacity={0.8}>
-              <Ionicons name={actionIcon} size={12} color={colors.textMuted} />
+              <Ionicons name={actionIcon} size={12} color={colors.text} />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -158,18 +158,10 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     card: {
       backgroundColor: colors.card,
       borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
       padding: spacing.cardPadding,
       marginBottom: spacing.md,
-      ...Platform.select({
-        ios: {
-          shadowColor: "#000000",
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: isOnboarding ? 0.14 : 0.06,
-          shadowRadius: 3,
-        },
-        android: { elevation: 2 },
-        default: {},
-      }),
     },
     header: {
       flexDirection: "row",
@@ -307,7 +299,9 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       borderRadius: 999,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: colors.badgeBg,
+      backgroundColor: isOnboarding ? "rgba(15,13,10,0.68)" : colors.card,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
       marginLeft: spacing.sm,
     },
     noteCountRow: {

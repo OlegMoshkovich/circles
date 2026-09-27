@@ -86,7 +86,10 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const { t } = useLanguage();
   const { bgOption } = useBackground();
   const colors = useColors();
-  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
+  const styles = React.useMemo(
+    () => makeStyles(colors, bgOption === "onboarding", bgOption !== "light"),
+    [colors, bgOption]
+  );
   const isCreator = !!user && !!created_by && user.id === created_by;
 
   React.useEffect(() => {
@@ -105,6 +108,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const [inviteVisible, setInviteVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [headerActionsOpen, setHeaderActionsOpen] = useState(false);
   const [hasNewActivity, setHasNewActivity] = useState(!!initialHasNewActivity);
   const [profileModalVisible, setProfileModalVisible] = useState(false);
 
@@ -468,13 +472,15 @@ export default function EventDetailScreen({ route, navigation }: Props) {
             {backLabel}
           </Text>
         </TouchableOpacity>
-        <View style={styles.headerActions}>
+        <View style={[styles.headerActions, !headerActionsOpen && styles.headerActionsCollapsed]}>
+          {headerActionsOpen ? (
+          <>
           <TouchableOpacity
             onPress={handleShare}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             style={styles.headerAction}
           >
-            <Ionicons name="share-outline" size={22} color={colors.text} />
+            <Ionicons name="share-outline" size={18} color={colors.text} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => { setShowChat((v) => !v); setHasNewActivity(false); }}
@@ -484,7 +490,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
             <View style={{ position: "relative" }}>
               <Ionicons
                 name={showChat ? "document-text-outline" : "chatbubble-outline"}
-                size={22}
+                size={18}
                 color={colors.text}
               />
               {hasNewActivity && !showChat && (
@@ -499,13 +505,13 @@ export default function EventDetailScreen({ route, navigation }: Props) {
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 style={styles.headerAction}
               >
-                <Ionicons name="create-outline" size={22} color={colors.text} />
+                <Ionicons name="create-outline" size={18} color={colors.text} />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleDelete}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
-                <Ionicons name="trash-outline" size={22} color={colors.text} />
+                <Ionicons name="trash-outline" size={18} color={colors.text} />
               </TouchableOpacity>
             </>
           )}
@@ -525,9 +531,22 @@ export default function EventDetailScreen({ route, navigation }: Props) {
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               style={styles.headerAction}
             >
-              <Ionicons name="flag-outline" size={22} color={colors.text} />
+              <Ionicons name="flag-outline" size={18} color={colors.text} />
             </TouchableOpacity>
           ) : null}
+          </>
+          ) : null}
+          <TouchableOpacity
+            onPress={() => setHeaderActionsOpen((open) => !open)}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityLabel={headerActionsOpen ? t.common.cancel : t.common.view}
+          >
+            <Ionicons
+              name={headerActionsOpen ? "chevron-forward" : "ellipsis-horizontal"}
+              size={18}
+              color={colors.text}
+            />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -881,7 +900,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   );
 }
 
-function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.create({
+function makeStyles(colors: Colors, isOnboarding: boolean, headerPills: boolean) { return StyleSheet.create({
   wrapper: {
     flex: 1,
     backgroundColor: isOnboarding ? "transparent" : colors.background,
@@ -914,12 +933,18 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   backButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: isOnboarding ? "rgba(15,13,10,0.68)" : "transparent",
+    justifyContent: "center",
+    backgroundColor: isOnboarding
+      ? "rgba(15,13,10,0.68)"
+      : headerPills
+        ? colors.card
+        : "transparent",
     borderRadius: 999,
-    paddingHorizontal: isOnboarding ? 12 : 0,
-    paddingVertical: isOnboarding ? 8 : 0,
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? colors.cardBorder : "transparent",
+    borderWidth: headerPills && !isOnboarding ? 1 : 0,
+    borderColor: colors.cardBorder,
+    height: headerPills ? 40 : undefined,
+    paddingHorizontal: headerPills ? 12 : 0,
+    maxWidth: "58%",
   },
   backLabel: {
     ...typography.body,
@@ -1136,13 +1161,24 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 12,
-    backgroundColor: isOnboarding ? "rgba(15,13,10,0.68)" : "transparent",
+    backgroundColor: isOnboarding
+      ? "rgba(15,13,10,0.68)"
+      : headerPills
+        ? colors.card
+        : "transparent",
     borderRadius: 999,
-    paddingHorizontal: isOnboarding ? 16 : 0,
-    paddingVertical: isOnboarding ? 8 : 0,
-    borderWidth: isOnboarding ? 1 : 0,
-    borderColor: isOnboarding ? colors.cardBorder : "transparent",
+    borderWidth: headerPills && !isOnboarding ? 1 : 0,
+    borderColor: colors.cardBorder,
+    height: headerPills ? 40 : undefined,
+    paddingHorizontal: headerPills ? 12 : 0,
+  },
+  headerActionsCollapsed: {
+    width: 40,
+    height: 40,
+    paddingHorizontal: 0,
+    borderRadius: 20,
   },
   headerAction: {},
   chatDot: {

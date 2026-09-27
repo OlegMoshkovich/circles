@@ -120,7 +120,10 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const { t } = useLanguage();
   const { bgOption } = useBackground();
   const colors = useColors();
-  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
+  const styles = React.useMemo(
+    () => makeStyles(colors, bgOption === "onboarding", bgOption !== "light"),
+    [colors, bgOption]
+  );
   const isOwner = user?.id === owner_id;
 
   React.useEffect(() => {
@@ -263,6 +266,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const [createEventVisible, setCreateEventVisible] = useState(false);
   const [createCircleVisible, setCreateCircleVisible] = useState(false);
   const [placeInfoVisible, setPlaceInfoVisible] = useState(false);
+  const [headerActionsOpen, setHeaderActionsOpen] = useState(false);
   const [placeMapVisible, setPlaceMapVisible] = useState(false);
   const [showEventFilters, setShowEventFilters] = useState(false);
   const [eventSort, setEventSort] = useState<"date" | "newest" | "popular">("date");
@@ -948,7 +952,9 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
           <Ionicons name="chevron-back" size={18} color={colors.text} />
           <Text style={styles.backLabel}>{route.params.backLabel ?? t.nav.circles}</Text>
         </TouchableOpacity>
-        <View style={styles.headerActions}>
+        <View style={[styles.headerActions, !headerActionsOpen && styles.headerActionsCollapsed]}>
+            {headerActionsOpen ? (
+            <>
             {(isOwner || isMember) && !isCircleView ? (
               <TouchableOpacity
                 onPress={() => setCreateCircleVisible(true)}
@@ -1031,6 +1037,19 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                 <Ionicons name="trash-outline" size={18} color={colors.text} />
               </TouchableOpacity>
             ) : null}
+            </>
+            ) : null}
+            <TouchableOpacity
+              onPress={() => setHeaderActionsOpen((open) => !open)}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityLabel={headerActionsOpen ? t.common.cancel : t.common.view}
+            >
+              <Ionicons
+                name={headerActionsOpen ? "chevron-forward" : "ellipsis-horizontal"}
+                size={18}
+                color={colors.text}
+              />
+            </TouchableOpacity>
           </View>
       </View>
 
@@ -1052,7 +1071,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                 <Ionicons
                   name="options-outline"
                   size={14}
-                  color={eventFiltersActive ? "#F5EFE3" : "#35412A"}
+                  color={eventFiltersActive ? colors.background : colors.text}
                 />
               </TouchableOpacity>
             ) : null}
@@ -1066,7 +1085,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                 <Ionicons
                   name={placeMapVisible ? "list-outline" : "map-outline"}
                   size={14}
-                  color="#35412A"
+                  color={colors.text}
                 />
               </TouchableOpacity>
             ) : null}
@@ -1720,7 +1739,10 @@ function MemberRow({
   const { t } = useLanguage();
   const { bgOption } = useBackground();
   const colors = useColors();
-  const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
+  const styles = React.useMemo(
+    () => makeStyles(colors, bgOption === "onboarding", bgOption !== "light"),
+    [colors, bgOption]
+  );
   const name =
     (member.user_id === currentUserId && currentUserName)
       ? currentUserName
@@ -1750,7 +1772,7 @@ function MemberRow({
   );
 }
 
-function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.create({
+function makeStyles(colors: Colors, isOnboarding: boolean, headerPills: boolean) { return StyleSheet.create({
   wrapper: {
     flex: 1,
     backgroundColor: isOnboarding ? "transparent" : colors.background,
@@ -1761,18 +1783,10 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   headerCard: {
     backgroundColor: colors.card,
     borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
     padding: spacing.cardPadding,
     marginBottom: spacing.md,
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: isOnboarding ? 0.14 : 0.06,
-        shadowRadius: 3,
-      },
-      android: { elevation: 2 },
-      default: {},
-    }),
   },
   backRow: {
     paddingHorizontal: spacing.pageHorizontal,
@@ -1784,10 +1798,17 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   backButton: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: isOnboarding ? "rgba(15,13,10,0.68)" : "transparent",
+    justifyContent: "center",
+    backgroundColor: isOnboarding
+      ? "rgba(15,13,10,0.68)"
+      : headerPills
+        ? colors.card
+        : "transparent",
     borderRadius: 999,
-    paddingHorizontal: isOnboarding ? 12 : 0,
-    paddingVertical: isOnboarding ? 8 : 0,
+    borderWidth: headerPills && !isOnboarding ? 1 : 0,
+    borderColor: colors.cardBorder,
+    height: headerPills ? 40 : undefined,
+    paddingHorizontal: headerPills ? 12 : 0,
   },
   backLabel: {
     ...typography.body,
@@ -1815,10 +1836,10 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     gap: 8,
   },
   titleCircleButtonActive: {
-    backgroundColor: "#E4DDD0",
+    backgroundColor: colors.badgeBg,
   },
   titleFilterButtonActive: {
-    backgroundColor: "#35412A",
+    backgroundColor: colors.text,
   },
   placeMapContainer: {
     flex: 1,
@@ -1834,10 +1855,12 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     lineHeight: 38,
   },
   titleCircleButton: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: "#F5EFE3",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: isOnboarding ? "rgba(15,13,10,0.68)" : colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1845,7 +1868,7 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     fontSize: 14,
     fontFamily: "Lora_400Regular",
     fontStyle: "italic",
-    color: "#35412A",
+    color: colors.text,
     lineHeight: 16,
   },
   eventFilterPanel: {
@@ -2120,10 +2143,14 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
     fontFamily: "Lora_400Regular",
   },
   joinButton: {
-    backgroundColor: "#F5EFE3",
+    backgroundColor: isOnboarding ? "rgba(15,13,10,0.68)" : colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   joinButtonText: {
-    color: "#35412A",
+    color: colors.text,
     fontSize: 16,
     fontFamily: "Lora_400Regular",
   },
@@ -2200,11 +2227,24 @@ function makeStyles(colors: Colors, isOnboarding: boolean) { return StyleSheet.c
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 12,
-    backgroundColor: isOnboarding ? "rgba(15,13,10,0.68)" : "transparent",
+    backgroundColor: isOnboarding
+      ? "rgba(15,13,10,0.68)"
+      : headerPills
+        ? colors.card
+        : "transparent",
     borderRadius: 999,
-    paddingHorizontal: isOnboarding ? 12 : 0,
-    paddingVertical: isOnboarding ? 8 : 0,
+    borderWidth: headerPills && !isOnboarding ? 1 : 0,
+    borderColor: colors.cardBorder,
+    height: headerPills ? 40 : undefined,
+    paddingHorizontal: headerPills ? 12 : 0,
+  },
+  headerActionsCollapsed: {
+    width: 40,
+    height: 40,
+    paddingHorizontal: 0,
+    borderRadius: 20,
   },
   headerCardOuter: {
     marginHorizontal: spacing.pageHorizontal,

@@ -609,7 +609,7 @@ export default function CirclesScreen() {
                   activeOpacity={0.7}
                   accessibilityLabel={t.circles.feedbackTitle}
                 >
-                  <Ionicons name="chatbubble-ellipses-outline" size={17} color={colors.textMuted} />
+                  <Ionicons name="chatbubble-ellipses-outline" size={17} color={colors.text} />
                 </TouchableOpacity>
               </View>
             }
@@ -789,7 +789,9 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: isOnboarding ? colors.badgeBg : colors.card,
+    backgroundColor: isOnboarding ? "rgba(15,13,10,0.68)" : colors.card,
+    borderWidth: 1,
+    borderColor: colors.cardBorder,
     alignItems: "center",
     justifyContent: "center",
   },
