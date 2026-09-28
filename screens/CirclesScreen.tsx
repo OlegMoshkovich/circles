@@ -128,6 +128,8 @@ export default function CirclesScreen() {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const mapView = false;
+  // Kept so the Places title card can be turned back on later.
+  const showPlacesTitleCard = false;
 
   useFocusEffect(
     useCallback(() => {
@@ -571,7 +573,7 @@ export default function CirclesScreen() {
       <>
       <ScreenLayout
         backgroundColor={mapView ? "transparent" : screenBgColor}
-        contentStyle={showLoader ? styles.scrollContentLoader : undefined}
+        contentStyle={showLoader ? styles.scrollContentLoader : showPlacesTitleCard ? undefined : styles.listTopSpacing}
         fillContent={mapView}
         fullBleed={mapView}
         onRefresh={async () => { setRefreshing(true); try { await fetchCircles(true); } finally { setRefreshing(false); } }}
@@ -596,7 +598,7 @@ export default function CirclesScreen() {
             </View>
           ) : null
         }
-        stickyTop={<ScreenHeaderCard glass={mapView} style={mapView ? styles.mapHeaderCard : undefined}>
+        stickyTop={showPlacesTitleCard ? <ScreenHeaderCard glass={mapView} style={mapView ? styles.mapHeaderCard : undefined}>
           <NavbarTitle
             title={t.nav.circles}
             textColor={mapView ? MAP_GLASS_TEXT : undefined}
@@ -739,7 +741,7 @@ export default function CirclesScreen() {
               </View>
             </View>
           )}
-        </ScreenHeaderCard>}
+        </ScreenHeaderCard> : null}
       >
         {mapView ? (
           <LazyCirclesMapView circles={listCircles} onCirclePress={handleMapCirclePress} />
@@ -774,6 +776,9 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     flexGrow: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  listTopSpacing: {
+    paddingTop: 20,
   },
   loader: {
     alignItems: "center",
