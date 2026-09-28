@@ -327,14 +327,14 @@ async function handleAccept(notif: AppNotification) {
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             accessibilityLabel="Cycle theme"
           >
-            <Ionicons name="color-palette-outline" size={16} color={colors.textOnIconBg} />
+            <Ionicons name="color-palette-outline" size={16} color={colors.text} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => handleSignOut(signOut)}
             style={styles.iconButton}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
-            <Ionicons name="log-out-outline" size={16} color={colors.textOnIconBg} />
+            <Ionicons name="log-out-outline" size={16} color={colors.text} />
           </TouchableOpacity>
         </View>
       </View>
@@ -1056,12 +1056,12 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       gap: 8,
     },
     iconButton: {
-      width: 30,
-      height: 30,
+      width: 32,
+      height: 32,
       borderRadius: 16,
-      backgroundColor: isOnboarding ? "rgba(255,255,255,0.12)" : colors.iconbBg,
-      borderWidth: isOnboarding ? 1 : 0,
-      borderColor: isOnboarding ? colors.cardBorder : "transparent",
+      backgroundColor: isOnboarding ? "rgba(15,13,10,0.68)" : colors.card,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
       alignItems: "center",
       justifyContent: "center",
     },
