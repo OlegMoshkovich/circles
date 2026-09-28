@@ -2,7 +2,6 @@ import React, { useCallback, useRef, useState } from "react";
 import {
   Alert,
   Image,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -18,7 +17,7 @@ import { Spinner } from "../src/components/loaders/Spinner";
 import { Colors } from "../src/theme/colors";
 import { spacing } from "../src/theme/spacing";
 import { typography } from "../src/theme/typography";
-import { useLanguage, Language } from "../src/i18n/LanguageContext";
+import { useLanguage } from "../src/i18n/LanguageContext";
 import { supabase, AppNotification } from "../lib/supabase";
 import {
   containsObjectionableContentInAny,
@@ -29,9 +28,9 @@ import { deleteAccount } from "../lib/deleteAccount";
 import { useNotificationContext } from "../src/contexts/NotificationContext";
 import { useBackground, useColors } from "../src/contexts/BackgroundContext";
 import { DeleteConfirmationModal } from "../src/components/modals/DeleteConfirmationModal";
-import { CommunityValuesModal } from "../src/components/modals/CommunityValuesModal";
-import { FeedbackModal } from "../src/components/modals/FeedbackModal";
-import { OnboardingRestartContext } from "../src/contexts/OnboardingRestartContext";
+import { ProfileSettings } from "../src/components/profile/ProfileSettings";
+import { ProfileMission } from "../src/components/profile/ProfileMission";
+import { ProfileActivity } from "../src/components/profile/ProfileActivity";
 
 async function handleSignOut(signOut: () => Promise<void>) {
   try {
@@ -46,25 +45,19 @@ function getErrorMessage(e: unknown) {
   return anyErr?.message || anyErr?.errors?.[0]?.longMessage || "Something went wrong";
 }
 
-const LANGUAGES: { code: Language; label: string }[] = [
-  { code: "de", label: "DE" },
-  { code: "fr", label: "FR" },
-  { code: "it", label: "IT" },
-  { code: "en", label: "EN" },
-];
-
 const ALL_INTERESTS = [
   "Hiking", "Sports", "Food", "Culture", "Music", "Art",
   "Family", "Nature", "Wellness", "Yoga", "Skiing", "Biking",
   "Community", "Volunteering", "Business", "Entrepreneurs",
 ];
 
+let settingsExpandedMemory = false;
+
 export default function MyProfileScreen() {
   const { signOut, getToken } = useAuth();
   const { user } = useUser();
   const navigation = useNavigation<any>();
-  const { restart: restartOnboarding } = React.useContext(OnboardingRestartContext);
-const { language, setLanguage, t } = useLanguage();
+  const { t } = useLanguage();
   const { setUnreadCount } = useNotificationContext();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [circleCount, setCircleCount] = useState(0);
@@ -72,24 +65,55 @@ const { language, setLanguage, t } = useLanguage();
   const [profileBio, setProfileBio] = useState<string | null>(null);
   const [profileLocation, setProfileLocation] = useState<string | null>(null);
   const [profileInterests, setProfileInterests] = useState<string[]>([]);
-  const [profileCircles, setProfileCircles] = useState<{ id: string; name: string }[]>([]);
-  const [profileEvents, setProfileEvents] = useState<{ id: string; title: string; date_label: string; time_label: string }[]>([]);
-  const [circlesExpanded, setCirclesExpanded] = useState(false);
-  const [eventsExpanded, setEventsExpanded] = useState(false);
-  const [settingsExpanded, setSettingsExpanded] = useState(false);
+  const [profileCircles, setProfileCircles] = useState<{
+    id: string;
+    name: string;
+    description: string | null;
+    visibility: "public" | "private" | "request";
+    owner_id: string;
+    organizer: string | null;
+    location: string | null;
+  }[]>([]);
+  const [profileEvents, setProfileEvents] = useState<{
+    id: string;
+    title: string;
+    organizer: string;
+    date_label: string;
+    time_label: string;
+    location: string;
+    description: string;
+    image_url?: string | null;
+    max_participants?: number | null;
+    contact_info?: string | null;
+    price_info?: string | null;
+    event_url?: string | null;
+    going: number;
+    maybe: number;
+    created_by?: string | null;
+    circle_id?: string | null;
+    circleName?: string | null;
+  }[]>([]);
+  const [profileExpanded, setProfileExpanded] = useState(false);
+  const [settingsExpanded, setSettingsExpandedState] = useState(settingsExpandedMemory);
+  const setSettingsExpanded = (next: boolean | ((open: boolean) => boolean)) => {
+    setSettingsExpandedState((open) => {
+      const value = typeof next === "function" ? next(open) : next;
+      settingsExpandedMemory = value;
+      return value;
+    });
+  };
+  const [activityReady, setActivityReady] = useState(false);
   const [profileUserType, setProfileUserType] = useState<"local" | "visitor" | null>(null);
   const [editingField, setEditingField] = useState<"bio" | "location" | "interests" | "userType" | null>(null);
   const [editText, setEditText] = useState("");
   const [editInterests, setEditInterests] = useState<string[]>([]);
   const editInputRef = useRef<TextInput>(null);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [feedbackVisible, setFeedbackVisible] = useState(false);
-  const [valuesModalVisible, setValuesModalVisible] = useState(false);
   const [deleteConfirming, setDeleteConfirming] = useState(false);
   const [deleteTyped, setDeleteTyped] = useState("");
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const { bgOption, setBgOption } = useBackground();
+  const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(() => makeStyles(colors, bgOption === "onboarding"), [colors, bgOption]);
 
@@ -108,14 +132,18 @@ const { language, setLanguage, t } = useLanguage();
   }, [user?.id, setUnreadCount]);
 
   const fetchProfileCounts = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      setActivityReady(true);
+      return;
+    }
 
+    try {
     // The circle count is derived from the memberships query below -- no
     // separate head/count query needed.
     const [eventsResult, profileResult, circleNamesResult] = await Promise.all([
       supabase
         .from("event_rsvps")
-        .select("event_id, events(id, title, date_label, time_label)")
+        .select("event_id, events(id, title, organizer, date_label, time_label, location, description, image_url, max_participants, contact_info, price_info, event_url, going, maybe, created_by, circle_id, circles(name))")
         .eq("user_id", user.id),
       supabase
         .from("user_profiles")
@@ -124,15 +152,38 @@ const { language, setLanguage, t } = useLanguage();
         .maybeSingle(),
       supabase
         .from("circle_members")
-        .select("circle_id, circles(id, name)")
+        .select("circle_id, circles(id, name, description, visibility, owner_id, organizer, location)")
         .eq("user_id", user.id)
         .eq("status", "active"),
     ]);
 
     if (eventsResult.data) {
       const evts = eventsResult.data
-        .map((row: any) => row.events)
-        .filter(Boolean) as { id: string; title: string; date_label: string; time_label: string }[];
+        .map((row: any) => {
+          const event = row.events;
+          if (!event) return null;
+          const circle = Array.isArray(event.circles) ? event.circles[0] : event.circles;
+          return {
+            id: event.id,
+            title: event.title,
+            organizer: event.organizer ?? "",
+            date_label: event.date_label ?? "",
+            time_label: event.time_label ?? "",
+            location: event.location ?? "",
+            description: event.description ?? "",
+            image_url: event.image_url ?? null,
+            max_participants: event.max_participants ?? null,
+            contact_info: event.contact_info ?? null,
+            price_info: event.price_info ?? null,
+            event_url: event.event_url ?? null,
+            going: event.going ?? 0,
+            maybe: event.maybe ?? 0,
+            created_by: event.created_by ?? null,
+            circle_id: event.circle_id ?? null,
+            circleName: circle?.name ?? null,
+          };
+        })
+        .filter(Boolean) as NonNullable<typeof profileEvents>;
       setProfileEvents(evts);
       setEventCount(evts.length);
     }
@@ -147,9 +198,20 @@ const { language, setLanguage, t } = useLanguage();
     if (circleNamesResult.data) {
       const circles = circleNamesResult.data
         .map((row: any) => row.circles)
-        .filter(Boolean) as { id: string; name: string }[];
+        .filter(Boolean) as {
+          id: string;
+          name: string;
+          description: string | null;
+          visibility: "public" | "private" | "request";
+          owner_id: string;
+          organizer: string | null;
+          location: string | null;
+        }[];
       setProfileCircles(circles);
       setCircleCount(circleNamesResult.data.length);
+    }
+    } finally {
+      setActivityReady(true);
     }
   }, [user?.id]);
 
@@ -242,7 +304,7 @@ async function handleAccept(notif: AppNotification) {
     if (!user) return;
     setDeleteError(null);
     if (deleteTyped.trim().toUpperCase() !== "DELETE") {
-      setDeleteError('Please type "DELETE" to confirm.');
+      setDeleteError(t.profile.deleteTypeError);
       return;
     }
 
@@ -283,22 +345,6 @@ async function handleAccept(notif: AppNotification) {
     : "—";
 
   const screenBgColor = colors.background;
-  const THEME_ORDER: Array<"onboarding" | "light" | "glass"> = [
-    "onboarding",
-    "light",
-    "glass",
-  ];
-  const themeLabel: Record<(typeof THEME_ORDER)[number], string> = {
-    onboarding: "Glass",
-    light: "Light",
-    glass: "Solid",
-  };
-
-  function cycleTheme() {
-    const currentIndex = THEME_ORDER.indexOf(bgOption as (typeof THEME_ORDER)[number]);
-    const next = THEME_ORDER[(currentIndex + 1) % THEME_ORDER.length];
-    setBgOption(next);
-  }
 
   const stickyHeader = (
     <ScreenHeaderCard>
@@ -322,14 +368,6 @@ async function handleAccept(notif: AppNotification) {
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity
-            onPress={cycleTheme}
-            style={styles.iconButton}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            accessibilityLabel="Cycle theme"
-          >
-            <Ionicons name="color-palette-outline" size={16} color={colors.text} />
-          </TouchableOpacity>
-          <TouchableOpacity
             onPress={() => handleSignOut(signOut)}
             style={styles.iconButton}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -344,12 +382,25 @@ async function handleAccept(notif: AppNotification) {
   return (
     <>
     <ScreenLayout backgroundColor={screenBgColor} stickyTop={stickyHeader}>
-      {/* All profile settings live in a single card, separated into line items
-          by dividers (Type / Location / Bio / Interests / Communities / Events /
-          Theme / Language / Mission / Replay). */}
+      {/* Profile details live in one card. Settings sits in its own card below. */}
       <View style={styles.card}>
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => setProfileExpanded((open) => !open)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.rowLabel}>{t.nav.profile}</Text>
+          <Ionicons
+            name={profileExpanded ? "chevron-up" : "chevron-down"}
+            size={16}
+            color={colors.textMuted}
+          />
+        </TouchableOpacity>
+        {profileExpanded ? (
+          <>
+        <View style={styles.rowDivider} />
         <TouchableOpacity style={styles.row} onPress={() => startEdit("userType")} activeOpacity={0.7}>
-          <Text style={styles.rowLabel}>Type</Text>
+          <Text style={styles.rowLabel}>{t.profile.type}</Text>
           <View style={styles.userTypeValue}>
             {profileUserType ? (
               <Ionicons
@@ -360,15 +411,15 @@ async function handleAccept(notif: AppNotification) {
               />
             ) : null}
             <Text style={[styles.rowValue, !profileUserType && styles.rowValuePlaceholder]}>
-              {profileUserType === "local" ? "Local" : profileUserType === "visitor" ? "Visitor" : "Add"}
+              {profileUserType === "local" ? t.profile.local : profileUserType === "visitor" ? t.profile.visitor : t.profile.add}
             </Text>
           </View>
         </TouchableOpacity>
         {editingField === "userType" && (
           <View style={styles.userTypePicker}>
             {([
-              { key: "local" as const, label: "Local", icon: "home-outline" as const, desc: "I live here year-round" },
-              { key: "visitor" as const, label: "Visitor", icon: "airplane-outline" as const, desc: "I'm visiting for a while" },
+              { key: "local" as const, label: t.profile.local, icon: "home-outline" as const, desc: t.profile.localDesc },
+              { key: "visitor" as const, label: t.profile.visitor, icon: "airplane-outline" as const, desc: t.profile.visitorDesc },
             ]).map((opt) => {
               const sel = profileUserType === opt.key;
               return (
@@ -388,7 +439,7 @@ async function handleAccept(notif: AppNotification) {
               );
             })}
             <TouchableOpacity onPress={cancelEdit} style={{ paddingHorizontal: 16, paddingBottom: 10 }}>
-              <Text style={styles.inlineCancelText}>Cancel</Text>
+              <Text style={styles.inlineCancelText}>{t.common.cancel}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -399,7 +450,7 @@ async function handleAccept(notif: AppNotification) {
         <TouchableOpacity style={styles.row} onPress={() => startEdit("location")} activeOpacity={0.7}>
           <Text style={styles.rowLabel}>{t.profile.location}</Text>
           <Text style={[styles.rowValue, !profileLocation && styles.rowValuePlaceholder]}>
-            {profileLocation ?? "Add location"}
+            {profileLocation ?? t.profile.addLocation}
           </Text>
         </TouchableOpacity>
         {editingField === "location" && (
@@ -409,7 +460,7 @@ async function handleAccept(notif: AppNotification) {
               style={styles.inlineInput}
               value={editText}
               onChangeText={setEditText}
-              placeholder="Your neighbourhood or city"
+              placeholder={t.profile.locationPlaceholder}
               placeholderTextColor={colors.textMuted}
               returnKeyType="done"
               onSubmitEditing={() => saveField()}
@@ -427,9 +478,9 @@ async function handleAccept(notif: AppNotification) {
 
         {/* Bio row */}
         <TouchableOpacity style={styles.row} onPress={() => startEdit("bio")} activeOpacity={0.7}>
-          <Text style={styles.rowLabel}>Bio</Text>
+          <Text style={styles.rowLabel}>{t.profile.bio}</Text>
           <Text style={[styles.rowValue, !profileBio && styles.rowValuePlaceholder]} numberOfLines={2}>
-            {profileBio ?? "Add bio"}
+            {profileBio ?? t.profile.addBio}
           </Text>
         </TouchableOpacity>
         {editingField === "bio" && (
@@ -439,17 +490,17 @@ async function handleAccept(notif: AppNotification) {
               style={[styles.inlineInput, styles.inlineInputMultiline]}
               value={editText}
               onChangeText={setEditText}
-              placeholder="A few words about yourself..."
+              placeholder={t.profile.bioPlaceholder}
               placeholderTextColor={colors.textMuted}
               multiline
               numberOfLines={3}
             />
             <View style={styles.inlineEditActions}>
               <TouchableOpacity onPress={() => saveField()} style={styles.inlineSaveBtn}>
-                <Text style={styles.inlineSaveBtnText}>Save</Text>
+                <Text style={styles.inlineSaveBtnText}>{t.profile.save}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={cancelEdit}>
-                <Text style={styles.inlineCancelText}>Cancel</Text>
+                <Text style={styles.inlineCancelText}>{t.common.cancel}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -459,17 +510,17 @@ async function handleAccept(notif: AppNotification) {
 
         {/* Interests row */}
         <TouchableOpacity style={styles.row} onPress={() => startEdit("interests")} activeOpacity={0.7}>
-          <Text style={styles.rowLabel}>Interests</Text>
+          <Text style={styles.rowLabel}>{t.profile.interests}</Text>
           {profileInterests.length > 0 ? (
-            <Text style={styles.rowValue}>{profileInterests.length} selected</Text>
+            <Text style={styles.rowValue}>{profileInterests.length} {t.profile.selected}</Text>
           ) : (
-            <Text style={styles.rowValuePlaceholder}>Add interests</Text>
+            <Text style={styles.rowValuePlaceholder}>{t.profile.addInterests}</Text>
           )}
         </TouchableOpacity>
         {profileInterests.length > 0 && editingField !== "interests" && (
           <View style={styles.chipRowInCard}>
             {profileInterests.map((i) => (
-              <View key={i} style={styles.chip}><Text style={styles.chipText}>{i}</Text></View>
+              <View key={i} style={styles.chip}><Text style={styles.chipText}>{t.profile.interestLabels[i as keyof typeof t.profile.interestLabels] ?? i}</Text></View>
             ))}
           </View>
         )}
@@ -489,184 +540,43 @@ async function handleAccept(notif: AppNotification) {
                     }
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{i}</Text>
+                    <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{t.profile.interestLabels[i as keyof typeof t.profile.interestLabels] ?? i}</Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
             <View style={styles.inlineEditActions}>
               <TouchableOpacity onPress={() => saveField()} style={styles.inlineSaveBtn}>
-                <Text style={styles.inlineSaveBtnText}>Save</Text>
+                <Text style={styles.inlineSaveBtnText}>{t.profile.save}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={cancelEdit}>
-                <Text style={styles.inlineCancelText}>Cancel</Text>
+                <Text style={styles.inlineCancelText}>{t.common.cancel}</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
-        {/* Communities — only shown when the member belongs to some */}
-        {profileCircles.length > 0 ? (
-          <>
-            <View style={styles.rowDivider} />
-            <TouchableOpacity
-              style={styles.row}
-              onPress={() => setCirclesExpanded((v) => !v)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.rowLabel}>Communities</Text>
-              <View style={styles.circlesHeaderRight}>
-                <Text style={styles.rowValue}>{profileCircles.length}</Text>
-                <Ionicons
-                  name={circlesExpanded ? "chevron-up" : "chevron-down"}
-                  size={14}
-                  color={colors.textMuted}
-                  style={{ marginLeft: 6 }}
-                />
-              </View>
-            </TouchableOpacity>
-            {circlesExpanded && profileCircles.map((circle) => (
-              <View key={circle.id} style={styles.subRow}>
-                <Text style={styles.rowValue}>{circle.name}</Text>
-              </View>
-            ))}
           </>
         ) : null}
-
-        {/* Events — only shown when the member has RSVPed to some */}
-        {profileEvents.length > 0 ? (
-          <>
-            <View style={styles.rowDivider} />
-            <TouchableOpacity
-              style={styles.row}
-              onPress={() => setEventsExpanded((v) => !v)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.rowLabel}>{t.nav.events}</Text>
-              <View style={styles.circlesHeaderRight}>
-                <Text style={styles.rowValue}>{profileEvents.length}</Text>
-                <Ionicons
-                  name={eventsExpanded ? "chevron-up" : "chevron-down"}
-                  size={14}
-                  color={colors.textMuted}
-                  style={{ marginLeft: 6 }}
-                />
-              </View>
-            </TouchableOpacity>
-            {eventsExpanded && profileEvents.map((event) => (
-              <View key={event.id} style={styles.subRow}>
-                <Text style={styles.rowValue}>{event.title}</Text>
-                <Text style={styles.rowValue}>{event.date_label}</Text>
-              </View>
-            ))}
-          </>
-        ) : null}
-
-        <View style={styles.rowDivider} />
-
-        {/* Settings — tapping reveals theme, language, mission & replay inside the card */}
-        <TouchableOpacity
-          style={styles.row}
-          onPress={() => setSettingsExpanded((v) => !v)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.rowLabel}>Settings</Text>
-          <Ionicons
-            name={settingsExpanded ? "chevron-up" : "chevron-down"}
-            size={16}
-            color={colors.textMuted}
-          />
-        </TouchableOpacity>
-
-        {settingsExpanded && (
-          <>
-            <View style={styles.rowDivider} />
-
-            {/* Theme */}
-            <TouchableOpacity style={styles.subSettingRow} onPress={cycleTheme} activeOpacity={0.7}>
-              <Text style={styles.rowLabel}>Theme</Text>
-              <View style={styles.themeValue}>
-                <Text style={styles.rowValue}>{themeLabel[bgOption as keyof typeof themeLabel] ?? "Glass"}</Text>
-                <Ionicons name="chevron-forward" size={14} color={colors.textMuted} style={{ marginLeft: 6 }} />
-              </View>
-            </TouchableOpacity>
-
-            <View style={styles.rowDivider} />
-
-            {/* Language */}
-            <View style={[styles.languageRow, styles.subSettingIndent]}>
-              {LANGUAGES.map(({ code, label }) => {
-                const selected = language === code;
-                return (
-                  <TouchableOpacity
-                    key={code}
-                    onPress={() => setLanguage(code)}
-                    style={[styles.flagButton, selected && styles.flagButtonSelected]}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.flagLabel, selected && styles.flagLabelSelected]}>
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <View style={styles.rowDivider} />
-
-            {/* Mission & values */}
-            <TouchableOpacity
-              style={styles.subSettingRow}
-              onPress={() => setValuesModalVisible(true)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.rowLabel}>Mission & values</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-            </TouchableOpacity>
-
-            <View style={styles.rowDivider} />
-
-            {/* Replay onboarding */}
-            <TouchableOpacity
-              style={styles.subSettingRow}
-              onPress={() =>
-                Alert.alert(
-                  "Replay onboarding",
-                  "Go through the welcome and setup steps again? Your profile and circles stay as they are.",
-                  [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "Replay", onPress: () => restartOnboarding() },
-                  ]
-                )
-              }
-              activeOpacity={0.7}
-            >
-              <Text style={styles.rowLabel}>Replay onboarding</Text>
-              <Ionicons name="refresh" size={16} color={colors.textMuted} />
-            </TouchableOpacity>
-          </>
-        )}
       </View>
 
       <View style={styles.sectionGap} />
 
-      <View
-        style={[
-          styles.card,
-          {
-            borderWidth: 1,
-            borderColor: colors.cardBorder,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={styles.row}
-          onPress={() => setFeedbackVisible(true)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.rowLabel}>{t.circles.feedbackTitle}</Text>
-          <Ionicons name="chatbubble-ellipses-outline" size={16} color={colors.text} />
-        </TouchableOpacity>
-      </View>
+      <ProfileActivity
+        circles={profileCircles}
+        events={profileEvents}
+        loading={!activityReady}
+      />
+
+      <View style={styles.sectionGap} />
+
+      <ProfileSettings
+        expanded={settingsExpanded}
+        onToggle={() => setSettingsExpanded((open) => !open)}
+      />
+
+      <View style={styles.sectionGap} />
+
+      <ProfileMission />
 
       <View style={styles.sectionGap} />
 
@@ -684,7 +594,7 @@ async function handleAccept(notif: AppNotification) {
           onPress={() => setDeleteModalVisible(true)}
           activeOpacity={0.7}
         >
-          <Text style={styles.rowLabel}>Delete account</Text>
+          <Text style={styles.rowLabel}>{t.profile.deleteAccount}</Text>
           <Ionicons name="trash-outline" size={16} color={colors.text} />
         </TouchableOpacity>
       </View>
@@ -724,10 +634,10 @@ async function handleAccept(notif: AppNotification) {
         setDeleteTyped("");
         setDeleteError(null);
       }}
-      title="Delete account"
+      title={t.profile.deleteAccount}
     >
       <Text style={styles.deleteModalBody}>
-        This permanently deletes your account and data. Type <Text style={styles.deleteInlineCode}>DELETE</Text> to confirm.
+        {t.profile.deletePrompt}
       </Text>
       {!deleteConfirming ? (
         <View style={styles.deleteActionsRow}>
@@ -736,7 +646,7 @@ async function handleAccept(notif: AppNotification) {
             onPress={() => setDeleteConfirming(true)}
             disabled={deleteSubmitting}
           >
-            <Text style={styles.deleteDangerButtonText}>Delete Account</Text>
+            <Text style={styles.deleteDangerButtonText}>{t.profile.deleteAccount}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.deleteCancelButton}
@@ -748,7 +658,7 @@ async function handleAccept(notif: AppNotification) {
             }}
             disabled={deleteSubmitting}
           >
-            <Text style={styles.deleteCancelButtonText}>Cancel</Text>
+            <Text style={styles.deleteCancelButtonText}>{t.common.cancel}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -768,7 +678,7 @@ async function handleAccept(notif: AppNotification) {
               onPress={handleDeleteAccount}
               disabled={deleteSubmitting}
             >
-              {deleteSubmitting ? <Spinner size="small" color="#fff" /> : <Text style={styles.deleteConfirmButtonText}>Confirm deletion</Text>}
+              {deleteSubmitting ? <Spinner size="small" color="#fff" /> : <Text style={styles.deleteConfirmButtonText}>{t.profile.confirmDeletion}</Text>}
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.deleteCancelButton}
@@ -779,17 +689,12 @@ async function handleAccept(notif: AppNotification) {
               }}
               disabled={deleteSubmitting}
             >
-              <Text style={styles.deleteCancelButtonText}>Cancel</Text>
+              <Text style={styles.deleteCancelButtonText}>{t.common.cancel}</Text>
             </TouchableOpacity>
           </View>
         </>
       )}
     </DeleteConfirmationModal>
-    <CommunityValuesModal
-      visible={valuesModalVisible}
-      onClose={() => setValuesModalVisible(false)}
-    />
-    <FeedbackModal visible={feedbackVisible} onClose={() => setFeedbackVisible(false)} />
     </>
   );
 }
@@ -989,16 +894,8 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
     card: {
       backgroundColor: colors.card,
       borderRadius: 16,
-      ...Platform.select({
-        ios: {
-          shadowColor: "#000000",
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.05,
-          shadowRadius: 2,
-        },
-        android: { elevation: 1 },
-        default: {},
-      }),
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
     },
     row: {
       flexDirection: "row",

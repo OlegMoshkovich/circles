@@ -121,7 +121,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(
-    () => makeStyles(colors, bgOption === "onboarding", bgOption !== "light"),
+    () => makeStyles(colors, bgOption === "onboarding", true),
     [colors, bgOption]
   );
   const isOwner = user?.id === owner_id;
@@ -1677,9 +1677,10 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
               <Text style={styles.placeInfoTitle}>{name}</Text>
               <TouchableOpacity
                 onPress={() => setPlaceInfoVisible(false)}
+                style={styles.titleCircleButton}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
-                <Ionicons name="close" size={18} color={colors.textMuted} />
+                <Ionicons name="close" size={16} color={colors.text} />
               </TouchableOpacity>
             </View>
             <Text style={styles.placeInfoBody}>
@@ -1740,7 +1741,7 @@ function MemberRow({
   const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(
-    () => makeStyles(colors, bgOption === "onboarding", bgOption !== "light"),
+    () => makeStyles(colors, bgOption === "onboarding", true),
     [colors, bgOption]
   );
   const name =
@@ -1811,7 +1812,8 @@ function makeStyles(colors: Colors, isOnboarding: boolean, headerPills: boolean)
     paddingHorizontal: headerPills ? 12 : 0,
   },
   backLabel: {
-    ...typography.body,
+    fontSize: 15,
+    fontFamily: "Lora_400Regular",
     color: colors.text,
     marginLeft: 2,
   },

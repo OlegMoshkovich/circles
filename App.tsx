@@ -13,6 +13,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { LanguageProvider } from "./src/i18n/LanguageContext";
 import { NotificationProvider } from "./src/contexts/NotificationContext";
 import { BackgroundProvider } from "./src/contexts/BackgroundContext";
+import { FontProvider, FontScope, useFont } from "./src/theme/font";
 import { ReportProvider } from "./src/contexts/ReportProvider";
 import { supabase, setSupabaseTokenGetter } from "./lib/supabase";
 import * as Notifications from "expo-notifications";
@@ -279,6 +280,7 @@ function PushRegistrar() {
 
 export default function App() {
   const isLoadingComplete = useCachedResources();
+  useFont();
 
   if (!isLoadingComplete) {
     return null;
@@ -289,6 +291,7 @@ export default function App() {
       // UI instead of unmounting the whole tree to a blank white screen.
       <ErrorBoundary>
         <LanguageProvider>
+        <FontProvider>
         <BackgroundProvider>
         <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
           <SafeAreaProvider>
@@ -300,7 +303,9 @@ export default function App() {
                     <ProfileSync />
                     <PushRegistrar />
                     <AppGate>
+                    <FontScope>
                       <Navigation />
+                    </FontScope>
                     </AppGate>
                     <StatusBar />
                   </HomeReadyProvider>
@@ -310,6 +315,7 @@ export default function App() {
           </SafeAreaProvider>
         </ClerkProvider>
         </BackgroundProvider>
+        </FontProvider>
         </LanguageProvider>
       </ErrorBoundary>
     );

@@ -76,7 +76,7 @@ import { ThemedBackground } from "../src/components/layout/ThemedBackground";
 type Props = NativeStackScreenProps<RootStackParamList, "EventDetail">;
 
 export default function EventDetailScreen({ route, navigation }: Props) {
-  const { id, created_by, circleName, circle_id, hasNewActivity: initialHasNewActivity } = route.params;
+  const { id, created_by, circleName, circle_id, hasNewActivity: initialHasNewActivity, backLabel: backLabelParam } = route.params;
   const insets = useSafeAreaInsets();
   const footerBottomInset = 0;
   const { user } = useUser();
@@ -87,7 +87,7 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   const { bgOption } = useBackground();
   const colors = useColors();
   const styles = React.useMemo(
-    () => makeStyles(colors, bgOption === "onboarding", bgOption !== "light"),
+    () => makeStyles(colors, bgOption === "onboarding", true),
     [colors, bgOption]
   );
   const isCreator = !!user && !!created_by && user.id === created_by;
@@ -166,7 +166,9 @@ export default function EventDetailScreen({ route, navigation }: Props) {
   }
 
   const backLabel =
-    openedFromShareLink.current && circle_id
+    backLabelParam
+      ? backLabelParam
+      : openedFromShareLink.current && circle_id
       ? circleName ?? t.nav.circles
       : t.common.back;
 
@@ -947,7 +949,8 @@ function makeStyles(colors: Colors, isOnboarding: boolean, headerPills: boolean)
     maxWidth: "58%",
   },
   backLabel: {
-    ...typography.body,
+    fontSize: 15,
+    fontFamily: "Lora_400Regular",
     color: colors.text,
     marginLeft: 2,
   },

@@ -28,14 +28,7 @@ import { fetchReportedHiddenContentIds, fetchHiddenAuthorIds } from "../lib/cont
 import { supabase, getAuthClient, Circle } from "../lib/supabase";
 import { isKeptCircle } from "../lib/allowedPlaces";
 import { Spinner } from "../src/components/loaders/Spinner";
-import {
-  COMMUNITY_TAGLINE,
-  COMMUNITY_MISSION,
-  CORE_VALUES,
-  COMMUNITY_PRINCIPLES,
-  COMMUNITY_GUIDELINES,
-  COMMUNITY_MODERATION,
-} from "../src/constants/community";
+import { useLanguage } from "../src/i18n/LanguageContext";
 
 const DEFAULT_MAP_REGION: Region = {
   latitude: 46.8,
@@ -269,12 +262,13 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
 // ─── Step 1: Mission, Values & Code of Conduct ──────────────────────────────
 
 function CommunityStep({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
+  const { t } = useLanguage();
   return (
     <View style={styles.formStep}>
       <View style={[styles.panel, styles.termsPanel]}>
         <StepHeader
-          title="Our mission & values"
-          subtitle={COMMUNITY_TAGLINE}
+          title={t.missionText.title}
+          subtitle={t.missionText.tagline}
           onBack={onBack}
         />
         <ScrollView
@@ -282,27 +276,27 @@ function CommunityStep({ onNext, onBack }: { onNext: () => void; onBack: () => v
           contentContainerStyle={styles.termsScrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.termsBody}>{COMMUNITY_MISSION}</Text>
+          <Text style={styles.termsBody}>{t.missionText.body}</Text>
 
-          <Text style={styles.communityHeading}>Core values</Text>
-          {CORE_VALUES.map((v) => (
+          <Text style={styles.communityHeading}>{t.missionText.valuesHeading}</Text>
+          {t.missionText.values.map((v) => (
             <Text key={v.name} style={styles.termsBody}>
               <Text style={styles.termsEmphasis}>{v.name}. </Text>
               {v.desc}
             </Text>
           ))}
 
-          <Text style={styles.communityHeading}>Community principles</Text>
-          <Text style={styles.termsBody}>ValMia works best when everyone contributes positively. Please:</Text>
-          {COMMUNITY_PRINCIPLES.map((p) => (
+          <Text style={styles.communityHeading}>{t.missionText.principlesHeading}</Text>
+          <Text style={styles.termsBody}>{t.missionText.principlesIntro}</Text>
+          {t.missionText.principles.map((p) => (
             <View key={p} style={styles.communityBulletRow}>
               <Text style={styles.communityBulletDot}>•</Text>
               <Text style={styles.communityBulletText}>{p}</Text>
             </View>
           ))}
 
-          <Text style={styles.communityHeading}>Reporting & moderation</Text>
-          <Text style={styles.termsBody}>{COMMUNITY_MODERATION}</Text>
+          <Text style={styles.communityHeading}>{t.missionText.moderationHeading}</Text>
+          <Text style={styles.termsBody}>{t.missionText.moderation}</Text>
         </ScrollView>
         <GlassButton label="Continue" onPress={onNext} />
       </View>
@@ -313,19 +307,20 @@ function CommunityStep({ onNext, onBack }: { onNext: () => void; onBack: () => v
 // ─── Step 2: Community Guidelines (must agree to continue) ───────────────────
 
 function CommunityGuidelinesStep({ onNext, onBack }: { onNext: () => void; onBack: () => void }) {
+  const { t } = useLanguage();
   return (
     <View style={styles.formStep}>
       <View style={styles.panel}>
-        <StepHeader title="Community Guidelines" onBack={onBack} />
+        <StepHeader title={t.missionText.guidelinesTitle} onBack={onBack} />
         <View style={styles.guidelineList}>
-          {COMMUNITY_GUIDELINES.map((g) => (
+          {t.missionText.guidelines.map((g) => (
             <View key={g} style={styles.guidelineRow}>
               <Ionicons name="checkmark-sharp" size={18} color="#efede1" style={styles.guidelineCheck} />
               <Text style={styles.guidelineText}>{g}</Text>
             </View>
           ))}
         </View>
-        <Text style={styles.guidelineTagline}>{COMMUNITY_TAGLINE}</Text>
+        <Text style={styles.guidelineTagline}>{t.missionText.tagline}</Text>
         <GlassButton label="Agree & Continue" onPress={onNext} />
       </View>
     </View>

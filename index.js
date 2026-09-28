@@ -1,3 +1,4 @@
+import "./src/theme/font";
 import { registerRootComponent } from "expo";
 
 import App from "./App";

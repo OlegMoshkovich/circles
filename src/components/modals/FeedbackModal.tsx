@@ -212,22 +212,22 @@ function makeStyles(colors: Colors, isOnboarding: boolean) {
       textAlignVertical: "top",
     },
     saveButton: {
-      backgroundColor: isOnboarding ? "rgba(255,255,255,0.14)" : colors.text,
+      backgroundColor: isOnboarding ? "rgba(15,13,10,0.68)" : colors.background,
       borderRadius: 50,
       height: 54,
       alignItems: "center",
       justifyContent: "center",
       marginTop: 20,
-      borderWidth: isOnboarding ? 1 : 0,
-      borderColor: isOnboarding ? "rgba(239,237,225,0.28)" : "transparent",
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
     },
     saveButtonDisabled: {
       opacity: 0.35,
     },
     saveButtonText: {
-      color: isOnboarding ? colors.text : colors.background,
+      color: colors.text,
       fontSize: 16,
-      fontWeight: "600",
+      fontFamily: "Lora_400Regular",
     },
     errorText: {
       fontSize: 13,

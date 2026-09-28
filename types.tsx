@@ -26,6 +26,7 @@ export type EventDetailParams = {
   circleName?: string | null;
   circle_id?: string | null;
   hasNewActivity?: boolean;
+  backLabel?: string;
 };
 
 export type PromptDetailParams = {

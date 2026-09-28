@@ -114,15 +114,20 @@ export function ScreenLayout({ header, children, stickyTop, contentStyle, backgr
     );
   }
 
-  if (shouldUseThemedBackground) {
-    return <ThemedBackground backgroundBlurIntensity={0}>{inner}</ThemedBackground>;
-  }
-
   if (fullBleed) {
     return <View style={[styles.fill, styles.fullBleedWrapper]}>{inner}</View>;
   }
 
-  return inner;
+  return (
+    <View style={styles.fill}>
+      <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+        {shouldUseThemedBackground ? (
+          <ThemedBackground backgroundBlurIntensity={0} style={styles.fill} />
+        ) : null}
+      </View>
+      {inner}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
