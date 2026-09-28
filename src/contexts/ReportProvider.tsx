@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Colors } from "../theme/colors";
-import { useColors } from "./BackgroundContext";
+import { useBackground, useColors } from "./BackgroundContext";
 import {
   ContentReportTargetType,
   REPORT_REASONS,
@@ -61,7 +61,9 @@ function ReportContentModal({
   onClose: () => void;
 }) {
   const colors = useColors();
-  const styles = React.useMemo(() => makeStyles(colors), [colors]);
+  const { bgOption } = useBackground();
+  const isOnboarding = bgOption === "onboarding";
+  const styles = React.useMemo(() => makeStyles(colors, isOnboarding), [colors, isOnboarding]);
 
   const [reason, setReason] = React.useState<string | null>(null);
   const [comment, setComment] = React.useState("");
@@ -115,8 +117,12 @@ function ReportContentModal({
         <View style={styles.card}>
           <View style={styles.headerRow}>
             <Text style={styles.title}>Report content</Text>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Ionicons name="close" size={20} color={colors.textMuted} />
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.closeButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close" size={16} color={colors.text} />
             </TouchableOpacity>
           </View>
           <Text style={styles.subtitle}>Why are you reporting this?</Text>
@@ -130,8 +136,8 @@ function ReportContentModal({
                 onPress={() => setReason(r.value)}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.optionText, active && styles.optionTextActive]}>{r.label}</Text>
-                {active ? <Ionicons name="checkmark" size={18} color={colors.background} /> : null}
+                <Text style={styles.optionText}>{r.label}</Text>
+                {active ? <Ionicons name="checkmark" size={16} color={colors.text} /> : null}
               </TouchableOpacity>
             );
           })}
@@ -172,20 +178,19 @@ function ReportContentModal({
   );
 }
 
-function makeStyles(colors: Colors) {
+function makeStyles(colors: Colors, isOnboarding: boolean) {
+  const controlFill = isOnboarding ? "rgba(15,13,10,0.68)" : colors.background;
   return StyleSheet.create({
     backdrop: {
       flex: 1,
-      backgroundColor: "rgba(0,0,0,0.5)",
+      backgroundColor: colors.background,
       justifyContent: "center",
       paddingHorizontal: 24,
     },
     card: {
-      // Use the opaque screen background (colors.card is translucent in the
-      // glass/onboarding themes) so content underneath isn't visible through it.
-      backgroundColor: colors.background,
-      borderRadius: 20,
-      padding: 20,
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 16,
       borderWidth: 1,
       borderColor: colors.cardBorder,
     },
@@ -193,6 +198,16 @@ function makeStyles(colors: Colors) {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
+    },
+    closeButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: controlFill,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
     },
     title: {
       fontSize: 20,
@@ -210,22 +225,21 @@ function makeStyles(colors: Colors) {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-between",
-      backgroundColor: colors.badgeBg,
+      backgroundColor: controlFill,
       borderRadius: 999,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
       paddingVertical: 14,
       paddingHorizontal: 18,
       marginBottom: 10,
     },
     optionActive: {
-      backgroundColor: colors.text,
+      borderColor: colors.text,
     },
     optionText: {
       fontSize: 15,
       fontFamily: "Lora_400Regular",
       color: colors.text,
-    },
-    optionTextActive: {
-      color: colors.background,
     },
     commentBlock: {
       marginTop: 6,
@@ -238,8 +252,8 @@ function makeStyles(colors: Colors) {
       marginBottom: 6,
     },
     commentInput: {
-      backgroundColor: colors.badgeBg,
-      borderRadius: 12,
+      backgroundColor: controlFill,
+      borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.cardBorder,
       padding: 12,
@@ -249,20 +263,22 @@ function makeStyles(colors: Colors) {
       color: colors.text,
     },
     submit: {
-      backgroundColor: colors.text,
+      backgroundColor: controlFill,
       borderRadius: 999,
-      paddingVertical: 14,
+      height: 54,
       alignItems: "center",
+      justifyContent: "center",
       marginTop: 14,
+      borderWidth: 1,
+      borderColor: colors.cardBorder,
     },
     submitDisabled: {
       opacity: 0.45,
     },
     submitText: {
-      fontSize: 15,
+      fontSize: 16,
       fontFamily: "Lora_400Regular",
-      fontWeight: "600",
-      color: colors.background,
+      color: colors.text,
     },
   });
 }

@@ -141,11 +141,15 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
   }, [owner_id, isOwner, navigation]);
 
   // Mutable display fields (can be updated via edit modal)
-  const [name, setName] = useState(route.params.name);
+  const [name, setName] = useState(route.params.name ?? "");
   const [description, setDescription] = useState(route.params.description ?? "");
-  const [visibility, setVisibility] = useState(route.params.visibility);
+  const [visibility, setVisibility] = useState(route.params.visibility ?? "public");
   const [organizer] = useState(route.params.organizer ?? null);
   const [location, setLocation] = useState(route.params.location ?? null);
+  const openedFromLink = !route.params.name;
+  const [linkStatus, setLinkStatus] = useState<"ready" | "loading" | "missing">(
+    openedFromLink ? "loading" : "ready"
+  );
 
   const isCircleView = route.params.mode === "circle";
   const [activeTab, setActiveTab] = useState<Tab>(isCircleView ? "events" : "circles");
@@ -179,19 +183,32 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       .eq("id", id)
       .maybeSingle()
       .then(({ data }) => {
-        if (cancelled || !data) return;
-        setName(data.name);
+        if (cancelled) return;
+        if (!data) {
+          setLinkStatus("missing");
+          return;
+        }
+        setName(data.name ?? "");
         setDescription(data.description ?? "");
-        setVisibility(data.visibility);
+        setVisibility(data.visibility ?? "public");
         setLocation((data as { location?: string | null }).location ?? null);
         if (typeof (data as { member_count?: number }).member_count === "number") {
           setMemberCount((data as { member_count?: number }).member_count as number);
         }
+        navigation.setParams({
+          name: data.name ?? "",
+          description: data.description ?? "",
+          visibility: data.visibility ?? "public",
+          owner_id: data.owner_id,
+          location: (data as { location?: string | null }).location ?? null,
+          organizer: (data as { organizer?: string | null }).organizer ?? null,
+        });
+        setLinkStatus("ready");
       });
     return () => {
       cancelled = true;
     };
-  }, [id, route.params.name]);
+  }, [id, navigation, route.params.name]);
 
   const didPickInitialPlaceTab = useRef(isCircleView);
 
@@ -936,6 +953,25 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
 
   return (
     <ThemedBackground backgroundColor={colors.background}>
+      {linkStatus !== "ready" ? (
+        <View style={[styles.wrapper, { paddingTop: insets.top + spacing.sm }]}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons name="chevron-back" size={18} color={colors.text} />
+            <Text style={styles.backLabel}>{t.common.back}</Text>
+          </TouchableOpacity>
+          <View style={styles.loader}>
+            {linkStatus === "loading" ? (
+              <Spinner size="small" />
+            ) : (
+              <Text style={styles.emptyText}>{t.circles.noDescription}</Text>
+            )}
+          </View>
+        </View>
+      ) : (
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -961,7 +997,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 accessibilityLabel={t.circles.createAction}
               >
-                <Ionicons name="people-outline" size={20} color={colors.text} />
+                <Ionicons name="ellipse-outline" size={18} color={colors.text} />
               </TouchableOpacity>
             ) : null}
             {(isOwner || isMember) ? (
@@ -1571,16 +1607,17 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                   />
                 ))}
                 {invitedUsers.map((u) => {
-                  const parts = u.name.trim().split(" ");
+                  const label = u.name ?? "";
+                  const parts = label.trim().split(" ");
                   const ini = parts.length >= 2
                     ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-                    : u.name.slice(0, 2).toUpperCase();
+                    : label.slice(0, 2).toUpperCase();
                   return (
                     <View key={u.user_id} style={styles.memberRow}>
                       <View style={styles.avatar}>
                         <Text style={styles.avatarText}>{ini}</Text>
                       </View>
-                      <Text style={styles.memberUserId} numberOfLines={1}>{u.name}</Text>
+                      <Text style={styles.memberUserId} numberOfLines={1}>{label}</Text>
                       <View style={styles.invitedBadge}>
                         <Text style={styles.invitedBadgeText}>{t.circles.badgeInvited}</Text>
                       </View>
@@ -1603,8 +1640,8 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
                       requests.map((req) => {
                         const requestName =
                           (req.user_id === user?.id && (user?.fullName ?? user?.firstName))
-                            ? (user.fullName ?? user.firstName ?? req.user_id)
-                            : (profileMap[req.user_id] ?? req.display_name ?? req.user_id);
+                            ? (user.fullName ?? user.firstName ?? req.user_id ?? "")
+                            : (profileMap[req.user_id] ?? req.display_name ?? req.user_id ?? "");
                         const parts = requestName.trim().split(" ");
                         const initials = parts.length >= 2
                           ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
@@ -1720,6 +1757,7 @@ export default function CircleDetailScreen({ route, navigation }: Props) {
       />
       </View>
       </KeyboardAvoidingView>
+      )}
     </ThemedBackground>
   );
 }
@@ -1747,7 +1785,7 @@ function MemberRow({
   const name =
     (member.user_id === currentUserId && currentUserName)
       ? currentUserName
-      : (profileMap[member.user_id] ?? member.display_name ?? member.user_id);
+      : (profileMap[member.user_id] ?? member.display_name ?? member.user_id ?? "");
   const parts = name.trim().split(" ");
   const initials = parts.length >= 2
     ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()

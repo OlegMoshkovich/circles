@@ -39,11 +39,14 @@ function resolveYear(rawYear: string | undefined, now: Date): { year: number; ha
   };
 }
 
-export function parseEventDateTime(dateLabel: string, timeLabel: string): number {
+export function parseEventDateTime(
+  dateLabel: string | null | undefined,
+  timeLabel: string | null | undefined
+): number {
   const now = new Date();
 
-  const cleanedDate = dateLabel.trim().replace(/\s*[•·]\s*.*/, "");
-  const cleanedTime = timeLabel.trim();
+  const cleanedDate = (dateLabel ?? "").trim().replace(/\s*[•·]\s*.*/, "");
+  const cleanedTime = (timeLabel ?? "").trim();
 
   let hour = 0;
   let minute = 0;

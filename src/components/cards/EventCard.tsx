@@ -29,8 +29,8 @@ type EventCardProps = {
   actionIcon?: keyof typeof Ionicons.glyphMap;
 };
 
-function formatDateWithYear(date: string): string {
-  const trimmed = date.trim();
+function formatDateWithYear(date: string | null | undefined): string {
+  const trimmed = (date ?? "").trim();
   if (!trimmed) return trimmed;
 
   // Keep explicit year formats as-is (e.g. 31.3.26, 31.03.2026, Mar 29 2026).
